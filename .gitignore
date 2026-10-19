@@ -1,0 +1,36 @@
+# Python
+backend/.venv/
+backend/venv/
+backend/.env
+backend/.env.*
+!backend/.env.example
+__pycache__/
+*.py[cod]
+*$py.class
+*.sqlite3
+*.db
+backend/uploads/
+backend/storage/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Flutter / Dart
+mobile/.dart_tool/
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+mobile/.packages
+mobile/.pub-cache/
+mobile/.pub/
+mobile/build/
+mobile/ios/Flutter/Generated.xcconfig
+mobile/android/local.properties
+mobile/**/*.g.dart
+
+# IDE & OS
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
