@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
-import '../../../core/network/api_endpoints.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/private_image_view.dart';
 import '../../../state/tryon_provider.dart';
 import '../../../state/wardrobe_provider.dart';
 
@@ -382,10 +382,10 @@ class _TryOnScreenState extends State<TryOnScreen> {
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(8),
-                        child: Image.network(
-                          ApiEndpoints.resolveImageUrl(wItem.imageUrl),
+                        child: PrivateImageView(
+                          imageUrl: wItem.imageUrl,
                           fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) => Container(
+                          errorWidget: Container(
                             color: AppColors.accentSoft,
                             child: const Icon(Icons.checkroom, size: 20),
                           ),
@@ -478,12 +478,12 @@ class _TryOnScreenState extends State<TryOnScreen> {
             const SizedBox(height: 14),
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: Image.network(
-                task.resultImageUrl ?? '',
+              child: PrivateImageView(
+                imageUrl: task.resultImageUrl ?? '',
                 width: double.infinity,
                 height: 320,
                 fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => Container(
+                errorWidget: Container(
                   height: 200,
                   color: AppColors.accentSoft,
                   child: const Center(child: Text('Image preview not available')),

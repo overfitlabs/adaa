@@ -10,6 +10,10 @@ class WardrobeItem {
   String? fit;
   String? season;
   String? formality;
+  String? brand;
+  String? size;
+  String? condition;
+  String? notes;
   List<String> tags;
   final String imagePath;
   final String imageUrl;
@@ -28,6 +32,10 @@ class WardrobeItem {
     this.fit,
     this.season,
     this.formality,
+    this.brand,
+    this.size,
+    this.condition,
+    this.notes,
     this.tags = const [],
     required this.imagePath,
     required this.imageUrl,
@@ -48,6 +56,10 @@ class WardrobeItem {
       fit: json['fit'],
       season: json['season'],
       formality: json['formality'],
+      brand: json['brand'],
+      size: json['size'],
+      condition: json['condition'],
+      notes: json['notes'],
       tags: (json['tags'] as List<dynamic>? ?? []).map((e) => e.toString()).toList(),
       imagePath: json['image_path'] ?? '',
       imageUrl: json['image_url'] ?? '',
@@ -69,6 +81,10 @@ class WardrobeItem {
       'fit': fit,
       'season': season,
       'formality': formality,
+      'brand': brand,
+      'size': size,
+      'condition': condition,
+      'notes': notes,
       'tags': tags,
       'image_path': imagePath,
       'image_url': imageUrl,

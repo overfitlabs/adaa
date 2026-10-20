@@ -8,11 +8,17 @@ import '../../../core/theme/app_colors.dart';
 import '../../../state/analysis_provider.dart';
 import '../../../state/wardrobe_provider.dart';
 import '../../../state/outfits_provider.dart';
+import '../../../state/auth_provider.dart';
+import '../../../core/widgets/private_image_view.dart';
 import '../../analysis/screens/analysis_detail_screen.dart';
+import '../../auth/screens/auth_dialog.dart';
 import '../../wardrobe/screens/wardrobe_screen.dart';
 import '../../tryon/screens/tryon_screen.dart';
 import '../../outfits/screens/outfits_screen.dart';
 import '../../styling/screens/recommendations_screen.dart';
+
+import '../../../state/community_provider.dart';
+import '../../communities/screens/communities_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -33,15 +39,20 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _checkHealthAndLoadData() async {
-    final connected = await ApiClient.checkHealth();
+    setState(() => _isCheckingHealth = true);
+    // Auto-detect reachable host (e.g. adb reverse 127.0.0.1:8000 vs 10.0.2.2:8000)
+    final connected = await ApiClient.autoDetectBaseUrl();
     if (mounted) {
       setState(() {
         _isBackendConnected = connected;
         _isCheckingHealth = false;
       });
-      context.read<WardrobeProvider>().loadWardrobe(silent: true);
-      context.read<AnalysisProvider>().loadHistory();
-      context.read<OutfitsProvider>().loadOutfits();
+      if (connected) {
+        context.read<WardrobeProvider>().loadWardrobe(silent: true);
+        context.read<AnalysisProvider>().loadHistory();
+        context.read<OutfitsProvider>().loadOutfits();
+        context.read<CommunityProvider>().loadMyCommunities(silent: true);
+      }
     }
   }
 
@@ -54,19 +65,33 @@ class _HomeScreenState extends State<HomeScreen> {
         imageQuality: 85,
       );
       if (picked == null) return;
-
       if (!mounted) return;
-      final analysisProv = context.read<AnalysisProvider>();
 
-      // Show loading dialog
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (ctx) => const _AnalyzingDialog(),
-      );
+      await _runAnalysis(picked);
+    } catch (e) {
+      if (mounted) {
+        _showAnalysisErrorDialog('Failed to pick image: $e');
+      }
+    }
+  }
 
-      final success = await analysisProv.analyzeImage(picked);
-      if (mounted) Navigator.of(context, rootNavigator: true).pop();
+  Future<void> _runAnalysis(XFile file) async {
+    final analysisProv = context.read<AnalysisProvider>();
+    bool dialogPopped = false;
+
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => const _AnalyzingDialog(),
+    );
+
+    try {
+      final success = await analysisProv.analyzeImage(file);
+      if (mounted && !dialogPopped) {
+        dialogPopped = true;
+        Navigator.of(context, rootNavigator: true).pop();
+      }
 
       if (success && mounted) {
         Navigator.of(context).push(
@@ -75,20 +100,202 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         );
       } else if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(analysisProv.error ?? 'Failed to analyze outfit image.'),
-            backgroundColor: AppColors.missing,
-          ),
-        );
+        _showAnalysisErrorDialog(analysisProv.error ?? 'Failed to analyze outfit image.');
       }
     } catch (e) {
+      if (mounted && !dialogPopped) {
+        dialogPopped = true;
+        Navigator.of(context, rootNavigator: true).pop();
+      }
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.missing),
-        );
+        _showAnalysisErrorDialog('Analysis error: $e');
+      }
+    } finally {
+      if (mounted && !dialogPopped) {
+        dialogPopped = true;
+        Navigator.of(context, rootNavigator: true).pop();
       }
     }
+  }
+
+  void _showAnalysisErrorDialog(String errorMessage) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.error_outline, color: AppColors.missing, size: 24),
+            SizedBox(width: 8),
+            Text('Analysis Failed', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              errorMessage,
+              style: const TextStyle(fontSize: 13, height: 1.4, color: AppColors.textPrimary),
+            ),
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceElevated,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.dns_outlined, size: 16, color: AppColors.textSecondary),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Server: ${ApiEndpoints.baseUrl}',
+                      style: const TextStyle(fontSize: 11, fontFamily: 'monospace', color: AppColors.textSecondary),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _showServerConfigDialog();
+            },
+            child: const Text('Change Server'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Dismiss', style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          ElevatedButton.icon(
+            icon: const Icon(Icons.refresh, size: 16),
+            label: const Text('Retry'),
+            onPressed: () {
+              Navigator.pop(ctx);
+              final lastFile = context.read<AnalysisProvider>().lastAnalyzedFile;
+              if (lastFile != null) {
+                _runAnalysis(lastFile);
+              }
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showServerConfigDialog() {
+    final controller = TextEditingController(text: ApiEndpoints.baseUrl);
+    bool testing = false;
+    String? testResult;
+    bool? testSuccess;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: const Text('Server Connection', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18)),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Specify the FastAPI backend server URL for WardrobeLens.',
+                    style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: controller,
+                    decoration: const InputDecoration(
+                      labelText: 'Backend Base URL',
+                      hintText: 'http://127.0.0.1:8000',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text('Quick Presets:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
+                    children: [
+                      ActionChip(
+                        label: const Text('USB ADB (127.0.0.1)', style: TextStyle(fontSize: 11)),
+                        onPressed: () => setDialogState(() => controller.text = 'http://127.0.0.1:8000'),
+                      ),
+                      ActionChip(
+                        label: const Text('Emulator (10.0.2.2)', style: TextStyle(fontSize: 11)),
+                        onPressed: () => setDialogState(() => controller.text = 'http://10.0.2.2:8000'),
+                      ),
+                      ActionChip(
+                        label: const Text('Wi-Fi (192.168.1.11)', style: TextStyle(fontSize: 11)),
+                        onPressed: () => setDialogState(() => controller.text = 'http://192.168.1.11:8000'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  if (testing)
+                    const Row(
+                      children: [
+                        SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)),
+                        SizedBox(width: 8),
+                        Text('Testing connection...', style: TextStyle(fontSize: 12)),
+                      ],
+                    )
+                  else if (testResult != null)
+                    Row(
+                      children: [
+                        Icon(testSuccess == true ? Icons.check_circle : Icons.error, color: testSuccess == true ? AppColors.exactMatch : AppColors.missing, size: 16),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            testResult!,
+                            style: TextStyle(fontSize: 12, color: testSuccess == true ? AppColors.exactMatch : AppColors.missing),
+                          ),
+                        ),
+                      ],
+                    ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: testing
+                    ? null
+                    : () async {
+                        setDialogState(() {
+                          testing = true;
+                          testResult = null;
+                        });
+                        final ok = await ApiClient.checkHealth(controller.text.trim());
+                        setDialogState(() {
+                          testing = false;
+                          testSuccess = ok;
+                          testResult = ok ? 'Connected successfully! (HTTP 200)' : 'Could not reach server at this URL.';
+                        });
+                      },
+                child: const Text('Test Connection'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  ApiEndpoints.setBaseUrl(controller.text.trim());
+                  Navigator.pop(ctx);
+                  _checkHealthAndLoadData();
+                },
+                child: const Text('Save & Connect'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
   }
 
   void _showImageSourceModal() {
@@ -153,6 +360,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final wardrobe = context.watch<WardrobeProvider>();
     final outfits = context.watch<OutfitsProvider>();
     final analysisProv = context.watch<AnalysisProvider>();
+    final communityProv = context.watch<CommunityProvider>();
 
     return Scaffold(
       appBar: AppBar(
@@ -187,29 +395,103 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         actions: [
+          // User / Auth button
+          Consumer<AuthProvider>(
+            builder: (ctx, auth, _) {
+              if (auth.isAuthenticated) {
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: PopupMenuButton<String>(
+                    tooltip: 'Account Menu',
+                    offset: const Offset(0, 40),
+                    child: CircleAvatar(
+                      radius: 14,
+                      backgroundColor: AppColors.primary,
+                      child: Text(
+                        auth.displayName.isNotEmpty ? auth.displayName[0].toUpperCase() : 'U',
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+                      ),
+                    ),
+                    itemBuilder: (ctx) => [
+                      PopupMenuItem(
+                        enabled: false,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(auth.displayName, style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                            Text(auth.email ?? '', style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuDivider(),
+                      const PopupMenuItem(
+                        value: 'logout',
+                        child: Row(
+                          children: [
+                            Icon(Icons.logout, size: 18, color: Colors.red),
+                            SizedBox(width: 8),
+                            Text('Sign Out', style: TextStyle(color: Colors.red)),
+                          ],
+                        ),
+                      ),
+                    ],
+                    onSelected: (val) {
+                      if (val == 'logout') {
+                        auth.signOut();
+                      }
+                    },
+                  ),
+                );
+              }
+              return Padding(
+                padding: const EdgeInsets.only(right: 4),
+                child: TextButton.icon(
+                  icon: const Icon(Icons.person_outline, size: 16),
+                  label: const Text('Sign In', style: TextStyle(fontSize: 12)),
+                  onPressed: () => AuthDialog.show(context),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                  ),
+                ),
+              );
+            },
+          ),
           // Connection pill
           Padding(
             padding: const EdgeInsets.only(right: 16),
-            child: Row(
-              children: [
-                Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: _isBackendConnected ? AppColors.exactMatch : AppColors.missing,
-                    shape: BoxShape.circle,
+            child: InkWell(
+              onTap: _showServerConfigDialog,
+              borderRadius: BorderRadius.circular(16),
+              child: Tooltip(
+                message: 'Tap to configure server connection',
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: _isBackendConnected ? AppColors.exactMatch : AppColors.missing,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        _isCheckingHealth
+                            ? 'Connecting...'
+                            : _isBackendConnected
+                                ? 'Online'
+                                : 'Offline',
+                        style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(Icons.settings, size: 12, color: AppColors.textSecondary),
+                    ],
                   ),
                 ),
-                const SizedBox(width: 6),
-                Text(
-                  _isCheckingHealth
-                      ? 'Connecting...'
-                      : _isBackendConnected
-                          ? 'Online'
-                          : 'Offline',
-                  style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
-                ),
-              ],
+              ),
             ),
           ),
         ],
@@ -232,7 +514,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   Expanded(
                     child: _buildMetricCard(
-                      title: 'Wardrobe Items',
+                      title: 'Wardrobe',
                       count: '${wardrobe.items.length}',
                       icon: Icons.checkroom_outlined,
                       onTap: () => Navigator.push(
@@ -241,7 +523,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: _buildMetricCard(
                       title: 'Saved Looks',
@@ -250,6 +532,18 @@ class _HomeScreenState extends State<HomeScreen> {
                       onTap: () => Navigator.push(
                         context,
                         MaterialPageRoute(builder: (_) => const OutfitsScreen()),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _buildMetricCard(
+                      title: 'Communities',
+                      count: '${communityProv.myCommunities.length}',
+                      icon: Icons.groups_outlined,
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const CommunitiesScreen()),
                       ),
                     ),
                   ),
@@ -276,6 +570,16 @@ class _HomeScreenState extends State<HomeScreen> {
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const WardrobeScreen()),
+                ),
+              ),
+              const SizedBox(height: 10),
+              _buildFeatureTile(
+                title: 'Communities & Shared Closets',
+                subtitle: 'Explore student style circles and browse shared wardrobes',
+                icon: Icons.groups_outlined,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const CommunitiesScreen()),
                 ),
               ),
               const SizedBox(height: 10),
@@ -343,12 +647,12 @@ class _HomeScreenState extends State<HomeScreen> {
                             children: [
                               ClipRRect(
                                 borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
-                                child: Image.network(
-                                  ApiEndpoints.resolveImageUrl(item.imageUrl),
+                                child: PrivateImageView(
+                                  imageUrl: item.imageUrl,
                                   height: 100,
                                   width: double.infinity,
                                   fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) => Container(
+                                  errorWidget: Container(
                                     height: 100,
                                     color: AppColors.accentSoft,
                                     child: const Icon(Icons.image_outlined, color: AppColors.textMuted),
@@ -480,7 +784,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(16),
@@ -492,22 +796,24 @@ class _HomeScreenState extends State<HomeScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Icon(icon, color: AppColors.primary, size: 22),
-                const Icon(Icons.chevron_right, color: AppColors.textMuted, size: 18),
+                Icon(icon, color: AppColors.primary, size: 20),
+                const Icon(Icons.chevron_right, color: AppColors.textMuted, size: 16),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
             Text(
               count,
               style: const TextStyle(
-                fontSize: 26,
+                fontSize: 22,
                 fontWeight: FontWeight.w800,
                 color: AppColors.textPrimary,
               ),
             ),
             Text(
               title,
-              style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
             ),
           ],
         ),

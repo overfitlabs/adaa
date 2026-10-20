@@ -1,25 +1,44 @@
 import json
+import logging
+import uuid
 from typing import List, Optional
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.database import get_db
-from app.models import WardrobeItem
+from app.models import WardrobeItem, Community, CommunityListing
 from app.schemas import (
     WardrobeItemResponse,
     WardrobeItemUpdate,
     DetectedFashionItem,
+    CommunityListingResponse,
 )
-from app.services.storage_service import storage_service
+from app.services.image_storage import image_storage_service
 from app.services.vision_provider import get_vision_provider
+from app.auth.supabase_auth import get_optional_current_user, get_current_user, AuthenticatedUser
+
+logger = logging.getLogger("wardrobelens.routes_wardrobe")
 
 router = APIRouter(prefix="/api/wardrobe", tags=["Digital Wardrobe"])
 
 
 def _model_to_response(item: WardrobeItem) -> WardrobeItemResponse:
     tags = json.loads(item.tags) if item.tags else []
+
+    if getattr(item, "storage_provider", "local") == "cloudinary" and getattr(item, "cloudinary_public_id", None):
+        image_url = image_storage_service.generate_delivery_url(
+            item.cloudinary_public_id,
+            storage_provider="cloudinary",
+            ttl_seconds=settings.IMAGE_DELIVERY_TTL_SECONDS,
+        )
+    else:
+        clean_path = item.image_path.lstrip("/")
+        image_url = f"/storage/{clean_path}"
+
     return WardrobeItemResponse(
         id=item.id,
+        user_id=item.user_id,
         name=item.name,
         category=item.category,
         sub_category=item.sub_category,
@@ -30,9 +49,15 @@ def _model_to_response(item: WardrobeItem) -> WardrobeItemResponse:
         fit=item.fit,
         season=item.season,
         formality=item.formality,
+        brand=getattr(item, "brand", None),
+        size=getattr(item, "size", None),
+        condition=getattr(item, "condition", None),
+        notes=getattr(item, "notes", None),
         tags=tags,
         image_path=item.image_path,
-        image_url=f"/storage/{item.image_path}",
+        image_url=image_url,
+        storage_provider=getattr(item, "storage_provider", "local"),
+        is_community_shared=getattr(item, "is_community_shared", False),
         created_at=item.created_at,
         updated_at=item.updated_at,
     )
@@ -45,23 +70,39 @@ async def detect_wardrobe_item_from_photo(
     """
     Analyzes a photo of a single wardrobe garment to pre-fill metadata
     (category, colors, material, pattern, fit) before saving.
+    Cleans up any temporary staging files immediately to prevent orphaned disk assets.
     """
-    rel_path, abs_path = await storage_service.save_image(file, subfolder="wardrobe")
-    vision = get_vision_provider()
+    raw_bytes = await file.read()
+    clean_bytes, ext, _, _ = image_storage_service.validate_and_sanitize_image(file, raw_bytes)
+
+    temp_filename = f"detect_staging_{uuid.uuid4().hex}.{ext}"
+    temp_dir = settings.storage_path / "temp"
+    temp_dir.mkdir(parents=True, exist_ok=True)
+    temp_path = temp_dir / temp_filename
+
     try:
-        summary, vibe, items = await vision.analyze_outfit_image(abs_path)
+        with open(temp_path, "wb") as f:
+            f.write(clean_bytes)
+
+        vision = get_vision_provider()
+        summary, vibe, items = await vision.analyze_outfit_image(temp_path)
         primary_item = items[0] if items else None
         return {
-            "image_path": rel_path,
-            "image_url": f"/storage/{rel_path}",
             "detected_item": primary_item,
+            "detected_vibe": vibe,
         }
     except Exception as e:
-        storage_service.delete_file(rel_path)
+        logger.error("Wardrobe item detection failed: %s", str(e), exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Detection failed: {str(e)}",
         )
+    finally:
+        if temp_path.is_file():
+            try:
+                temp_path.unlink()
+            except Exception:
+                pass
 
 
 @router.post("/items", response_model=WardrobeItemResponse, status_code=status.HTTP_201_CREATED)
@@ -76,17 +117,17 @@ async def create_wardrobe_item(
     fit: Optional[str] = Form(None),
     season: Optional[str] = Form(None),
     formality: Optional[str] = Form(None),
+    brand: Optional[str] = Form(None),
+    size: Optional[str] = Form(None),
+    condition: Optional[str] = Form(None),
+    notes: Optional[str] = Form(None),
     tags: Optional[str] = Form("[]"),  # JSON array string or comma separated
     image_path: Optional[str] = Form(None),
     file: Optional[UploadFile] = File(None),
     db: Session = Depends(get_db),
+    current_user: Optional[AuthenticatedUser] = Depends(get_optional_current_user),
 ):
-    final_image_path = image_path
-    if file:
-        rel_path, _ = await storage_service.save_image(file, subfolder="wardrobe")
-        final_image_path = rel_path
-
-    if not final_image_path:
+    if not file and not image_path:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Either an image file or an existing image_path must be provided.",
@@ -102,7 +143,30 @@ async def create_wardrobe_item(
         except Exception:
             parsed_tags = [t.strip() for t in tags.split(",") if t.strip()]
 
+    user_id = current_user.id if current_user else None
+    uploaded_meta = None
+
+    if file:
+        uploaded_meta = await image_storage_service.upload(
+            file,
+            user_id=user_id,
+            subfolder="wardrobe",
+        )
+        final_image_path = uploaded_meta.public_id
+        final_storage_provider = uploaded_meta.storage_provider
+        final_cloudinary_id = uploaded_meta.public_id if uploaded_meta.storage_provider == "cloudinary" else None
+        final_format = uploaded_meta.format
+        final_version = uploaded_meta.version
+    else:
+        # Fallback for manual or test fixture image_path
+        final_image_path = image_path
+        final_storage_provider = "local"
+        final_cloudinary_id = None
+        final_format = image_path.split(".")[-1] if "." in image_path else "jpg"
+        final_version = None
+
     item = WardrobeItem(
+        user_id=user_id,
         name=name.strip(),
         category=category.strip().lower(),
         sub_category=sub_category.strip() if sub_category else None,
@@ -113,12 +177,37 @@ async def create_wardrobe_item(
         fit=fit.strip() if fit else None,
         season=season.strip() if season else None,
         formality=formality.strip() if formality else None,
+        brand=brand.strip() if brand else None,
+        size=size.strip() if size else None,
+        condition=condition.strip() if condition else None,
+        notes=notes.strip() if notes else None,
         tags=json.dumps(parsed_tags),
         image_path=final_image_path,
+        storage_provider=final_storage_provider,
+        cloudinary_public_id=final_cloudinary_id,
+        image_format=final_format,
+        image_version=final_version,
+        is_community_shared=False,  # Private by default
     )
-    db.add(item)
-    db.commit()
-    db.refresh(item)
+
+    try:
+        db.add(item)
+        db.commit()
+        db.refresh(item)
+    except Exception as e:
+        db.rollback()
+        # Clean up newly uploaded image to prevent orphaned assets on failed DB writes
+        if uploaded_meta:
+            image_storage_service.delete(
+                uploaded_meta.public_id,
+                storage_provider=uploaded_meta.storage_provider,
+            )
+        logger.error("Failed to persist wardrobe item: %s", str(e), exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Database error saving wardrobe item: {str(e)}",
+        )
+
     return _model_to_response(item)
 
 
@@ -127,9 +216,17 @@ def list_wardrobe_items(
     category: Optional[str] = Query(None),
     search: Optional[str] = Query(None),
     color: Optional[str] = Query(None),
+    brand: Optional[str] = Query(None),
     db: Session = Depends(get_db),
+    current_user: Optional[AuthenticatedUser] = Depends(get_optional_current_user),
 ):
     query = db.query(WardrobeItem)
+
+    # Scoped ownership: authenticated users only see their items; anonymous users only see unowned legacy items
+    if current_user:
+        query = query.filter(WardrobeItem.user_id == current_user.id)
+    else:
+        query = query.filter(WardrobeItem.user_id.is_(None))
 
     if category and category.lower() != "all":
         query = query.filter(WardrobeItem.category == category.lower().strip())
@@ -140,6 +237,9 @@ def list_wardrobe_items(
             | (WardrobeItem.secondary_color.ilike(f"%{color}%"))
         )
 
+    if brand:
+        query = query.filter(WardrobeItem.brand.ilike(f"%{brand.strip()}%"))
+
     if search:
         s = f"%{search.strip()}%"
         query = query.filter(
@@ -147,6 +247,8 @@ def list_wardrobe_items(
             | (WardrobeItem.category.ilike(s))
             | (WardrobeItem.sub_category.ilike(s))
             | (WardrobeItem.material.ilike(s))
+            | (WardrobeItem.brand.ilike(s))
+            | (WardrobeItem.notes.ilike(s))
             | (WardrobeItem.tags.ilike(s))
         )
 
@@ -155,10 +257,20 @@ def list_wardrobe_items(
 
 
 @router.get("/items/{item_id}", response_model=WardrobeItemResponse)
-def get_wardrobe_item(item_id: str, db: Session = Depends(get_db)):
+def get_wardrobe_item(
+    item_id: str,
+    db: Session = Depends(get_db),
+    current_user: Optional[AuthenticatedUser] = Depends(get_optional_current_user),
+):
     item = db.query(WardrobeItem).filter(WardrobeItem.id == item_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="Wardrobe item not found.")
+
+    # Ownership guard: User B or anonymous caller cannot access User A's private item
+    if item.user_id is not None:
+        if current_user is None or current_user.id != item.user_id:
+            raise HTTPException(status_code=404, detail="Wardrobe item not found.")
+
     return _model_to_response(item)
 
 
@@ -167,10 +279,20 @@ def update_wardrobe_item(
     item_id: str,
     update_data: WardrobeItemUpdate,
     db: Session = Depends(get_db),
+    current_user: Optional[AuthenticatedUser] = Depends(get_optional_current_user),
 ):
     item = db.query(WardrobeItem).filter(WardrobeItem.id == item_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="Wardrobe item not found.")
+
+    # Ownership guard
+    if item.user_id is not None:
+        if current_user is None or current_user.id != item.user_id:
+            raise HTTPException(status_code=404, detail="Wardrobe item not found.")
+    else:
+        # Legacy unowned record cannot be claimed or modified by authenticated users
+        if current_user is not None:
+            raise HTTPException(status_code=403, detail="Cannot modify unowned legacy items.")
 
     data = update_data.model_dump(exclude_unset=True)
     if "tags" in data and data["tags"] is not None:
@@ -180,19 +302,84 @@ def update_wardrobe_item(
         if hasattr(item, key):
             setattr(item, key, value)
 
-    db.commit()
-    db.refresh(item)
+    try:
+        db.commit()
+        db.refresh(item)
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Database update failed: {str(e)}")
+
     return _model_to_response(item)
 
 
-@router.delete("/items/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_wardrobe_item(item_id: str, db: Session = Depends(get_db)):
+@router.put("/items/{item_id}/photo", response_model=WardrobeItemResponse)
+async def update_wardrobe_item_photo(
+    item_id: str,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: Optional[AuthenticatedUser] = Depends(get_optional_current_user),
+):
     item = db.query(WardrobeItem).filter(WardrobeItem.id == item_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="Wardrobe item not found.")
 
-    # Remove image file from disk
-    storage_service.delete_file(item.image_path)
+    if item.user_id is not None:
+        if current_user is None or current_user.id != item.user_id:
+            raise HTTPException(status_code=404, detail="Wardrobe item not found.")
+    else:
+        if current_user is not None:
+            raise HTTPException(status_code=403, detail="Cannot modify unowned legacy items.")
+
+    old_public_id = item.cloudinary_public_id or item.image_path
+    old_provider = item.storage_provider
+
+    new_meta = await image_storage_service.upload(
+        file,
+        user_id=item.user_id,
+        subfolder="wardrobe",
+    )
+    item.image_path = new_meta.public_id
+    item.storage_provider = new_meta.storage_provider
+    item.cloudinary_public_id = new_meta.public_id if new_meta.storage_provider == "cloudinary" else None
+    item.image_format = new_meta.format
+    item.image_version = new_meta.version
+
+    try:
+        db.commit()
+        db.refresh(item)
+    except Exception as e:
+        db.rollback()
+        image_storage_service.delete(new_meta.public_id, storage_provider=new_meta.storage_provider)
+        raise HTTPException(status_code=500, detail=f"Database photo update failed: {str(e)}")
+
+    if old_public_id and old_public_id != new_meta.public_id:
+        image_storage_service.delete(old_public_id, storage_provider=old_provider)
+
+    return _model_to_response(item)
+
+
+@router.delete("/items/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_wardrobe_item(
+    item_id: str,
+    db: Session = Depends(get_db),
+    current_user: Optional[AuthenticatedUser] = Depends(get_optional_current_user),
+):
+    item = db.query(WardrobeItem).filter(WardrobeItem.id == item_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Wardrobe item not found.")
+
+    # Ownership guard
+    if item.user_id is not None:
+        if current_user is None or current_user.id != item.user_id:
+            raise HTTPException(status_code=404, detail="Wardrobe item not found.")
+    else:
+        # Legacy unowned record cannot be deleted by authenticated users
+        if current_user is not None:
+            raise HTTPException(status_code=403, detail="Cannot delete unowned legacy items.")
+
+    # Remove image asset from Cloudinary or local disk
+    target_asset = item.cloudinary_public_id or item.image_path
+    image_storage_service.delete(target_asset, storage_provider=item.storage_provider)
 
     db.delete(item)
     db.commit()
@@ -200,28 +387,79 @@ def delete_wardrobe_item(item_id: str, db: Session = Depends(get_db)):
 
 
 @router.get("/categories")
-def get_categories(db: Session = Depends(get_db)):
-    all_categories = [
+def get_categories(
+    db: Session = Depends(get_db),
+    current_user: Optional[AuthenticatedUser] = Depends(get_optional_current_user),
+):
+    standard_categories = [
         "tops",
-        "shirts",
-        "trousers",
-        "jeans",
-        "jackets",
-        "footwear",
+        "bottoms",
+        "dresses",
+        "outerwear",
+        "shoes",
         "bags",
-        "watches",
-        "jewelry",
-        "hats",
-        "sunglasses",
+        "accessories",
         "other",
     ]
-    # Count items per category in user's wardrobe
+    query = db.query(WardrobeItem.category)
+    if current_user:
+        query = query.filter(WardrobeItem.user_id == current_user.id)
+    else:
+        query = query.filter(WardrobeItem.user_id.is_(None))
+
     counts = {}
-    items = db.query(WardrobeItem.category).all()
-    for (cat,) in items:
-        counts[cat] = counts.get(cat, 0) + 1
+    for (cat,) in query.all():
+        if cat:
+            c = cat.strip().lower()
+            counts[c] = counts.get(c, 0) + 1
+
+    # Include standard categories first, then any additional categories with counts
+    all_categories = list(standard_categories)
+    for cat in counts.keys():
+        if cat not in all_categories:
+            all_categories.append(cat)
 
     return [
         {"category": cat, "count": counts.get(cat, 0)}
         for cat in all_categories
+    ]
+
+
+@router.get("/items/{item_id}/listings", response_model=List[CommunityListingResponse])
+def get_item_community_listings(
+    item_id: str,
+    db: Session = Depends(get_db),
+    current_user: AuthenticatedUser = Depends(get_current_user),
+):
+    """
+    List all active community shares for a specific personal wardrobe item.
+    Scoped strictly to the item owner.
+    """
+    item = db.query(WardrobeItem).filter(WardrobeItem.id == item_id).first()
+    if not item or item.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Wardrobe item not found.")
+
+    listings = (
+        db.query(CommunityListing, Community)
+        .join(Community, Community.id == CommunityListing.community_id)
+        .filter(
+            CommunityListing.wardrobe_item_id == item.id,
+            CommunityListing.status == "active",
+        )
+        .all()
+    )
+
+    return [
+        CommunityListingResponse(
+            id=listing.id,
+            community_id=comm.id,
+            community_name=comm.name,
+            wardrobe_item_id=listing.wardrobe_item_id,
+            owner_id=listing.owner_id,
+            status=listing.status,
+            notes=listing.notes,
+            created_at=listing.created_at,
+            item=_model_to_response(item),
+        )
+        for listing, comm in listings
     ]

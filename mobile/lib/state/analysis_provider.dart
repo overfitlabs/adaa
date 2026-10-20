@@ -12,6 +12,7 @@ class AnalysisProvider extends ChangeNotifier {
   bool _isAnalyzing = false;
   bool _isMatching = false;
   String? _error;
+  XFile? _lastAnalyzedFile;
 
   OutfitAnalysisResponse? get currentAnalysis => _currentAnalysis;
   List<OutfitAnalysisResponse> get history => _history;
@@ -19,8 +20,20 @@ class AnalysisProvider extends ChangeNotifier {
   bool get isAnalyzing => _isAnalyzing;
   bool get isMatching => _isMatching;
   String? get error => _error;
+  XFile? get lastAnalyzedFile => _lastAnalyzedFile;
+
+  void clearError() {
+    _error = null;
+    notifyListeners();
+  }
+
+  Future<bool> retryLastAnalysis() async {
+    if (_lastAnalyzedFile == null) return false;
+    return analyzeImage(_lastAnalyzedFile!);
+  }
 
   Future<bool> analyzeImage(XFile imageFile) async {
+    _lastAnalyzedFile = imageFile;
     _isAnalyzing = true;
     _error = null;
     _currentMatchResult = null;

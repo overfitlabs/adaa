@@ -9,12 +9,15 @@ from app.config import settings
 from app.database import init_db
 from app.api import (
     routes_health,
+    routes_auth,
     routes_analysis,
     routes_wardrobe,
     routes_matching,
     routes_outfits,
     routes_tryon,
     routes_recommendations,
+    routes_storage,
+    routes_communities,
 )
 
 
@@ -23,6 +26,9 @@ async def lifespan(app: FastAPI):
     # Startup: ensure DB tables and storage directories exist
     init_db()
     settings.storage_path.mkdir(parents=True, exist_ok=True)
+    (settings.storage_path / "wardrobe").mkdir(parents=True, exist_ok=True)
+    (settings.storage_path / "tryon").mkdir(parents=True, exist_ok=True)
+    (settings.storage_path / "inspirations").mkdir(parents=True, exist_ok=True)
     yield
     # Shutdown
 
@@ -43,21 +49,22 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mount local storage for serving image files
-app.mount(
-    "/storage",
-    StaticFiles(directory=str(settings.storage_path)),
-    name="storage",
-)
+# Storage Security & Privacy Architecture Policy:
+# All local media paths (/storage/inspirations, /storage/wardrobe, /storage/tryon)
+# are protected and routed through routes_storage.router with strict ownership validation
+# and path-traversal prevention. No public StaticFiles mounts are used for user media.
+app.include_router(routes_storage.router)
 
 # Include API Routers
 app.include_router(routes_health.router)
+app.include_router(routes_auth.router)
 app.include_router(routes_analysis.router)
 app.include_router(routes_wardrobe.router)
 app.include_router(routes_matching.router)
 app.include_router(routes_outfits.router)
 app.include_router(routes_tryon.router)
 app.include_router(routes_recommendations.router)
+app.include_router(routes_communities.router)
 
 
 @app.get("/")

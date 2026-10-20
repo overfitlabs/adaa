@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/models/garment_item.dart';
-import '../../../core/network/api_endpoints.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../state/analysis_provider.dart';
+import '../../../core/widgets/private_image_view.dart';
 import '../../matching/screens/matching_result_screen.dart';
 import '../../tryon/screens/tryon_screen.dart';
 
@@ -151,12 +151,17 @@ class _AnalysisDetailScreenState extends State<AnalysisDetailScreen> {
             // Inspiration Image Banner
             Stack(
               children: [
-                Image.network(
-                  ApiEndpoints.resolveImageUrl(analysis.imageUrl),
+                PrivateImageView(
+                  imageUrl: analysis.imageUrl,
                   width: double.infinity,
                   height: 260,
                   fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
+                  placeholder: Container(
+                    height: 200,
+                    color: AppColors.accentSoft,
+                    child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                  ),
+                  errorWidget: Container(
                     height: 200,
                     color: AppColors.accentSoft,
                     child: const Center(child: Icon(Icons.broken_image_outlined, size: 40)),

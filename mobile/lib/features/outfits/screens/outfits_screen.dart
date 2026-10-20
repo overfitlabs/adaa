@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/models/saved_outfit.dart';
-import '../../../core/network/api_endpoints.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/private_image_view.dart';
 import '../../../state/outfits_provider.dart';
 import 'create_outfit_screen.dart';
 
@@ -187,10 +187,10 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(8),
-                      child: Image.network(
-                        ApiEndpoints.resolveImageUrl(item.imageUrl),
+                      child: PrivateImageView(
+                        imageUrl: item.imageUrl,
                         fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) => Container(
+                        errorWidget: Container(
                           color: AppColors.accentSoft,
                           child: const Icon(Icons.checkroom, size: 18),
                         ),

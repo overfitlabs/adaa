@@ -1,5 +1,5 @@
 import json
-from typing import List
+from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -11,6 +11,7 @@ from app.schemas import (
     WardrobeItemResponse,
 )
 from app.api.routes_wardrobe import _model_to_response
+from app.auth.supabase_auth import get_optional_current_user, AuthenticatedUser
 
 router = APIRouter(prefix="/api/outfits", tags=["Saved Outfits & Looks"])
 
@@ -39,8 +40,10 @@ def _outfit_to_response(outfit: SavedOutfit, db: Session) -> SavedOutfitResponse
 def create_saved_outfit(
     data: SavedOutfitCreate,
     db: Session = Depends(get_db),
+    current_user: Optional[AuthenticatedUser] = Depends(get_optional_current_user),
 ):
     outfit = SavedOutfit(
+        user_id=current_user.id if current_user else None,
         name=data.name.strip(),
         occasion=data.occasion.strip() if data.occasion else None,
         notes=data.notes.strip() if data.notes else None,
@@ -54,24 +57,54 @@ def create_saved_outfit(
 
 
 @router.get("", response_model=List[SavedOutfitResponse])
-def list_saved_outfits(db: Session = Depends(get_db)):
-    outfits = db.query(SavedOutfit).order_by(SavedOutfit.created_at.desc()).all()
+def list_saved_outfits(
+    db: Session = Depends(get_db),
+    current_user: Optional[AuthenticatedUser] = Depends(get_optional_current_user),
+):
+    query = db.query(SavedOutfit)
+    if current_user:
+        query = query.filter(SavedOutfit.user_id == current_user.id)
+    else:
+        query = query.filter(SavedOutfit.user_id.is_(None))
+
+    outfits = query.order_by(SavedOutfit.created_at.desc()).all()
     return [_outfit_to_response(o, db) for o in outfits]
 
 
 @router.get("/{outfit_id}", response_model=SavedOutfitResponse)
-def get_saved_outfit(outfit_id: str, db: Session = Depends(get_db)):
+def get_saved_outfit(
+    outfit_id: str,
+    db: Session = Depends(get_db),
+    current_user: Optional[AuthenticatedUser] = Depends(get_optional_current_user),
+):
     outfit = db.query(SavedOutfit).filter(SavedOutfit.id == outfit_id).first()
     if not outfit:
         raise HTTPException(status_code=404, detail="Saved outfit not found.")
+
+    if outfit.user_id is not None:
+        if current_user is None or current_user.id != outfit.user_id:
+            raise HTTPException(status_code=404, detail="Saved outfit not found.")
+
     return _outfit_to_response(outfit, db)
 
 
 @router.delete("/{outfit_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_saved_outfit(outfit_id: str, db: Session = Depends(get_db)):
+def delete_saved_outfit(
+    outfit_id: str,
+    db: Session = Depends(get_db),
+    current_user: Optional[AuthenticatedUser] = Depends(get_optional_current_user),
+):
     outfit = db.query(SavedOutfit).filter(SavedOutfit.id == outfit_id).first()
     if not outfit:
         raise HTTPException(status_code=404, detail="Saved outfit not found.")
+
+    if outfit.user_id is not None:
+        if current_user is None or current_user.id != outfit.user_id:
+            raise HTTPException(status_code=404, detail="Saved outfit not found.")
+    else:
+        if current_user is not None:
+            raise HTTPException(status_code=403, detail="Cannot delete unowned legacy outfits.")
+
     db.delete(outfit)
     db.commit()
     return None

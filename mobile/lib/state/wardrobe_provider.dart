@@ -63,6 +63,10 @@ class WardrobeProvider extends ChangeNotifier {
     String? fit,
     String? season,
     String? formality,
+    String? brand,
+    String? size,
+    String? condition,
+    String? notes,
     List<String> tags = const [],
     String? imagePath,
     XFile? file,
@@ -82,6 +86,10 @@ class WardrobeProvider extends ChangeNotifier {
         fit: fit,
         season: season,
         formality: formality,
+        brand: brand,
+        size: size,
+        condition: condition,
+        notes: notes,
         tags: tags,
         imagePath: imagePath,
         file: file,
@@ -116,6 +124,36 @@ class WardrobeProvider extends ChangeNotifier {
     }
   }
 
+  Future<bool> updateItemPhoto(String id, XFile file) async {
+    try {
+      final updated = await ApiClient.updateWardrobeItemPhoto(id, file);
+      final idx = _items.indexWhere((i) => i.id == id);
+      if (idx != -1) {
+        _items[idx] = updated;
+        notifyListeners();
+      }
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<WardrobeItem?> refreshItem(String id) async {
+    try {
+      final updated = await ApiClient.getWardrobeItem(id);
+      final idx = _items.indexWhere((i) => i.id == id);
+      if (idx != -1) {
+        _items[idx] = updated;
+        notifyListeners();
+      }
+      return updated;
+    } catch (e) {
+      return null;
+    }
+  }
+
   Future<bool> deleteItem(String id) async {
     try {
       await ApiClient.deleteWardrobeItem(id);
@@ -128,5 +166,10 @@ class WardrobeProvider extends ChangeNotifier {
       notifyListeners();
       return false;
     }
+  }
+
+  void clearError() {
+    _error = null;
+    notifyListeners();
   }
 }

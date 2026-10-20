@@ -34,10 +34,11 @@ class OutfitAnalysisResponse(BaseModel):
     analysis_id: str
     image_url: str
     summary: str
-    vibe_or_style: str
+    vibe_or_style: Optional[str] = None
     items: List[DetectedFashionItem]
     detected_garment_count: int
     created_at: datetime
+    user_id: Optional[str] = None
 
 
 # Wardrobe Models
@@ -52,6 +53,10 @@ class WardrobeItemBase(BaseModel):
     fit: Optional[str] = None
     season: Optional[str] = None
     formality: Optional[str] = None
+    brand: Optional[str] = None
+    size: Optional[str] = None
+    condition: Optional[str] = None
+    notes: Optional[str] = None
     tags: List[str] = Field(default_factory=list)
 
 
@@ -70,13 +75,20 @@ class WardrobeItemUpdate(BaseModel):
     fit: Optional[str] = None
     season: Optional[str] = None
     formality: Optional[str] = None
+    brand: Optional[str] = None
+    size: Optional[str] = None
+    condition: Optional[str] = None
+    notes: Optional[str] = None
     tags: Optional[List[str]] = None
 
 
 class WardrobeItemResponse(WardrobeItemBase):
     id: str
+    user_id: Optional[str] = None
     image_path: str
     image_url: str
+    storage_provider: Optional[str] = "local"
+    is_community_shared: bool = False
     created_at: datetime
     updated_at: datetime
 
@@ -170,3 +182,90 @@ class StyleRecommendation(BaseModel):
     occasion: str
     suggested_item_ids: List[str]
     styling_tips: List[str]
+
+
+# Community Schemas
+class CommunityBase(BaseModel):
+    name: str = Field(..., min_length=2, max_length=100)
+    description: Optional[str] = None
+    is_private: bool = True
+
+
+class CommunityCreate(CommunityBase):
+    pass
+
+
+class CommunityUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=2, max_length=100)
+    description: Optional[str] = None
+    is_private: Optional[bool] = None
+
+
+class CommunityMembershipSummary(BaseModel):
+    id: str
+    role: str
+    status: str
+    requested_at: datetime
+    decided_at: Optional[datetime] = None
+
+
+class CommunityResponse(CommunityBase):
+    id: str
+    creator_id: str
+    status: str
+    created_at: datetime
+    updated_at: datetime
+    members_count: int = 0
+    listings_count: int = 0
+    my_membership: Optional[CommunityMembershipSummary] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class CommunityMemberResponse(BaseModel):
+    id: str
+    community_id: str
+    user_id: str
+    role: str  # owner, admin, member
+    status: str  # requested, approved, rejected, removed
+    requested_at: datetime
+    decided_at: Optional[datetime] = None
+    decided_by_id: Optional[str] = None
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class MemberRoleUpdate(BaseModel):
+    role: str = Field(..., description="owner, admin, or member")
+
+
+# Community Listing Schemas
+class CommunityListingCreate(BaseModel):
+    wardrobe_item_id: str
+    notes: Optional[str] = None
+
+
+class CommunityListingResponse(BaseModel):
+    id: str
+    community_id: str
+    community_name: Optional[str] = None
+    wardrobe_item_id: str
+    owner_id: str
+    status: str
+    notes: Optional[str] = None
+    created_at: datetime
+    item: Optional[WardrobeItemResponse] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class SharedClosetItemResponse(BaseModel):
+    listing_id: str
+    community_id: str
+    community_name: str
+    owner_id: str
+    status: str
+    notes: Optional[str] = None
+    created_at: datetime
+    item: WardrobeItemResponse

@@ -19,7 +19,6 @@ class AddWardrobeItemScreen extends StatefulWidget {
 class _AddWardrobeItemScreenState extends State<AddWardrobeItemScreen> {
   final ImagePicker _picker = ImagePicker();
   XFile? _selectedImage;
-  String? _serverImagePath;
 
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
@@ -27,6 +26,10 @@ class _AddWardrobeItemScreenState extends State<AddWardrobeItemScreen> {
   final _subCategoryController = TextEditingController();
   final _primaryColorController = TextEditingController();
   final _secondaryColorController = TextEditingController();
+  final _brandController = TextEditingController();
+  final _sizeController = TextEditingController();
+  final _conditionController = TextEditingController(text: 'Good');
+  final _notesController = TextEditingController();
   final _materialController = TextEditingController();
   final _patternController = TextEditingController();
   final _fitController = TextEditingController();
@@ -39,18 +42,42 @@ class _AddWardrobeItemScreenState extends State<AddWardrobeItemScreen> {
 
   final List<String> _categoryOptions = [
     'tops',
-    'shirts',
-    'trousers',
-    'jeans',
-    'jackets',
-    'footwear',
+    'bottoms',
+    'dresses',
+    'outerwear',
+    'shoes',
     'bags',
-    'watches',
-    'jewelry',
-    'hats',
-    'sunglasses',
+    'accessories',
     'other',
   ];
+
+  final List<String> _conditionOptions = [
+    'New with tags',
+    'Like New',
+    'Good',
+    'Fair',
+    'Vintage',
+  ];
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _categoryController.dispose();
+    _subCategoryController.dispose();
+    _primaryColorController.dispose();
+    _secondaryColorController.dispose();
+    _brandController.dispose();
+    _sizeController.dispose();
+    _conditionController.dispose();
+    _notesController.dispose();
+    _materialController.dispose();
+    _patternController.dispose();
+    _fitController.dispose();
+    _seasonController.dispose();
+    _formalityController.dispose();
+    _tagsController.dispose();
+    super.dispose();
+  }
 
   Future<void> _pickImage(ImageSource source) async {
     try {
@@ -63,7 +90,6 @@ class _AddWardrobeItemScreenState extends State<AddWardrobeItemScreen> {
       if (picked != null) {
         setState(() {
           _selectedImage = picked;
-          _serverImagePath = null;
         });
         // Automatically suggest running AI garment detection
         _runAutoDetection();
@@ -84,14 +110,31 @@ class _AddWardrobeItemScreenState extends State<AddWardrobeItemScreen> {
     try {
       final data = await ApiClient.detectWardrobeItemFromPhoto(_selectedImage!);
       setState(() {
-        _serverImagePath = data['image_path'];
         final detected = data['detected_item'] != null
             ? DetectedFashionItem.fromJson(data['detected_item'])
             : null;
 
         if (detected != null) {
           _nameController.text = detected.name;
-          _categoryController.text = detected.category;
+          final cat = detected.category.toLowerCase().trim();
+          if (_categoryOptions.contains(cat)) {
+            _categoryController.text = cat;
+          } else if (cat.contains('jacket') || cat.contains('coat') || cat.contains('blazer')) {
+            _categoryController.text = 'outerwear';
+          } else if (cat.contains('jean') || cat.contains('trouser') || cat.contains('pant') || cat.contains('skirt') || cat.contains('short')) {
+            _categoryController.text = 'bottoms';
+          } else if (cat.contains('shoe') || cat.contains('boot') || cat.contains('sneaker') || cat.contains('footwear')) {
+            _categoryController.text = 'shoes';
+          } else if (cat.contains('bag') || cat.contains('clutch') || cat.contains('tote')) {
+            _categoryController.text = 'bags';
+          } else if (cat.contains('dress') || cat.contains('gown')) {
+            _categoryController.text = 'dresses';
+          } else if (cat.contains('shirt') || cat.contains('top') || cat.contains('sweater') || cat.contains('hoodie')) {
+            _categoryController.text = 'tops';
+          } else {
+            _categoryController.text = 'other';
+          }
+
           _subCategoryController.text = detected.subCategory ?? '';
           _primaryColorController.text = detected.primaryColor;
           _secondaryColorController.text = detected.secondaryColor ?? '';
@@ -123,7 +166,7 @@ class _AddWardrobeItemScreenState extends State<AddWardrobeItemScreen> {
   }
 
   Future<void> _saveItem() async {
-    if (_selectedImage == null && _serverImagePath == null) {
+    if (_selectedImage == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please select or capture a photo of the clothing item.'),
@@ -150,14 +193,17 @@ class _AddWardrobeItemScreenState extends State<AddWardrobeItemScreen> {
       primaryColor: _primaryColorController.text.trim(),
       subCategory: _subCategoryController.text.trim().isEmpty ? null : _subCategoryController.text.trim(),
       secondaryColor: _secondaryColorController.text.trim().isEmpty ? null : _secondaryColorController.text.trim(),
+      brand: _brandController.text.trim().isEmpty ? null : _brandController.text.trim(),
+      size: _sizeController.text.trim().isEmpty ? null : _sizeController.text.trim(),
+      condition: _conditionController.text.trim().isEmpty ? null : _conditionController.text.trim(),
+      notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
       material: _materialController.text.trim().isEmpty ? null : _materialController.text.trim(),
       pattern: _patternController.text.trim().isEmpty ? null : _patternController.text.trim(),
       fit: _fitController.text.trim().isEmpty ? null : _fitController.text.trim(),
       season: _seasonController.text.trim().isEmpty ? null : _seasonController.text.trim(),
       formality: _formalityController.text.trim().isEmpty ? null : _formalityController.text.trim(),
       tags: tags,
-      imagePath: _serverImagePath,
-      file: _serverImagePath == null ? _selectedImage : null,
+      file: _selectedImage,
     );
 
     setState(() => _isSaving = false);
@@ -208,7 +254,35 @@ class _AddWardrobeItemScreenState extends State<AddWardrobeItemScreen> {
               // Image Picker Area
               _buildImagePickerBox(),
 
-              const SizedBox(height: 24),
+              if (_selectedImage != null) ...[
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _isDetecting ? null : _runAutoDetection,
+                        icon: _isDetecting
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
+                              )
+                            : const Icon(Icons.auto_awesome, size: 18, color: AppColors.primary),
+                        label: Text(
+                          _isDetecting ? 'Detecting Garment...' : 'Auto-Detect Details with AI',
+                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: AppColors.primary, width: 1.2),
+                          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+
+              const SizedBox(height: 18),
 
               if (_isDetecting)
                 Container(
@@ -300,6 +374,64 @@ class _AddWardrobeItemScreenState extends State<AddWardrobeItemScreen> {
                     ),
                   ),
                 ],
+              ),
+
+              const SizedBox(height: 14),
+
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _brandController,
+                      decoration: const InputDecoration(
+                        labelText: 'Brand',
+                        hintText: 'e.g. Zara, Levi\'s, Nike',
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _sizeController,
+                      decoration: const InputDecoration(
+                        labelText: 'Size',
+                        hintText: 'e.g. M, 32/30, US 9',
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 14),
+
+              DropdownButtonFormField<String>(
+                initialValue: _conditionOptions.contains(_conditionController.text)
+                    ? _conditionController.text
+                    : 'Good',
+                decoration: const InputDecoration(
+                  labelText: 'Condition',
+                  hintText: 'Select condition',
+                ),
+                items: _conditionOptions.map((cond) {
+                  return DropdownMenuItem(
+                    value: cond,
+                    child: Text(cond),
+                  );
+                }).toList(),
+                onChanged: (val) {
+                  if (val != null) setState(() => _conditionController.text = val);
+                },
+              ),
+
+              const SizedBox(height: 14),
+
+              TextFormField(
+                controller: _notesController,
+                maxLines: 2,
+                decoration: const InputDecoration(
+                  labelText: 'Notes',
+                  hintText: 'e.g. Dry clean only, gifts from family, favorite styling tip',
+                ),
               ),
 
               const SizedBox(height: 14),

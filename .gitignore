@@ -1,19 +1,38 @@
-# Python
-backend/.venv/
-backend/venv/
+# Environment & Secrets
+.env
+.env.*
+*.env
+!*.env.example
+!.env.example
 backend/.env
 backend/.env.*
 !backend/.env.example
+
+# Python
+backend/.venv/
+backend/venv/
 __pycache__/
 *.py[cod]
 *$py.class
-*.sqlite3
-*.db
-backend/uploads/
-backend/storage/
 .pytest_cache/
 .coverage
 htmlcov/
+
+# Databases & Backups
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+backend/backups/
+backups/
+
+# Local Storage & User Uploads
+backend/uploads/
+backend/storage/
+uploads/
+storage/
 
 # Flutter / Dart
 mobile/.dart_tool/

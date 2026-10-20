@@ -2,21 +2,52 @@ import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 
 class ApiEndpoints {
-  // Dynamically configure host based on execution platform
+  // Support compile-time environment overrides: flutter run --dart-define=API_BASE_URL=http://...
+  static const String _envBaseUrl = String.fromEnvironment('API_BASE_URL');
+
   static String get defaultBaseUrl {
+    if (_envBaseUrl.isNotEmpty) {
+      return _cleanUrl(_envBaseUrl);
+    }
     if (kIsWeb) {
       return 'http://127.0.0.1:8000';
     }
     try {
       if (Platform.isAndroid) {
-        // Android emulator maps 10.0.2.2 to host machine's localhost
-        return 'http://10.0.2.2:8000';
+        // http://127.0.0.1:8000 works on physical Android devices when "adb reverse tcp:8000 tcp:8000" is run.
+        // http://10.0.2.2:8000 is used on standard Android emulators.
+        // Auto-detection probes both.
+        return 'http://127.0.0.1:8000';
       }
     } catch (_) {}
     return 'http://127.0.0.1:8000';
   }
 
   static String baseUrl = defaultBaseUrl;
+
+  static void setBaseUrl(String url) {
+    baseUrl = _cleanUrl(url);
+  }
+
+  static String _cleanUrl(String url) {
+    var clean = url.trim();
+    if (clean.endsWith('/')) {
+      clean = clean.substring(0, clean.length - 1);
+    }
+    return clean;
+  }
+
+  static List<String> get candidateUrls {
+    final list = <String>[];
+    if (_envBaseUrl.isNotEmpty) {
+      list.add(_cleanUrl(_envBaseUrl));
+      return list;
+    }
+    list.add(baseUrl);
+    list.add('http://127.0.0.1:8000');
+    list.add('http://10.0.2.2:8000');
+    return list.toSet().toList();
+  }
 
   // Analysis
   static String get analyzeImage => '$baseUrl/api/analysis/analyze-image';
@@ -26,6 +57,7 @@ class ApiEndpoints {
   // Wardrobe
   static String get wardrobeItems => '$baseUrl/api/wardrobe/items';
   static String wardrobeItemDetail(String id) => '$baseUrl/api/wardrobe/items/$id';
+  static String wardrobeItemPhoto(String id) => '$baseUrl/api/wardrobe/items/$id/photo';
   static String get wardrobeCategories => '$baseUrl/api/wardrobe/categories';
   static String get detectWardrobeItem => '$baseUrl/api/wardrobe/detect-item';
 
@@ -42,6 +74,26 @@ class ApiEndpoints {
 
   // Recommendations
   static String get recommendations => '$baseUrl/api/recommendations';
+
+  // Communities & Shared Closets
+  static String get communities => '$baseUrl/api/communities';
+  static String get myCommunities => '$baseUrl/api/communities/my';
+  static String get sharedCloset => '$baseUrl/api/communities/shared-closet';
+  static String communityDetail(String id) => '$baseUrl/api/communities/$id';
+  static String communityMembers(String id) => '$baseUrl/api/communities/$id/members';
+  static String communityJoin(String id) => '$baseUrl/api/communities/$id/join';
+  static String communityLeave(String id) => '$baseUrl/api/communities/$id/leave';
+  static String communityMembership(String id) => '$baseUrl/api/communities/$id/membership';
+  static String communityApproveMember(String commId, String userId) => '$baseUrl/api/communities/$commId/members/$userId/approve';
+  static String communityRejectMember(String commId, String userId) => '$baseUrl/api/communities/$commId/members/$userId/reject';
+  static String communityRemoveMember(String commId, String userId) => '$baseUrl/api/communities/$commId/members/$userId';
+  static String communityMemberRole(String commId, String userId) => '$baseUrl/api/communities/$commId/members/$userId/role';
+  static String communityListings(String commId) => '$baseUrl/api/communities/$commId/listings';
+  static String communityListingDetail(String commId, String listingId) => '$baseUrl/api/communities/$commId/listings/$listingId';
+  static String wardrobeItemListings(String itemId) => '$baseUrl/api/wardrobe/items/$itemId/listings';
+
+  // Auth
+  static String get authMe => '$baseUrl/api/auth/me';
 
   // Health
   static String get health => '$baseUrl/health';

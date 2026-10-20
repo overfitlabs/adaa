@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/models/outfit_match.dart';
-import '../../../core/network/api_endpoints.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../state/analysis_provider.dart';
 import '../../../state/outfits_provider.dart';
+import '../../../core/widgets/private_image_view.dart';
 import '../../outfits/screens/outfits_screen.dart';
 
 class MatchingResultScreen extends StatelessWidget {
@@ -338,12 +338,12 @@ class MatchingResultScreen extends StatelessWidget {
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.circular(10),
-                  child: Image.network(
-                    ApiEndpoints.resolveImageUrl(match.bestMatch!.wardrobeItem.imageUrl),
+                  child: PrivateImageView(
+                    imageUrl: match.bestMatch!.wardrobeItem.imageUrl,
                     width: 54,
                     height: 54,
                     fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Container(
+                    errorWidget: Container(
                       width: 54,
                       height: 54,
                       color: AppColors.accentSoft,
@@ -414,12 +414,12 @@ class MatchingResultScreen extends StatelessWidget {
                       children: [
                         ClipRRect(
                           borderRadius: BorderRadius.circular(6),
-                          child: Image.network(
-                            ApiEndpoints.resolveImageUrl(alt.wardrobeItem.imageUrl),
+                          child: PrivateImageView(
+                            imageUrl: alt.wardrobeItem.imageUrl,
                             width: 36,
                             height: 36,
                             fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) => Container(
+                            errorWidget: Container(
                               width: 36,
                               height: 36,
                               color: AppColors.accentSoft,

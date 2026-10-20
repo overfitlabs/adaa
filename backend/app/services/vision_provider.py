@@ -1,10 +1,16 @@
 import abc
+import asyncio
 import json
+import logging
+import re
+import time
 import uuid
 from pathlib import Path
 from typing import List, Tuple
 from app.config import settings
 from app.schemas import DetectedFashionItem, StyleAttributes
+
+logger = logging.getLogger("wardrobelens.vision")
 
 
 class VisionProvider(abc.ABC):
@@ -20,16 +26,25 @@ class VisionProvider(abc.ABC):
 
 
 class GeminiVisionProvider(VisionProvider):
-    def __init__(self, api_key: str, model_name: str = "gemini-2.5-flash"):
+    def __init__(self, api_key: str, model_name: str = "gemini-2.5-flash", timeout_seconds: int = 40):
         self.api_key = api_key
         self.model_name = model_name
+        self.timeout_seconds = timeout_seconds
 
     async def analyze_outfit_image(
         self, image_path: Path
     ) -> Tuple[str, str, List[DetectedFashionItem]]:
         from google import genai
         from google.genai import types
+        from google.genai.errors import APIError
         from PIL import Image
+
+        start_time = time.time()
+        logger.info(
+            "GeminiVisionProvider: Initiating analysis with model '%s' (timeout: %ds)",
+            self.model_name,
+            self.timeout_seconds,
+        )
 
         client = genai.Client(api_key=self.api_key)
 
@@ -80,9 +95,28 @@ Provide your response in strictly valid JSON format matching this schema:
 }
 """
 
-        with Image.open(image_path) as pil_img:
-            # Call Gemini with structured JSON configuration
-            response = client.models.generate_content(
+        # Preprocess and resize image if necessary to prevent large payload network bottlenecks
+        with Image.open(image_path) as raw_img:
+            if raw_img.mode != "RGB":
+                pil_img = raw_img.convert("RGB")
+            else:
+                pil_img = raw_img.copy()
+
+            orig_w, orig_h = pil_img.size
+            max_dim = 1600
+            if max(orig_w, orig_h) > max_dim:
+                pil_img.thumbnail((max_dim, max_dim), Image.Resampling.LANCZOS)
+                logger.info(
+                    "Resized image for Gemini inference from %dx%d to %dx%d",
+                    orig_w,
+                    orig_h,
+                    pil_img.width,
+                    pil_img.height,
+                )
+
+        try:
+            # Asynchronous non-blocking call with explicit timeout
+            coro = client.aio.models.generate_content(
                 model=self.model_name,
                 contents=[pil_img, prompt],
                 config=types.GenerateContentConfig(
@@ -90,8 +124,42 @@ Provide your response in strictly valid JSON format matching this schema:
                     temperature=0.2,
                 ),
             )
+            response = await asyncio.wait_for(coro, timeout=self.timeout_seconds)
+        except asyncio.TimeoutError:
+            elapsed = time.time() - start_time
+            logger.error("GeminiVisionProvider: Call timed out after %.2fs", elapsed)
+            raise TimeoutError(
+                f"Gemini AI vision analysis timed out after {self.timeout_seconds}s. The service may be under heavy load."
+            )
+        except APIError as e:
+            elapsed = time.time() - start_time
+            logger.error("GeminiVisionProvider: APIError (%s) after %.2fs: %s", getattr(e, "code", "UNKNOWN"), elapsed, str(e))
+            status_code = getattr(e, "code", None)
+            if status_code in (401, 403):
+                raise PermissionError("Gemini API authentication failed. Please verify your GEMINI_API_KEY.")
+            elif status_code == 429:
+                raise RuntimeError("Gemini API quota or rate limit exceeded. Please try again later.")
+            elif status_code == 503:
+                raise RuntimeError("Gemini model is currently experiencing high demand. Please try again shortly.")
+            raise RuntimeError(f"Gemini API error: {str(e)}")
+        except Exception as e:
+            elapsed = time.time() - start_time
+            logger.error("GeminiVisionProvider: Unexpected error after %.2fs: %s", elapsed, str(e), exc_info=True)
+            raise RuntimeError(f"Unexpected vision provider failure: {str(e)}")
 
-        parsed = json.loads(response.text)
+        raw_text = response.text or ""
+        # Strip markdown code blocks if the model wrapped output in ```json ... ```
+        cleaned_text = raw_text.strip()
+        if cleaned_text.startswith("```"):
+            cleaned_text = re.sub(r"^```(?:json)?\s*", "", cleaned_text, flags=re.IGNORECASE)
+            cleaned_text = re.sub(r"\s*```$", "", cleaned_text)
+
+        try:
+            parsed = json.loads(cleaned_text)
+        except json.JSONDecodeError as e:
+            logger.error("GeminiVisionProvider: Failed to parse JSON response: %s", str(e))
+            raise ValueError(f"Failed to parse structured JSON response from Gemini model: {str(e)}")
+
         summary = parsed.get("summary", "Complete curated outfit.")
         vibe = parsed.get("vibe", "Contemporary Chic")
         items = []
@@ -119,6 +187,13 @@ Provide your response in strictly valid JSON format matching this schema:
             )
             items.append(item)
 
+        elapsed = time.time() - start_time
+        logger.info(
+            "GeminiVisionProvider: Analysis completed successfully in %.2fs (detected %d items, vibe='%s')",
+            elapsed,
+            len(items),
+            vibe,
+        )
         return summary, vibe, items
 
 
@@ -276,9 +351,16 @@ class MockVisionProvider(VisionProvider):
 
 
 def get_vision_provider() -> VisionProvider:
-    if settings.VISION_PROVIDER.lower() == "gemini" and settings.GEMINI_API_KEY:
-        return GeminiVisionProvider(
-            api_key=settings.GEMINI_API_KEY,
-            model_name=settings.GEMINI_MODEL,
-        )
+    if settings.VISION_PROVIDER.lower() == "gemini":
+        if settings.GEMINI_API_KEY:
+            logger.info("Vision provider configured: GeminiVisionProvider (model=%s, timeout=%ds)", settings.GEMINI_MODEL, settings.VISION_TIMEOUT_SECONDS)
+            return GeminiVisionProvider(
+                api_key=settings.GEMINI_API_KEY,
+                model_name=settings.GEMINI_MODEL,
+                timeout_seconds=settings.VISION_TIMEOUT_SECONDS,
+            )
+        else:
+            logger.warning("VISION_PROVIDER is 'gemini' but GEMINI_API_KEY is missing! Falling back to MockVisionProvider.")
+    else:
+        logger.info("Vision provider configured: MockVisionProvider (VISION_PROVIDER='%s')", settings.VISION_PROVIDER)
     return MockVisionProvider()

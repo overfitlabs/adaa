@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/models/wardrobe_item.dart';
-import '../../../core/network/api_endpoints.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../state/wardrobe_provider.dart';
+import '../../../core/widgets/private_image_view.dart';
 import 'add_wardrobe_item_screen.dart';
 import 'wardrobe_detail_screen.dart';
 
@@ -38,7 +38,18 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Digital Wardrobe'),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Digital Wardrobe', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+            Text(
+              prov.items.isNotEmpty
+                  ? '${prov.items.length} ${prov.items.length == 1 ? "garment" : "garments"} in closet'
+                  : 'Personal closet & garment manager',
+              style: const TextStyle(fontSize: 11, color: AppColors.textSecondary, fontWeight: FontWeight.w500),
+            ),
+          ],
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.add_a_photo_outlined),
@@ -54,13 +65,13 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
       ),
       body: Column(
         children: [
-          // Search & Filter Header
+          // Search Bar
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: 'Search by title, fabric, color, or tag...',
+                hintText: 'Search by title, brand, fabric, color, or notes...',
                 prefixIcon: const Icon(Icons.search, size: 20),
                 suffixIcon: _searchController.text.isNotEmpty
                     ? IconButton(
@@ -80,31 +91,40 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
           // Category Chips Bar
           _buildCategoryChips(prov),
 
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
 
-          // Items Grid
+          // Active filter & count summary bar
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  prov.selectedCategory == 'all'
+                      ? 'ALL GARMENTS (${prov.items.length})'
+                      : '${prov.selectedCategory.toUpperCase()} (${prov.items.length})',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.8,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                if (prov.isLoading)
+                  const SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
+                  ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 4),
+
+          // Content Area (Loading, Error, Empty, or Grid)
           Expanded(
-            child: prov.isLoading && prov.items.isEmpty
-                ? const Center(child: CircularProgressIndicator())
-                : prov.items.isEmpty
-                    ? _buildEmptyState(context)
-                    : RefreshIndicator(
-                        onRefresh: () => prov.loadWardrobe(),
-                        child: GridView.builder(
-                          padding: const EdgeInsets.all(16),
-                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            childAspectRatio: 0.72,
-                            crossAxisSpacing: 14,
-                            mainAxisSpacing: 14,
-                          ),
-                          itemCount: prov.items.length,
-                          itemBuilder: (ctx, idx) {
-                            final item = prov.items[idx];
-                            return _buildWardrobeGridTile(context, item);
-                          },
-                        ),
-                      ),
+            child: _buildBodyContent(context, prov),
           ),
         ],
       ),
@@ -118,6 +138,65 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
             context,
             MaterialPageRoute(builder: (_) => const AddWardrobeItemScreen()),
           );
+        },
+      ),
+    );
+  }
+
+  Widget _buildBodyContent(BuildContext context, WardrobeProvider prov) {
+    if (prov.isLoading && prov.items.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (prov.error != null && prov.items.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.cloud_off_outlined, size: 48, color: AppColors.missing),
+              const SizedBox(height: 12),
+              const Text(
+                'Unable to Load Wardrobe',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                prov.error!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: () => prov.loadWardrobe(),
+                icon: const Icon(Icons.refresh, size: 18),
+                label: const Text('Try Again'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (prov.items.isEmpty) {
+      return _buildEmptyState(context, prov);
+    }
+
+    return RefreshIndicator(
+      onRefresh: () => prov.loadWardrobe(),
+      child: GridView.builder(
+        padding: const EdgeInsets.all(16),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          childAspectRatio: 0.68,
+          crossAxisSpacing: 14,
+          mainAxisSpacing: 14,
+        ),
+        itemCount: prov.items.length,
+        itemBuilder: (ctx, idx) {
+          final item = prov.items[idx];
+          return _buildWardrobeGridTile(context, item);
         },
       ),
     );
@@ -185,20 +264,13 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
             Expanded(
               child: Stack(
                 children: [
-                  ClipRRect(
+                  PrivateImageView(
+                    imageUrl: item.imageUrl,
+                    width: double.infinity,
+                    height: double.infinity,
+                    fit: BoxFit.cover,
                     borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                    child: Image.network(
-                      ApiEndpoints.resolveImageUrl(item.imageUrl),
-                      width: double.infinity,
-                      height: double.infinity,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => Container(
-                        color: AppColors.accentSoft,
-                        child: const Center(
-                          child: Icon(Icons.checkroom, color: AppColors.textMuted, size: 36),
-                        ),
-                      ),
-                    ),
+                    onRefreshUrl: () => context.read<WardrobeProvider>().loadWardrobe(),
                   ),
                   Positioned(
                     top: 8,
@@ -239,7 +311,9 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    '${item.primaryColor} • ${item.material ?? item.fit ?? 'Wardrobe Piece'}',
+                    item.brand != null && item.brand!.isNotEmpty
+                        ? '${item.primaryColor} • ${item.brand}'
+                        : '${item.primaryColor} • ${item.material ?? item.fit ?? 'Garment'}',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
@@ -253,7 +327,44 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
     );
   }
 
-  Widget _buildEmptyState(BuildContext context) {
+  Widget _buildEmptyState(BuildContext context, WardrobeProvider prov) {
+    final bool hasFilter = _searchController.text.isNotEmpty || prov.selectedCategory != 'all';
+
+    if (hasFilter) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.search_off_outlined, size: 48, color: AppColors.textMuted),
+              const SizedBox(height: 16),
+              const Text(
+                'No matching garments',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'No items found matching your current filter criteria.',
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+              ),
+              const SizedBox(height: 16),
+              OutlinedButton.icon(
+                onPressed: () {
+                  _searchController.clear();
+                  prov.setSearchQuery('');
+                  prov.setCategory('all');
+                },
+                icon: const Icon(Icons.clear, size: 16),
+                label: const Text('Reset Filters'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
