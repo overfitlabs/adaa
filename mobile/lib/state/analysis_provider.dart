@@ -102,4 +102,17 @@ class AnalysisProvider extends ChangeNotifier {
       notifyListeners();
     }
   }
+
+  /// Completely clears all cached analyses, history, match results, and staged files.
+  /// Called on logout or when switching accounts to ensure total session isolation.
+  void clear() {
+    _currentAnalysis = null;
+    _history = [];
+    _currentMatchResult = null;
+    _isAnalyzing = false;
+    _isMatching = false;
+    _error = null;
+    _lastAnalyzedFile = null;
+    notifyListeners();
+  }
 }

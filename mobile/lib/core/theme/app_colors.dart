@@ -48,4 +48,10 @@ class AppColors {
     blurRadius: 8,
     offset: const Offset(0, 2),
   );
+
+  static final BoxShadow subtleShadow = BoxShadow(
+    color: espresso.withValues(alpha: 0.04),
+    blurRadius: 4,
+    offset: const Offset(0, 1),
+  );
 }

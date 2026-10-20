@@ -13,6 +13,13 @@ class WardrobeProvider extends ChangeNotifier {
   String? _error;
 
   List<WardrobeItem> get items => _items;
+
+  @visibleForTesting
+  set items(List<WardrobeItem> value) {
+    _items = value;
+    notifyListeners();
+  }
+
   List<Map<String, dynamic>> get categories => _categories;
   String get selectedCategory => _selectedCategory;
   String get searchQuery => _searchQuery;
@@ -204,6 +211,18 @@ class WardrobeProvider extends ChangeNotifier {
   }
 
   void clearError() {
+    _error = null;
+    notifyListeners();
+  }
+
+  /// Completely clears all cached wardrobe items and resets filters.
+  /// Called on logout or when switching accounts to ensure total session isolation.
+  void clear() {
+    _items = [];
+    _categories = [];
+    _selectedCategory = 'all';
+    _searchQuery = '';
+    _isLoading = false;
     _error = null;
     notifyListeners();
   }

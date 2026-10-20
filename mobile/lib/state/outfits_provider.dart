@@ -64,4 +64,13 @@ class OutfitsProvider extends ChangeNotifier {
       return false;
     }
   }
+
+  /// Completely clears all cached outfits.
+  /// Called on logout or when switching accounts to ensure total session isolation.
+  void clear() {
+    _outfits = [];
+    _isLoading = false;
+    _error = null;
+    notifyListeners();
+  }
 }

@@ -8,6 +8,8 @@ import '../../../state/auth_provider.dart';
 import '../../../state/community_provider.dart';
 import '../../../state/wardrobe_provider.dart';
 import '../../wardrobe/screens/wardrobe_detail_screen.dart';
+import '../widgets/public_profile_sheet.dart';
+import 'shared_item_detail_screen.dart';
 
 class CommunityDetailScreen extends StatefulWidget {
   final CommunityModel community;
@@ -531,7 +533,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
                   padding: const EdgeInsets.all(16),
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
-                    childAspectRatio: 0.68,
+                    childAspectRatio: 0.58,
                     crossAxisSpacing: 12,
                     mainAxisSpacing: 12,
                   ),
@@ -541,12 +543,27 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
                     final item = listing.item;
                     if (item == null) return const SizedBox.shrink();
 
+                    final currentUserId = context.read<AuthProvider>().user?.id;
+                    final isOwner = currentUserId != null && currentUserId == listing.ownerId;
+
                     return GestureDetector(
                       onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => WardrobeDetailScreen(item: item)),
-                        );
+                        if (isOwner) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => WardrobeDetailScreen(item: item)),
+                          );
+                        } else {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => SharedItemDetailScreen.fromListing(
+                                listing: listing,
+                                communityName: widget.community.name,
+                              ),
+                            ),
+                          );
+                        }
                       },
                       child: Container(
                         decoration: BoxDecoration(
@@ -605,15 +622,42 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
                                     overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(fontSize: 10, color: AppColors.textSecondary),
                                   ),
-                                  if (listing.notes != null && listing.notes!.isNotEmpty) ...[
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      listing.notes!,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(fontSize: 9, fontStyle: FontStyle.italic, color: AppColors.accent),
+                                  const SizedBox(height: 5),
+                                  // Owner attribution
+                                  InkWell(
+                                    onTap: () => PublicProfileSheet.show(
+                                      context,
+                                      userId: listing.ownerId,
+                                      fallbackName: listing.resolvedOwnerName,
                                     ),
-                                  ],
+                                    borderRadius: BorderRadius.circular(4),
+                                    child: Row(
+                                      children: [
+                                        CircleAvatar(
+                                          radius: 8,
+                                          backgroundColor: AppColors.accentSoft,
+                                          child: Text(
+                                            listing.ownerInitials,
+                                            style: const TextStyle(fontSize: 8, fontWeight: FontWeight.w800, color: AppColors.primary),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Expanded(
+                                          child: Text(
+                                            listing.resolvedOwnerName,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(fontSize: 10, color: AppColors.textSecondary, fontWeight: FontWeight.w600),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 3),
+                                  const Text(
+                                    'Shared with this community',
+                                    style: TextStyle(fontSize: 9, color: AppColors.textMuted, fontStyle: FontStyle.italic),
+                                  ),
                                 ],
                               ),
                             ),

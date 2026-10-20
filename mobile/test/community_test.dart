@@ -275,9 +275,53 @@ class FakeCommunityProvider extends ChangeNotifier implements CommunityProvider 
   Future<List<CommunityListingModel>> getWardrobeItemListings(String itemId) async {
     return testWardrobeItemListings.where((l) => l.wardrobeItemId == itemId).toList();
   }
+
+  @override
+  void clear() {
+    testCommunities.clear();
+    testMyCommunities.clear();
+    testMembers.clear();
+    testCommunityListings.clear();
+    testSharedClosetItems.clear();
+    testWardrobeItemListings.clear();
+    testIsLoading = false;
+    testError = null;
+    notifyListeners();
+  }
+
+  @override
+  set communities(List<CommunityModel> value) {
+    testCommunities = value;
+    notifyListeners();
+  }
+
+  @override
+  set myCommunities(List<CommunityModel> value) {
+    testMyCommunities = value;
+    notifyListeners();
+  }
+
+  @override
+  set sharedClosetItems(List<SharedClosetItemModel> value) {
+    testSharedClosetItems = value;
+    notifyListeners();
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 class FakeWardrobeProvider extends ChangeNotifier implements WardrobeProvider {
+  @override
+  void clear() {
+    items.clear();
+    categories.clear();
+    selectedCategory = 'all';
+    searchQuery = '';
+    isLoading = false;
+    error = null;
+    notifyListeners();
+  }
   @override
   List<WardrobeItem> items = [];
   @override

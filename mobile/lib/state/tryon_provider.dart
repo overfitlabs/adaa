@@ -80,6 +80,16 @@ class TryOnProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Completely clears active task and polling timer.
+  /// Called on logout or when switching accounts to ensure total session isolation.
+  void clear() {
+    _cancelPolling();
+    _activeTask = null;
+    _isSubmitting = false;
+    _error = null;
+    notifyListeners();
+  }
+
   @override
   void dispose() {
     _cancelPolling();

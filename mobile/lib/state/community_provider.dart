@@ -23,6 +23,24 @@ class CommunityProvider extends ChangeNotifier {
   List<CommunityListingModel> get communityListings => _communityListings;
   List<SharedClosetItemModel> get sharedClosetItems => _sharedClosetItems;
 
+  @visibleForTesting
+  set communities(List<CommunityModel> value) {
+    _communities = value;
+    notifyListeners();
+  }
+
+  @visibleForTesting
+  set myCommunities(List<CommunityModel> value) {
+    _myCommunities = value;
+    notifyListeners();
+  }
+
+  @visibleForTesting
+  set sharedClosetItems(List<SharedClosetItemModel> value) {
+    _sharedClosetItems = value;
+    notifyListeners();
+  }
+
   String get searchQuery => _searchQuery;
   String get sharedClosetCategory => _sharedClosetCategory;
   String get sharedClosetSearch => _sharedClosetSearch;
@@ -346,5 +364,22 @@ class CommunityProvider extends ChangeNotifier {
     if (kDebugMode) {
       print('[CommunityProvider] $msg');
     }
+  }
+
+  /// Completely clears all cached community listings, memberships, and shared closet items.
+  /// Called on logout or when switching accounts to ensure total session isolation.
+  void clear() {
+    _communities = [];
+    _myCommunities = [];
+    _selectedCommunity = null;
+    _members = [];
+    _communityListings = [];
+    _sharedClosetItems = [];
+    _searchQuery = '';
+    _sharedClosetCategory = 'all';
+    _sharedClosetSearch = '';
+    _isLoading = false;
+    _error = null;
+    notifyListeners();
   }
 }

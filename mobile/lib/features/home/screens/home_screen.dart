@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/auth/session_manager.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_endpoints.dart';
 import '../../../core/theme/app_colors.dart';
@@ -17,15 +18,20 @@ import '../../../state/outfits_provider.dart';
 import '../../../state/wardrobe_provider.dart';
 import '../../analysis/screens/analysis_detail_screen.dart';
 import '../../analysis/screens/item_review_screen.dart';
-import '../../auth/screens/auth_dialog.dart';
 import '../../communities/screens/communities_screen.dart';
 import '../../communities/screens/shared_closet_screen.dart';
 import '../../outfits/screens/outfits_screen.dart';
 import '../../profile/screens/profile_screen.dart';
 import '../../styling/screens/recommendations_screen.dart';
 import '../../tryon/screens/tryon_screen.dart';
+import '../../communities/screens/shared_item_detail_screen.dart';
+import '../../communities/widgets/public_profile_sheet.dart';
+import '../../requests/screens/requests_screen.dart';
+import '../../notifications/screens/notifications_screen.dart';
 import '../../wardrobe/screens/wardrobe_detail_screen.dart';
 import '../../wardrobe/screens/wardrobe_screen.dart';
+import '../../../state/notification_provider.dart';
+
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -61,6 +67,10 @@ class _HomeScreenState extends State<HomeScreen> {
         context.read<OutfitsProvider>().loadOutfits();
         context.read<CommunityProvider>().loadMyCommunities(silent: true);
         context.read<CommunityProvider>().loadSharedCloset(silent: true);
+        try {
+          context.read<NotificationProvider>().loadNotifications(silent: true);
+          context.read<NotificationProvider>().loadUnreadCount(silent: true);
+        } catch (_) {}
       }
     }
   }
@@ -447,7 +457,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                   onSelected: (val) {
                     if (val == 'logout') {
-                      auth.signOut();
+                      SessionManager.performLogout(context);
                     } else if (val == 'profile') {
                       setState(() => _currentTabIndex = 3);
                     }
@@ -455,23 +465,54 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               );
             }
-            return Padding(
-              padding: const EdgeInsets.only(right: 4),
-              child: TextButton.icon(
-                icon: const Icon(Icons.person_outline, size: 16),
-                label: const Text('Sign In', style: TextStyle(fontSize: 12)),
-                onPressed: () => AuthDialog.show(context),
-                style: TextButton.styleFrom(
-                  foregroundColor: AppColors.primary,
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
+            return const SizedBox.shrink();
+          },
+        ),
+        // Activity & Notifications Button with Unread Badge
+        Builder(
+          builder: (ctx) {
+            NotificationProvider? notifProv;
+            try {
+              notifProv = ctx.watch<NotificationProvider>();
+            } catch (_) {
+              notifProv = null;
+            }
+            final unread = notifProv?.unreadCount ?? 0;
+            return IconButton(
+              tooltip: 'Activity & Notifications',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+                );
+              },
+              icon: Badge(
+                isLabelVisible: unread > 0,
+                backgroundColor: AppColors.terracotta,
+                label: Text(
+                  unread > 99 ? '99+' : '$unread',
+                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
                 ),
+                child: const Icon(Icons.notifications_outlined, size: 22, color: AppColors.espresso),
               ),
+            );
+          },
+        ),
+        // Requests Button
+        IconButton(
+          icon: const Icon(Icons.handshake_outlined, size: 22, color: AppColors.espresso),
+          tooltip: 'Borrowing Requests',
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const RequestsScreen()),
             );
           },
         ),
         // Connection pill
         Padding(
           padding: const EdgeInsets.only(right: 16),
+
           child: InkWell(
             onTap: _showServerConfigDialog,
             borderRadius: BorderRadius.circular(16),
@@ -1039,7 +1080,7 @@ class _HomeScreenState extends State<HomeScreen> {
         else
           // Rich horizontal feed of shared pieces
           SizedBox(
-            height: 220,
+            height: 235,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: sharedItems.length,
@@ -1047,18 +1088,29 @@ class _HomeScreenState extends State<HomeScreen> {
               itemBuilder: (ctx, idx) {
                 final shared = sharedItems[idx];
                 final garment = shared.item;
+                final currentUserId = context.read<AuthProvider>().user?.id;
+                final isOwner = currentUserId != null && currentUserId == shared.ownerId;
 
                 return GestureDetector(
                   onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => WardrobeDetailScreen(item: garment),
-                      ),
-                    );
+                    if (isOwner) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => WardrobeDetailScreen(item: garment),
+                        ),
+                      );
+                    } else {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => SharedItemDetailScreen(sharedItem: shared),
+                        ),
+                      );
+                    }
                   },
                   child: Container(
-                    width: 150,
+                    width: 155,
                     decoration: BoxDecoration(
                       color: AppColors.surface,
                       borderRadius: BorderRadius.circular(14),
@@ -1074,8 +1126,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             children: [
                               PrivateImageView(
                                 imageUrl: garment.imageUrl,
-                                height: 120,
-                                width: 150,
+                                height: 115,
+                                width: 155,
                                 fit: BoxFit.cover,
                               ),
                               Positioned(
@@ -1117,7 +1169,38 @@ class _HomeScreenState extends State<HomeScreen> {
                                   color: AppColors.textPrimary,
                                 ),
                               ),
-                              const SizedBox(height: 2),
+                              const SizedBox(height: 3),
+                              // Owner Attribution
+                              InkWell(
+                                onTap: () => PublicProfileSheet.show(
+                                  context,
+                                  userId: shared.ownerId,
+                                  fallbackName: shared.resolvedOwnerName,
+                                ),
+                                borderRadius: BorderRadius.circular(4),
+                                child: Row(
+                                  children: [
+                                    CircleAvatar(
+                                      radius: 8,
+                                      backgroundColor: AppColors.accentSoft,
+                                      child: Text(
+                                        shared.ownerInitials,
+                                        style: const TextStyle(fontSize: 8, fontWeight: FontWeight.w800, color: AppColors.primary),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Expanded(
+                                      child: Text(
+                                        shared.resolvedOwnerName,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(fontSize: 10, color: AppColors.textSecondary, fontWeight: FontWeight.w500),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 4),
                               Wrap(
                                 spacing: 4,
                                 children: [

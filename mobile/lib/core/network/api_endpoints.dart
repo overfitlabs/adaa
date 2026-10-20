@@ -75,6 +75,7 @@ class ApiEndpoints {
 
   // Recommendations
   static String get recommendations => '$baseUrl/api/recommendations';
+  static String get generateRecommendations => '$baseUrl/api/recommendations/generate';
 
   // Communities & Shared Closets
   static String get communities => '$baseUrl/api/communities';
@@ -93,8 +94,28 @@ class ApiEndpoints {
   static String communityListingDetail(String commId, String listingId) => '$baseUrl/api/communities/$commId/listings/$listingId';
   static String wardrobeItemListings(String itemId) => '$baseUrl/api/wardrobe/items/$itemId/listings';
 
+  // Borrowing Requests
+  static String borrowRequest(String commId, String listingId) => '$baseUrl/api/communities/$commId/listings/$listingId/requests';
+  static String get incomingRequests => '$baseUrl/api/requests/incoming';
+  static String get outgoingRequests => '$baseUrl/api/requests/outgoing';
+  static String updateRequestStatus(String reqId) => '$baseUrl/api/requests/$reqId/status';
+
+  // Users & Profiles
+  static String get myProfile => '$baseUrl/api/users/me';
+  static String get updateMyProfile => '$baseUrl/api/users/me/profile';
+  static String get myPrivacy => '$baseUrl/api/users/me/privacy';
+  static String get uploadAvatar => '$baseUrl/api/users/me/avatar';
+  static String publicProfile(String userId) => '$baseUrl/api/users/$userId/public-profile';
+
   // Auth
   static String get authMe => '$baseUrl/api/auth/me';
+
+  // Notifications & Activity Center
+  static String get notifications => '$baseUrl/api/notifications';
+  static String get unreadNotificationCount => '$baseUrl/api/notifications/unread-count';
+  static String markNotificationRead(String id) => '$baseUrl/api/notifications/$id/read';
+  static String get markAllNotificationsRead => '$baseUrl/api/notifications/read-all';
+
 
   // Health
   static String get health => '$baseUrl/health';

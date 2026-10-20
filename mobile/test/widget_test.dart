@@ -112,17 +112,16 @@ void main() {
   });
 
   group('AdaaApp Widget Tests', () {
-    testWidgets('App renders Home Screen with adaa branding', (WidgetTester tester) async {
+    testWidgets('App renders Auth Screen when unauthenticated with adaa branding', (WidgetTester tester) async {
       await tester.pumpWidget(const AdaaApp());
       await tester.pump();
 
       // Check adaa wordmark
       expect(find.text('adaa'), findsOneWidget);
 
-      // Check hero action
-      expect(find.text('Upload Outfit Photo'), findsOneWidget);
-      expect(find.text('Digital Wardrobe'), findsOneWidget);
-      expect(find.text('YouCam Virtual Try-On'), findsOneWidget);
+      // Strict auth gate: renders AuthScreen, showing Sign In / Create Account
+      expect(find.text('Sign In'), findsAtLeastNWidgets(1));
+      expect(find.text('Create Account'), findsAtLeastNWidgets(1));
     });
   });
 
@@ -645,6 +644,17 @@ class FakeWardrobeProvider extends ChangeNotifier implements WardrobeProvider {
 
   @override
   void clearError() {
+    error = null;
+    notifyListeners();
+  }
+
+  @override
+  void clear() {
+    items = [];
+    categories = [];
+    selectedCategory = 'all';
+    searchQuery = '';
+    isLoading = false;
     error = null;
     notifyListeners();
   }

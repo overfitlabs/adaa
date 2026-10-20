@@ -84,6 +84,17 @@ class FakeWardrobeForReview extends ChangeNotifier implements WardrobeProvider {
 
   @override
   Future<bool> deleteItem(String id) async => true;
+
+  @override
+  void clear() {
+    items = [];
+    categories = [];
+    selectedCategory = 'all';
+    searchQuery = '';
+    isLoading = false;
+    error = null;
+    notifyListeners();
+  }
 }
 
 void main() {

@@ -1,4 +1,5 @@
 import 'wardrobe_item.dart';
+import 'user_profile_model.dart';
 
 class CommunityMembershipSummary {
   final String id;
@@ -206,6 +207,9 @@ class CommunityListingModel {
   final String? communityName;
   final String wardrobeItemId;
   final String ownerId;
+  final String? ownerName;
+  final String? ownerAvatarUrl;
+  final String? ownerBio;
   final String status; // active, unlisted
   final String? notes;
   final DateTime createdAt;
@@ -217,11 +221,32 @@ class CommunityListingModel {
     this.communityName,
     required this.wardrobeItemId,
     required this.ownerId,
+    this.ownerName,
+    this.ownerAvatarUrl,
+    this.ownerBio,
     required this.status,
     this.notes,
     required this.createdAt,
     this.item,
   });
+
+  String get resolvedOwnerName {
+    if (ownerName != null && ownerName!.trim().isNotEmpty) {
+      return ownerName!.trim();
+    }
+    return 'Member (${ownerId.length >= 6 ? ownerId.substring(0, 6) : ownerId})';
+  }
+
+  String get ownerInitials {
+    final name = resolvedOwnerName;
+    final parts = name.split(' ').where((p) => p.isNotEmpty).toList();
+    if (parts.length >= 2) {
+      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+    } else if (name.isNotEmpty) {
+      return name.substring(0, name.length >= 2 ? 2 : 1).toUpperCase();
+    }
+    return 'M';
+  }
 
   factory CommunityListingModel.fromJson(Map<String, dynamic> json) {
     return CommunityListingModel(
@@ -230,6 +255,9 @@ class CommunityListingModel {
       communityName: json['community_name'] as String?,
       wardrobeItemId: json['wardrobe_item_id'] as String,
       ownerId: json['owner_id'] as String,
+      ownerName: json['owner_name'] as String?,
+      ownerAvatarUrl: json['owner_avatar_url'] as String?,
+      ownerBio: json['owner_bio'] as String?,
       status: json['status'] as String? ?? 'active',
       notes: json['notes'] as String?,
       createdAt: json['created_at'] != null
@@ -248,6 +276,9 @@ class CommunityListingModel {
       'community_name': communityName,
       'wardrobe_item_id': wardrobeItemId,
       'owner_id': ownerId,
+      'owner_name': ownerName,
+      'owner_avatar_url': ownerAvatarUrl,
+      'owner_bio': ownerBio,
       'status': status,
       'notes': notes,
       'created_at': createdAt.toIso8601String(),
@@ -261,6 +292,9 @@ class SharedClosetItemModel {
   final String communityId;
   final String communityName;
   final String ownerId;
+  final String? ownerName;
+  final String? ownerAvatarUrl;
+  final String? ownerBio;
   final String status;
   final String? notes;
   final DateTime createdAt;
@@ -271,11 +305,32 @@ class SharedClosetItemModel {
     required this.communityId,
     required this.communityName,
     required this.ownerId,
+    this.ownerName,
+    this.ownerAvatarUrl,
+    this.ownerBio,
     required this.status,
     this.notes,
     required this.createdAt,
     required this.item,
   });
+
+  String get resolvedOwnerName {
+    if (ownerName != null && ownerName!.trim().isNotEmpty) {
+      return ownerName!.trim();
+    }
+    return 'Member (${ownerId.length >= 6 ? ownerId.substring(0, 6) : ownerId})';
+  }
+
+  String get ownerInitials {
+    final name = resolvedOwnerName;
+    final parts = name.split(' ').where((p) => p.isNotEmpty).toList();
+    if (parts.length >= 2) {
+      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+    } else if (name.isNotEmpty) {
+      return name.substring(0, name.length >= 2 ? 2 : 1).toUpperCase();
+    }
+    return 'M';
+  }
 
   factory SharedClosetItemModel.fromJson(Map<String, dynamic> json) {
     return SharedClosetItemModel(
@@ -283,6 +338,9 @@ class SharedClosetItemModel {
       communityId: json['community_id'] as String,
       communityName: json['community_name'] as String? ?? 'Community',
       ownerId: json['owner_id'] as String,
+      ownerName: json['owner_name'] as String?,
+      ownerAvatarUrl: json['owner_avatar_url'] as String?,
+      ownerBio: json['owner_bio'] as String?,
       status: json['status'] as String? ?? 'active',
       notes: json['notes'] as String?,
       createdAt: json['created_at'] != null
@@ -298,6 +356,9 @@ class SharedClosetItemModel {
       'community_id': communityId,
       'community_name': communityName,
       'owner_id': ownerId,
+      'owner_name': ownerName,
+      'owner_avatar_url': ownerAvatarUrl,
+      'owner_bio': ownerBio,
       'status': status,
       'notes': notes,
       'created_at': createdAt.toIso8601String(),
@@ -305,3 +366,203 @@ class SharedClosetItemModel {
     };
   }
 }
+
+class ItemRequestModel {
+  final String id;
+  final String listingId;
+  final String wardrobeItemId;
+  final String communityId;
+  final String? communityName;
+  final String requesterId;
+  final String? requesterName;
+  final String? requesterAvatarUrl;
+  final String ownerId;
+  final String? ownerName;
+  final String? ownerAvatarUrl;
+  final String status; // pending, accepted, declined, cancelled, completed
+  final String? message;
+  final DateTime? startDate;
+  final DateTime? endDate;
+  final DateTime? respondedAt;
+  final DateTime? completedAt;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final WardrobeItem? item;
+
+  ItemRequestModel({
+    required this.id,
+    required this.listingId,
+    required this.wardrobeItemId,
+    required this.communityId,
+    this.communityName,
+    required this.requesterId,
+    this.requesterName,
+    this.requesterAvatarUrl,
+    required this.ownerId,
+    this.ownerName,
+    this.ownerAvatarUrl,
+    required this.status,
+    this.message,
+    this.startDate,
+    this.endDate,
+    this.respondedAt,
+    this.completedAt,
+    required this.createdAt,
+    required this.updatedAt,
+    this.item,
+  });
+
+  bool get isPending => status == 'pending';
+  bool get isAccepted => status == 'accepted';
+  bool get isDeclined => status == 'declined';
+  bool get isCancelled => status == 'cancelled';
+  bool get isCompleted => status == 'completed';
+  bool get isTerminal => isDeclined || isCancelled || isCompleted;
+
+  String get resolvedRequesterName {
+    if (requesterName != null && requesterName!.trim().isNotEmpty) {
+      return requesterName!.trim();
+    }
+    return 'Member (${requesterId.length >= 6 ? requesterId.substring(0, 6) : requesterId})';
+  }
+
+  String get resolvedOwnerName {
+    if (ownerName != null && ownerName!.trim().isNotEmpty) {
+      return ownerName!.trim();
+    }
+    return 'Member (${ownerId.length >= 6 ? ownerId.substring(0, 6) : ownerId})';
+  }
+
+  String get dateRangeSummary {
+    if (startDate == null && endDate == null) {
+      return 'Flexible dates';
+    }
+    if (startDate != null && endDate != null) {
+      return '${_formatMonthDay(startDate!)} - ${_formatMonthDay(endDate!)}';
+    }
+    if (startDate != null) {
+      return 'From ${_formatMonthDay(startDate!)}';
+    }
+    return 'Until ${_formatMonthDay(endDate!)}';
+  }
+
+  static String _formatMonthDay(DateTime dt) {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return '${months[dt.month - 1]} ${dt.day}';
+  }
+
+  factory ItemRequestModel.fromJson(Map<String, dynamic> json) {
+    return ItemRequestModel(
+      id: json['id'] as String,
+      listingId: json['listing_id'] as String,
+      wardrobeItemId: json['wardrobe_item_id'] as String,
+      communityId: json['community_id'] as String,
+      communityName: json['community_name'] as String?,
+      requesterId: json['requester_id'] as String,
+      requesterName: json['requester_name'] as String?,
+      requesterAvatarUrl: json['requester_avatar_url'] as String?,
+      ownerId: json['owner_id'] as String,
+      ownerName: json['owner_name'] as String?,
+      ownerAvatarUrl: json['owner_avatar_url'] as String?,
+      status: json['status'] as String? ?? 'pending',
+      message: json['message'] as String?,
+      startDate: json['start_date'] != null ? DateTime.parse(json['start_date'] as String) : null,
+      endDate: json['end_date'] != null ? DateTime.parse(json['end_date'] as String) : null,
+      respondedAt: json['responded_at'] != null ? DateTime.parse(json['responded_at'] as String) : null,
+      completedAt: json['completed_at'] != null ? DateTime.parse(json['completed_at'] as String) : null,
+      createdAt: json['created_at'] != null ? DateTime.parse(json['created_at'] as String) : DateTime.now(),
+      updatedAt: json['updated_at'] != null ? DateTime.parse(json['updated_at'] as String) : DateTime.now(),
+      item: json['item'] != null ? WardrobeItem.fromJson(json['item'] as Map<String, dynamic>) : null,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'listing_id': listingId,
+      'wardrobe_item_id': wardrobeItemId,
+      'community_id': communityId,
+      'community_name': communityName,
+      'requester_id': requesterId,
+      'requester_name': requesterName,
+      'requester_avatar_url': requesterAvatarUrl,
+      'owner_id': ownerId,
+      'owner_name': ownerName,
+      'owner_avatar_url': ownerAvatarUrl,
+      'status': status,
+      'message': message,
+      'start_date': startDate?.toIso8601String(),
+      'end_date': endDate?.toIso8601String(),
+      'responded_at': respondedAt?.toIso8601String(),
+      'completed_at': completedAt?.toIso8601String(),
+      'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt.toIso8601String(),
+      'item': item?.toJson(),
+    };
+  }
+}
+
+class PublicUserProfileModel {
+  final String id;
+  final String displayName;
+  final String? avatarUrl;
+  final String? bio;
+  final int? age;
+  final String? phoneNumber;
+  final String? email;
+  final FitPreferencesModel? fitPreferences;
+  final List<String>? preferredStyles;
+  final int sharedCommunitiesCount;
+  final int sharedItemsCount;
+
+  PublicUserProfileModel({
+    required this.id,
+    required this.displayName,
+    this.avatarUrl,
+    this.bio,
+    this.age,
+    this.phoneNumber,
+    this.email,
+    this.fitPreferences,
+    this.preferredStyles,
+    this.sharedCommunitiesCount = 0,
+    this.sharedItemsCount = 0,
+  });
+
+  String get initials {
+    final parts = displayName.trim().split(' ').where((p) => p.isNotEmpty).toList();
+    if (parts.length >= 2) {
+      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+    } else if (displayName.isNotEmpty) {
+      return displayName.substring(0, displayName.length >= 2 ? 2 : 1).toUpperCase();
+    }
+    return 'M';
+  }
+
+  factory PublicUserProfileModel.fromJson(Map<String, dynamic> json) {
+    List<String>? styles;
+    if (json['preferred_styles'] is List) {
+      styles = (json['preferred_styles'] as List).map((e) => e.toString()).toList();
+    }
+
+    FitPreferencesModel? fit;
+    if (json['fit_preferences'] is Map<String, dynamic>) {
+      fit = FitPreferencesModel.fromJson(json['fit_preferences'] as Map<String, dynamic>);
+    }
+
+    return PublicUserProfileModel(
+      id: json['id'] as String,
+      displayName: json['display_name'] as String? ?? 'Member',
+      avatarUrl: json['avatar_url'] as String?,
+      bio: json['bio'] as String?,
+      age: json['age'] as int?,
+      phoneNumber: json['phone_number'] as String?,
+      email: json['email'] as String?,
+      fitPreferences: fit,
+      preferredStyles: styles,
+      sharedCommunitiesCount: json['shared_communities_count'] as int? ?? 0,
+      sharedItemsCount: json['shared_items_count'] as int? ?? 0,
+    );
+  }
+}
+
