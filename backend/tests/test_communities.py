@@ -322,3 +322,40 @@ def test_private_image_delivery_for_community_members(client, db_session, sample
             verifier.verify_token = orig_verify
             app.dependency_overrides.pop(get_current_user, None)
             app.dependency_overrides.pop(get_optional_current_user, None)
+
+
+def test_community_members_profile_resolution_privacy(client, db_session):
+    from app.main import app
+    from app.auth.supabase_auth import get_current_user
+
+    owner = AuthenticatedUser(id="owner-prof-test", email="owner@adaa.style", role="authenticated")
+    requester = AuthenticatedUser(id="req-prof-test", email="secret_req@adaa.style", role="authenticated")
+
+    # 1. Owner creates community
+    app.dependency_overrides[get_current_user] = lambda: owner
+    c_res = client.post("/api/communities", json={"name": "Identity Test Circle", "is_private": True})
+    assert c_res.status_code == 201
+    comm_id = c_res.json()["id"]
+
+    # 2. Requester requests to join
+    app.dependency_overrides[get_current_user] = lambda: requester
+    j_res = client.post(f"/api/communities/{comm_id}/join")
+    assert j_res.status_code == 200
+
+    # 3. Owner views members
+    app.dependency_overrides[get_current_user] = lambda: owner
+    m_res = client.get(f"/api/communities/{comm_id}/members")
+    assert m_res.status_code == 200
+    members = m_res.json()
+    assert len(members) >= 2
+
+    # Check privacy: no email or secrets exposed
+    for m in members:
+        assert "email" not in m
+        assert "student_email" not in m
+        assert "password" not in m
+        assert "display_name" in m
+        assert "avatar_url" in m
+        assert "bio" in m
+
+    app.dependency_overrides.pop(get_current_user, None)

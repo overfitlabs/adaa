@@ -89,10 +89,12 @@ Provide your response in strictly valid JSON format matching this schema:
         "neckline_or_collar": "notch lapel"
       },
       "confidence": 0.95,
-      "bounding_box_description": "Upper body outer layer"
+      "bounding_box_description": "Upper body outer layer",
+      "box_2d": [150, 150, 650, 850]
     }
   ]
 }
+Note: box_2d is [ymin, xmin, ymax, xmax] with coordinates normalized from 0 to 1000.
 """
 
         # Preprocess and resize image if necessary to prevent large payload network bottlenecks
@@ -174,6 +176,14 @@ Provide your response in strictly valid JSON format matching this schema:
                 season=attr_dict.get("season"),
                 neckline_or_collar=attr_dict.get("neckline_or_collar"),
             )
+            raw_box = item_data.get("box_2d")
+            box_2d = None
+            if isinstance(raw_box, (list, tuple)) and len(raw_box) == 4:
+                try:
+                    box_2d = [int(v) for v in raw_box]
+                except (ValueError, TypeError):
+                    box_2d = None
+
             item = DetectedFashionItem(
                 id=str(uuid.uuid4()),
                 category=item_data.get("category", "other").lower(),
@@ -184,6 +194,7 @@ Provide your response in strictly valid JSON format matching this schema:
                 attributes=attributes,
                 confidence=float(item_data.get("confidence", 0.9)),
                 bounding_box_description=item_data.get("bounding_box_description"),
+                box_2d=box_2d,
             )
             items.append(item)
 
@@ -229,6 +240,7 @@ class MockVisionProvider(VisionProvider):
                     ),
                     confidence=0.96,
                     bounding_box_description="Upper body core garment",
+                    box_2d=[150, 200, 750, 800],
                 )
             ]
             summary = "A timeless white oxford button-down shirt ideal for layering or crisp standalone wear."
@@ -251,6 +263,7 @@ class MockVisionProvider(VisionProvider):
                     ),
                     confidence=0.94,
                     bounding_box_description="Lower body garment",
+                    box_2d=[500, 250, 950, 750],
                 )
             ]
             summary = "High-rise indigo denim with subtle whiskering and tailored straight-leg cut."
@@ -275,6 +288,7 @@ class MockVisionProvider(VisionProvider):
                     ),
                     confidence=0.95,
                     bounding_box_description="Upper body outer layer",
+                    box_2d=[150, 150, 650, 850],
                 ),
                 DetectedFashionItem(
                     id=str(uuid.uuid4()),
@@ -293,6 +307,7 @@ class MockVisionProvider(VisionProvider):
                     ),
                     confidence=0.92,
                     bounding_box_description="Upper body base layer",
+                    box_2d=[250, 250, 600, 750],
                 ),
                 DetectedFashionItem(
                     id=str(uuid.uuid4()),
@@ -310,6 +325,7 @@ class MockVisionProvider(VisionProvider):
                     ),
                     confidence=0.93,
                     bounding_box_description="Lower body trousers",
+                    box_2d=[550, 250, 920, 750],
                 ),
                 DetectedFashionItem(
                     id=str(uuid.uuid4()),
@@ -327,6 +343,7 @@ class MockVisionProvider(VisionProvider):
                     ),
                     confidence=0.91,
                     bounding_box_description="Footwear",
+                    box_2d=[850, 280, 980, 720],
                 ),
                 DetectedFashionItem(
                     id=str(uuid.uuid4()),
@@ -342,6 +359,7 @@ class MockVisionProvider(VisionProvider):
                     ),
                     confidence=0.88,
                     bounding_box_description="Side accessory",
+                    box_2d=[400, 100, 650, 300],
                 ),
             ]
             summary = "Sophisticated minimalist ensemble balancing a structured navy blazer with clean white base and charcoal trousers."

@@ -245,3 +245,68 @@ async def get_tryon_image(
             raise HTTPException(status_code=404, detail="Image not found.")
 
     return _stream_image_response(target_path, is_private=True)
+
+
+@router.get("/extracted/{filename}")
+async def get_extracted_garment_image(
+    filename: str,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """
+    Secure retrieval for isolated/cropped garment photos.
+    - Path traversal protected.
+    - Authenticated garments are strictly private to owner or approved community members.
+    - Unowned legacy items or analysis records remain accessible.
+    """
+    target_path = _validate_safe_path("extracted", filename)
+    filename_clean = filename.strip()
+    rel_path = f"extracted/{filename_clean}"
+
+    current_user = _resolve_caller(request)
+
+    # 1. Check if saved as a WardrobeItem
+    item = db.query(WardrobeItem).filter(
+        (WardrobeItem.image_path == rel_path)
+        | (WardrobeItem.image_path == filename_clean)
+        | (WardrobeItem.cloudinary_public_id == rel_path)
+    ).first()
+
+    if item:
+        if item.user_id is not None:
+            if current_user is None:
+                raise HTTPException(status_code=404, detail="Image not found.")
+            if current_user.id != item.user_id:
+                # Check active community listing membership
+                has_community_access = db.query(CommunityListing).join(
+                    CommunityMembership,
+                    CommunityMembership.community_id == CommunityListing.community_id,
+                ).filter(
+                    CommunityListing.wardrobe_item_id == item.id,
+                    CommunityListing.status == "active",
+                    CommunityMembership.user_id == current_user.id,
+                    CommunityMembership.status == "approved",
+                ).first() is not None
+
+                if not has_community_access:
+                    logger.info("Denied access to extracted wardrobe photo: owner=%s, caller=%s",
+                                item.user_id, current_user.id)
+                    raise HTTPException(status_code=404, detail="Image not found.")
+
+        return _stream_image_response(target_path, is_private=(item.user_id is not None))
+
+    # 2. Check if part of an uncommitted OutfitAnalysisRecord
+    analysis_record = db.query(OutfitAnalysisRecord).filter(
+        OutfitAnalysisRecord.items_json.like(f"%{filename_clean}%")
+    ).first()
+
+    if not analysis_record:
+        raise HTTPException(status_code=404, detail="Image not found.")
+
+    if analysis_record.user_id is not None:
+        if current_user is None or current_user.id != analysis_record.user_id:
+            logger.info("Denied access to uncommitted extracted photo: owner=%s, caller=%s",
+                        analysis_record.user_id, current_user.id if current_user else "anon")
+            raise HTTPException(status_code=404, detail="Image not found.")
+
+    return _stream_image_response(target_path, is_private=(analysis_record.user_id is not None))

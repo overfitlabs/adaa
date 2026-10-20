@@ -29,6 +29,7 @@ async def lifespan(app: FastAPI):
     (settings.storage_path / "wardrobe").mkdir(parents=True, exist_ok=True)
     (settings.storage_path / "tryon").mkdir(parents=True, exist_ok=True)
     (settings.storage_path / "inspirations").mkdir(parents=True, exist_ok=True)
+    (settings.storage_path / "extracted").mkdir(parents=True, exist_ok=True)
     yield
     # Shutdown
 

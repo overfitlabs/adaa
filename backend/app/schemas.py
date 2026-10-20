@@ -28,6 +28,15 @@ class DetectedFashionItem(BaseModel):
     bounding_box_description: Optional[str] = Field(
         None, description="Position description, e.g. 'Upper body outer layer'"
     )
+    box_2d: Optional[List[int]] = Field(
+        None, description="Bounding box [ymin, xmin, ymax, xmax] normalized to 0-1000"
+    )
+    extracted_image_path: Optional[str] = Field(
+        None, description="Stored path or public_id of the isolated garment image"
+    )
+    extracted_image_url: Optional[str] = Field(
+        None, description="Delivery URL to the isolated garment image"
+    )
 
 
 class OutfitAnalysisResponse(BaseModel):
@@ -93,6 +102,31 @@ class WardrobeItemResponse(WardrobeItemBase):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class BulkWardrobeItemCreateItem(WardrobeItemBase):
+    client_id: Optional[str] = Field(None, description="Client-side ID for deduplication and tracking")
+    image_path: Optional[str] = Field(None, description="Extracted garment image path or public_id")
+    extracted_image_url: Optional[str] = Field(None, description="Delivery URL to extracted garment image")
+
+
+class BulkWardrobeItemsRequest(BaseModel):
+    items: List[BulkWardrobeItemCreateItem] = Field(..., min_length=1, max_length=50)
+    source_analysis_id: Optional[str] = Field(None, description="Optional source inspiration analysis ID")
+
+
+class BulkWardrobeItemResult(BaseModel):
+    client_id: Optional[str] = None
+    success: bool
+    item: Optional[WardrobeItemResponse] = None
+    error: Optional[str] = None
+
+
+class BulkWardrobeItemsResponse(BaseModel):
+    saved_count: int
+    failed_count: int
+    results: List[BulkWardrobeItemResult]
+
 
 
 # Matching Models
@@ -232,6 +266,9 @@ class CommunityMemberResponse(BaseModel):
     decided_at: Optional[datetime] = None
     decided_by_id: Optional[str] = None
     created_at: datetime
+    display_name: Optional[str] = None
+    avatar_url: Optional[str] = None
+    bio: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 

@@ -194,3 +194,129 @@ def test_wardrobe_cross_user_isolation(client, db_session, sample_image_bytes):
     assert del_res.status_code == 204
 
     app.dependency_overrides.pop(get_optional_current_user, None)
+
+
+def test_bulk_create_wardrobe_items(client, db_session):
+    from app.main import app
+    from app.auth.supabase_auth import get_optional_current_user
+
+    user = AuthenticatedUser(id="user-bulk-test", email="bulk@adaa.style", role="authenticated")
+    app.dependency_overrides[get_optional_current_user] = lambda: user
+
+    payload = {
+        "items": [
+            {
+                "client_id": "c1",
+                "name": "Extracted Linen Shirt",
+                "category": "shirts",
+                "primary_color": "White",
+                "material": "Linen",
+                "image_path": "extracted/item1.jpg",
+            },
+            {
+                "client_id": "c2",
+                "name": "Extracted Denim Jeans",
+                "category": "jeans",
+                "primary_color": "Blue",
+                "material": "Denim",
+                "image_path": "extracted/item2.jpg",
+            },
+        ],
+        "source_analysis_id": "analysis-123",
+    }
+
+    res = client.post("/api/wardrobe/items/bulk", json=payload)
+    assert res.status_code == 201
+    data = res.json()
+    assert data["saved_count"] == 2
+    assert data["failed_count"] == 0
+    assert len(data["results"]) == 2
+    assert data["results"][0]["client_id"] == "c1"
+    assert data["results"][0]["item"]["name"] == "Extracted Linen Shirt"
+    assert data["results"][1]["client_id"] == "c2"
+    assert data["results"][1]["item"]["name"] == "Extracted Denim Jeans"
+
+    # Test deduplication on retry
+    res_retry = client.post("/api/wardrobe/items/bulk", json=payload)
+    assert res_retry.status_code == 201
+    retry_data = res_retry.json()
+    assert retry_data["saved_count"] == 2
+    assert retry_data["results"][0]["item"]["id"] == data["results"][0]["item"]["id"]
+    assert retry_data["results"][1]["item"]["id"] == data["results"][1]["item"]["id"]
+
+    # Verify both records exist independently in the user's wardrobe list
+    list_res = client.get("/api/wardrobe/items")
+    assert list_res.status_code == 200
+    names = [i["name"] for i in list_res.json()]
+    assert "Extracted Linen Shirt" in names
+    assert "Extracted Denim Jeans" in names
+
+    app.dependency_overrides.pop(get_optional_current_user, None)
+
+
+def test_bulk_create_separate_identical_items_in_same_batch(client, db_session):
+    """
+    Verify that duplicate prevention does NOT incorrectly suppress legitimate separate items
+    within the same bulk request (e.g. matching accessories/earrings or items from same outfit).
+    """
+    from app.main import app
+    from app.auth.supabase_auth import get_optional_current_user
+
+    user = AuthenticatedUser(id="user-earrings-test", email="earrings@adaa.style", role="authenticated")
+    app.dependency_overrides[get_optional_current_user] = lambda: user
+
+    # Two identical earrings in the same outfit capture
+    payload = {
+        "items": [
+            {
+                "client_id": "earring-left",
+                "name": "Gold Hoop Earring",
+                "category": "accessories",
+                "primary_color": "Gold",
+                "material": "Gold",
+                "image_path": "extracted/earring.jpg",
+            },
+            {
+                "client_id": "earring-right",
+                "name": "Gold Hoop Earring",
+                "category": "accessories",
+                "primary_color": "Gold",
+                "material": "Gold",
+                "image_path": "extracted/earring.jpg",
+            },
+        ],
+        "source_analysis_id": "analysis-earrings",
+    }
+
+    res = client.post("/api/wardrobe/items/bulk", json=payload)
+    assert res.status_code == 201
+    data = res.json()
+    assert data["saved_count"] == 2
+    assert data["failed_count"] == 0
+    assert len(data["results"]) == 2
+
+    id1 = data["results"][0]["item"]["id"]
+    id2 = data["results"][1]["item"]["id"]
+
+    # Crucial: Both must be created with separate database IDs
+    assert id1 != id2
+
+    # Verify both exist in wardrobe
+    list_res = client.get("/api/wardrobe/items?category=accessories")
+    assert list_res.status_code == 200
+    user_items = [i for i in list_res.json() if i["name"] == "Gold Hoop Earring"]
+    assert len(user_items) == 2
+
+    # Retry should be idempotent: mapping client_ids to their respective items without duplicates
+    retry_res = client.post("/api/wardrobe/items/bulk", json=payload)
+    assert retry_res.status_code == 201
+    retry_data = retry_res.json()
+    assert retry_data["saved_count"] == 2
+    assert retry_data["failed_count"] == 0
+
+    # Ensure no additional duplicate rows were inserted
+    list_res_after = client.get("/api/wardrobe/items?category=accessories")
+    user_items_after = [i for i in list_res_after.json() if i["name"] == "Gold Hoop Earring"]
+    assert len(user_items_after) == 2
+
+    app.dependency_overrides.pop(get_optional_current_user, None)

@@ -479,6 +479,33 @@ def get_community_detail(
     )
 
 
+def _resolve_member_profiles(db: Session, user_ids: List[str]) -> dict:
+    """
+    Safely resolves display names and avatars from public.profiles.
+    Never exposes email or sensitive private account details.
+    Gracefully handles environments where profiles table is absent (e.g. SQLite test suites).
+    """
+    if not user_ids:
+        return {}
+    unique_ids = list(set(user_ids))
+    profiles_map = {}
+    try:
+        from sqlalchemy import text
+        placeholders = ", ".join([f":uid_{i}" for i in range(len(unique_ids))])
+        params = {f"uid_{i}": uid for i, uid in enumerate(unique_ids)}
+        query = text(f"SELECT id, full_name, avatar_url, bio FROM profiles WHERE id IN ({placeholders})")
+        rows = db.execute(query, params).mappings().fetchall()
+        for r in rows:
+            profiles_map[str(r["id"])] = {
+                "display_name": r.get("full_name"),
+                "avatar_url": r.get("avatar_url"),
+                "bio": r.get("bio"),
+            }
+    except Exception as e:
+        logger.debug("Profiles table lookup skipped or not available: %s", str(e))
+    return profiles_map
+
+
 @router.get("/{community_id}/members", response_model=List[CommunityMemberResponse])
 def get_community_members(
     community_id: str,
@@ -489,6 +516,7 @@ def get_community_members(
     List community members:
     - Approved members can view other approved members.
     - Admins and Owners can view all members including pending requests.
+    - Enriches members with public profile identity (display_name, avatar_url, bio).
     """
     comm = db.query(Community).filter(Community.id == community_id).first()
     if not comm:
@@ -510,6 +538,9 @@ def get_community_members(
     # Re-order in Python so requested is at the top
     members.sort(key=lambda m: 0 if m.status == "requested" else 1)
 
+    user_ids = [m.user_id for m in members]
+    profiles = _resolve_member_profiles(db, user_ids)
+
     return [
         CommunityMemberResponse(
             id=m.id,
@@ -521,6 +552,9 @@ def get_community_members(
             decided_at=m.decided_at,
             decided_by_id=m.decided_by_id,
             created_at=m.created_at,
+            display_name=profiles.get(m.user_id, {}).get("display_name"),
+            avatar_url=profiles.get(m.user_id, {}).get("avatar_url"),
+            bio=profiles.get(m.user_id, {}).get("bio"),
         )
         for m in members
     ]

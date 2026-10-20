@@ -13,6 +13,9 @@ from app.schemas import (
     WardrobeItemUpdate,
     DetectedFashionItem,
     CommunityListingResponse,
+    BulkWardrobeItemsRequest,
+    BulkWardrobeItemsResponse,
+    BulkWardrobeItemResult,
 )
 from app.services.image_storage import image_storage_service
 from app.services.vision_provider import get_vision_provider
@@ -32,8 +35,12 @@ def _model_to_response(item: WardrobeItem) -> WardrobeItemResponse:
             storage_provider="cloudinary",
             ttl_seconds=settings.IMAGE_DELIVERY_TTL_SECONDS,
         )
+    elif item.image_path.startswith("http://") or item.image_path.startswith("https://"):
+        image_url = item.image_path
     else:
         clean_path = item.image_path.lstrip("/")
+        if clean_path.startswith("storage/"):
+            clean_path = clean_path[len("storage/"):]
         image_url = f"/storage/{clean_path}"
 
     return WardrobeItemResponse(
@@ -209,6 +216,126 @@ async def create_wardrobe_item(
         )
 
     return _model_to_response(item)
+
+
+@router.post("/items/bulk", response_model=BulkWardrobeItemsResponse, status_code=status.HTTP_201_CREATED)
+def bulk_create_wardrobe_items(
+    payload: BulkWardrobeItemsRequest,
+    db: Session = Depends(get_db),
+    current_user: Optional[AuthenticatedUser] = Depends(get_optional_current_user),
+):
+    """
+    Bulk saves multiple wardrobe items extracted from an outfit capture.
+    - Each item becomes its own independent WardrobeItem record.
+    - Idempotent deduplication prevents double-creation on client retry.
+    - Granular per-item success/failure reporting.
+    """
+    user_id = current_user.id if current_user else None
+    results: List[BulkWardrobeItemResult] = []
+    saved_count = 0
+    failed_count = 0
+    created_in_this_batch_ids = set()
+
+    for item_data in payload.items:
+        client_id = item_data.client_id
+        try:
+            # Clean image path (strip any leading slashes or /storage/ prefix)
+            raw_img = (item_data.image_path or "").strip().lstrip("/")
+            if raw_img.startswith("storage/"):
+                raw_img = raw_img[len("storage/"):]
+
+            # Check for recent duplicate (identical name, category, and real image_path for this user)
+            existing = None
+            if raw_img and raw_img != "wardrobe/placeholder.jpg":
+                q = db.query(WardrobeItem).filter(
+                    WardrobeItem.name == item_data.name.strip(),
+                    WardrobeItem.category == item_data.category.strip().lower(),
+                    (WardrobeItem.image_path == raw_img)
+                    | (WardrobeItem.image_path == f"/{raw_img}")
+                    | (WardrobeItem.image_path == f"storage/{raw_img}"),
+                )
+                if user_id:
+                    q = q.filter(WardrobeItem.user_id == user_id)
+                else:
+                    q = q.filter(WardrobeItem.user_id.is_(None))
+
+                # Never suppress separate items that were created earlier within this same batch
+                if created_in_this_batch_ids:
+                    q = q.filter(~WardrobeItem.id.in_(created_in_this_batch_ids))
+
+                existing = q.first()
+
+            if existing:
+                results.append(
+                    BulkWardrobeItemResult(
+                        client_id=client_id,
+                        success=True,
+                        item=_model_to_response(existing),
+                    )
+                )
+                saved_count += 1
+                continue
+
+            final_image_path = raw_img or "wardrobe/placeholder.jpg"
+            is_cloudinary = settings.is_cloudinary_configured and settings.STORAGE_BACKEND == "cloudinary"
+            final_storage_provider = "cloudinary" if is_cloudinary else "local"
+            final_cloudinary_id = final_image_path if is_cloudinary else None
+            ext = final_image_path.split(".")[-1] if "." in final_image_path else "jpg"
+
+            new_item = WardrobeItem(
+                user_id=user_id,
+                name=item_data.name.strip(),
+                category=item_data.category.strip().lower(),
+                sub_category=item_data.sub_category.strip() if item_data.sub_category else None,
+                primary_color=item_data.primary_color.strip(),
+                secondary_color=item_data.secondary_color.strip() if item_data.secondary_color else None,
+                pattern=item_data.pattern.strip() if item_data.pattern else None,
+                material=item_data.material.strip() if item_data.material else None,
+                fit=item_data.fit.strip() if item_data.fit else None,
+                season=item_data.season.strip() if item_data.season else None,
+                formality=item_data.formality.strip() if item_data.formality else None,
+                brand=item_data.brand.strip() if item_data.brand else None,
+                size=item_data.size.strip() if item_data.size else None,
+                condition=item_data.condition.strip() if item_data.condition else None,
+                notes=item_data.notes.strip() if item_data.notes else None,
+                tags=json.dumps(item_data.tags or []),
+                image_path=final_image_path,
+                storage_provider=final_storage_provider,
+                cloudinary_public_id=final_cloudinary_id,
+                image_format=ext,
+                image_version=None,
+                is_community_shared=False,
+            )
+            db.add(new_item)
+            db.commit()
+            db.refresh(new_item)
+            created_in_this_batch_ids.add(new_item.id)
+
+            results.append(
+                BulkWardrobeItemResult(
+                    client_id=client_id,
+                    success=True,
+                    item=_model_to_response(new_item),
+                )
+            )
+            saved_count += 1
+        except Exception as e:
+            db.rollback()
+            logger.error("Failed to create bulk wardrobe item (%s): %s", item_data.name, str(e))
+            results.append(
+                BulkWardrobeItemResult(
+                    client_id=client_id,
+                    success=False,
+                    error=str(e),
+                )
+            )
+            failed_count += 1
+
+    return BulkWardrobeItemsResponse(
+        saved_count=saved_count,
+        failed_count=failed_count,
+        results=results,
+    )
 
 
 @router.get("/items", response_model=List[WardrobeItemResponse])

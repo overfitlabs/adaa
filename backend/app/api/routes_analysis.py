@@ -35,6 +35,14 @@ def _record_to_response(record: OutfitAnalysisRecord) -> OutfitAnalysisResponse:
     items = []
     for item in raw_items:
         attr = StyleAttributes(**item.get("attributes", {}))
+        ext_path = item.get("extracted_image_path")
+        ext_url = item.get("extracted_image_url")
+        if ext_path:
+            ext_url = image_storage_service.generate_delivery_url(
+                ext_path,
+                storage_provider=record.storage_provider,
+                ttl_seconds=settings.IMAGE_DELIVERY_TTL_SECONDS,
+            )
         items.append(
             DetectedFashionItem(
                 id=item["id"],
@@ -46,6 +54,9 @@ def _record_to_response(record: OutfitAnalysisRecord) -> OutfitAnalysisResponse:
                 attributes=attr,
                 confidence=item.get("confidence", 0.9),
                 bounding_box_description=item.get("bounding_box_description"),
+                box_2d=item.get("box_2d"),
+                extracted_image_path=ext_path,
+                extracted_image_url=ext_url,
             )
         )
 
@@ -121,12 +132,82 @@ async def analyze_outfit_image(
             except Exception:
                 pass
 
-    # 3. Upload to Image Storage (Cloudinary authenticated or local fallback)
+    # 3. Upload full outfit image to Image Storage (Cloudinary authenticated or local fallback)
     uploaded_meta = await image_storage_service.upload(
         user_id=current_user.id if current_user else None,
         subfolder="inspirations",
         pre_sanitized=(clean_bytes, ext, width, height),
     )
+
+    # 3.1 Extract individual garment images using bounding box coordinates
+    try:
+        from PIL import Image
+        import io
+        pil_source = Image.open(io.BytesIO(clean_bytes)).convert("RGB")
+        src_w, src_h = pil_source.size
+
+        for item in items:
+            crop_img = None
+            if item.box_2d and len(item.box_2d) == 4:
+                ymin, xmin, ymax, xmax = item.box_2d
+                ymin = max(0, min(1000, ymin))
+                xmin = max(0, min(1000, xmin))
+                ymax = max(0, min(1000, ymax))
+                xmax = max(0, min(1000, xmax))
+
+                if ymax > ymin and xmax > xmin:
+                    top = int((ymin / 1000.0) * src_h)
+                    left = int((xmin / 1000.0) * src_w)
+                    bottom = int((ymax / 1000.0) * src_h)
+                    right = int((xmax / 1000.0) * src_w)
+
+                    pad_y = max(2, int((bottom - top) * 0.03))
+                    pad_x = max(2, int((right - left) * 0.03))
+                    crop_box = (
+                        max(0, left - pad_x),
+                        max(0, top - pad_y),
+                        min(src_w, right + pad_x),
+                        min(src_h, bottom + pad_y),
+                    )
+                    crop_img = pil_source.crop(crop_box)
+
+            # Fallback if crop_img is None or invalid
+            if crop_img is None or crop_img.width < 10 or crop_img.height < 10:
+                crop_img = pil_source.copy()
+
+            crop_buf = io.BytesIO()
+            crop_img.save(crop_buf, format="JPEG", quality=90)
+            crop_bytes = crop_buf.getvalue()
+
+            try:
+                extracted_meta = await image_storage_service.upload(
+                    user_id=current_user.id if current_user else None,
+                    subfolder="extracted",
+                    pre_sanitized=(crop_bytes, "jpg", crop_img.width, crop_img.height),
+                )
+                item.extracted_image_path = extracted_meta.public_id
+                item.extracted_image_url = image_storage_service.generate_delivery_url(
+                    extracted_meta.public_id,
+                    storage_provider=extracted_meta.storage_provider,
+                    ttl_seconds=settings.IMAGE_DELIVERY_TTL_SECONDS,
+                )
+            except Exception as upload_err:
+                logger.warning("Failed to store extracted item image for %s: %s", item.name, str(upload_err))
+                item.extracted_image_path = uploaded_meta.public_id
+                item.extracted_image_url = image_storage_service.generate_delivery_url(
+                    uploaded_meta.public_id,
+                    storage_provider=uploaded_meta.storage_provider,
+                    ttl_seconds=settings.IMAGE_DELIVERY_TTL_SECONDS,
+                )
+    except Exception as extract_err:
+        logger.warning("Multi-item extraction encountered an error; falling back to original image: %s", str(extract_err))
+        for item in items:
+            item.extracted_image_path = uploaded_meta.public_id
+            item.extracted_image_url = image_storage_service.generate_delivery_url(
+                uploaded_meta.public_id,
+                storage_provider=uploaded_meta.storage_provider,
+                ttl_seconds=settings.IMAGE_DELIVERY_TTL_SECONDS,
+            )
 
     # 4. Persist analysis to database
     items_serialized = json.dumps([item.model_dump() for item in items])
