@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
+import '../core/models/garment_item.dart';
 import '../core/models/wardrobe_item.dart';
 import '../core/network/api_client.dart';
 
@@ -102,6 +103,40 @@ class WardrobeProvider extends ChangeNotifier {
       _error = e.toString();
       notifyListeners();
       return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<Map<String, dynamic>> bulkAddItems(
+    List<DetectedFashionItem> detectedItems, {
+    String? sourceAnalysisId,
+  }) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+    try {
+      final res = await ApiClient.bulkCreateWardrobeItems(
+        items: detectedItems,
+        sourceAnalysisId: sourceAnalysisId,
+      );
+      final savedItems = res['saved_items'] as List<WardrobeItem>? ?? [];
+      for (final item in savedItems) {
+        _items.removeWhere((i) => i.id == item.id);
+        _items.insert(0, item);
+      }
+      _categories = await ApiClient.getCategories();
+      notifyListeners();
+      return res;
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      return {
+        'saved_count': 0,
+        'failed_count': detectedItems.length,
+        'error': e.toString(),
+      };
     } finally {
       _isLoading = false;
       notifyListeners();

@@ -154,10 +154,10 @@ class _CommunitiesScreenState extends State<CommunitiesScreen>
         ],
         bottom: TabBar(
           controller: _tabController,
-          labelColor: AppColors.primary,
-          unselectedLabelColor: AppColors.textSecondary,
-          indicatorColor: AppColors.primary,
-          indicatorWeight: 3,
+          labelColor: AppColors.espresso,
+          unselectedLabelColor: AppColors.textMuted,
+          indicatorColor: AppColors.terracotta,
+          indicatorWeight: 2.5,
           tabs: [
             Tab(text: 'Explore (${commProv.communities.length})'),
             Tab(text: 'My Circles (${commProv.myCommunities.length})'),
@@ -174,7 +174,7 @@ class _CommunitiesScreenState extends State<CommunitiesScreen>
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: AppColors.primary,
+        backgroundColor: AppColors.terracotta,
         foregroundColor: Colors.white,
         icon: const Icon(Icons.group_add),
         label: const Text('New Circle', style: TextStyle(fontWeight: FontWeight.w600)),

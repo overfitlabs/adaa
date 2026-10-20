@@ -374,10 +374,10 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: const BoxDecoration(
-                color: AppColors.accentSoft,
+                color: AppColors.terracottaSoft,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.checkroom_outlined, size: 48, color: AppColors.primary),
+              child: const Icon(Icons.checkroom_outlined, size: 48, color: AppColors.terracotta),
             ),
             const SizedBox(height: 20),
             const Text(
@@ -386,7 +386,7 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
             ),
             const SizedBox(height: 8),
             const Text(
-              'Take photos of your garments or flat-lays. WardrobeLens AI will detect categories, colors, and materials automatically.',
+              'Take photos of your garments or flat-lays. adaa AI will detect categories, colors, and materials automatically.',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.4),
             ),

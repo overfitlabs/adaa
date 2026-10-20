@@ -122,6 +122,9 @@ class CommunityMemberModel {
   final DateTime? decidedAt;
   final String? decidedById;
   final DateTime createdAt;
+  final String? displayName;
+  final String? avatarUrl;
+  final String? bio;
 
   CommunityMemberModel({
     required this.id,
@@ -133,7 +136,28 @@ class CommunityMemberModel {
     this.decidedAt,
     this.decidedById,
     required this.createdAt,
+    this.displayName,
+    this.avatarUrl,
+    this.bio,
   });
+
+  String get resolvedName {
+    if (displayName != null && displayName!.trim().isNotEmpty) {
+      return displayName!.trim();
+    }
+    return 'Member (${userId.length >= 6 ? userId.substring(0, 6) : userId})';
+  }
+
+  String get initials {
+    final name = resolvedName;
+    final parts = name.split(' ').where((p) => p.isNotEmpty).toList();
+    if (parts.length >= 2) {
+      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+    } else if (name.isNotEmpty) {
+      return name.substring(0, name.length >= 2 ? 2 : 1).toUpperCase();
+    }
+    return 'M';
+  }
 
   factory CommunityMemberModel.fromJson(Map<String, dynamic> json) {
     return CommunityMemberModel(
@@ -152,6 +176,9 @@ class CommunityMemberModel {
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'] as String)
           : DateTime.now(),
+      displayName: json['display_name'] as String?,
+      avatarUrl: json['avatar_url'] as String?,
+      bio: json['bio'] as String?,
     );
   }
 
@@ -166,6 +193,9 @@ class CommunityMemberModel {
       'decided_at': decidedAt?.toIso8601String(),
       'decided_by_id': decidedById,
       'created_at': createdAt.toIso8601String(),
+      'display_name': displayName,
+      'avatar_url': avatarUrl,
+      'bio': bio,
     };
   }
 }

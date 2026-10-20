@@ -30,11 +30,12 @@ Future<void> main() async {
     }
   }
 
-  runApp(const WardrobeLensApp());
+  runApp(const AdaaApp());
 }
 
-class WardrobeLensApp extends StatelessWidget {
-  const WardrobeLensApp({super.key});
+/// Root application widget for `adaa`.
+class AdaaApp extends StatelessWidget {
+  const AdaaApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -48,7 +49,7 @@ class WardrobeLensApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => CommunityProvider()),
       ],
       child: MaterialApp(
-        title: 'WardrobeLens',
+        title: 'adaa',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
         home: const HomeScreen(),
@@ -56,3 +57,6 @@ class WardrobeLensApp extends StatelessWidget {
     );
   }
 }
+
+/// Backwards compatibility alias for tests
+typedef WardrobeLensApp = AdaaApp;

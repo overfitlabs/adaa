@@ -249,10 +249,10 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
                 delegate: _SliverAppBarDelegate(
                   TabBar(
                     controller: _tabController,
-                    labelColor: AppColors.primary,
-                    unselectedLabelColor: AppColors.textSecondary,
-                    indicatorColor: AppColors.primary,
-                    indicatorWeight: 3,
+                    labelColor: AppColors.espresso,
+                    unselectedLabelColor: AppColors.textMuted,
+                    indicatorColor: AppColors.terracotta,
+                    indicatorWeight: 2.5,
                     tabs: [
                       Tab(
                         icon: const Icon(Icons.checkroom_outlined, size: 20),
@@ -280,7 +280,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
       ),
       floatingActionButton: isApproved
           ? FloatingActionButton.extended(
-              backgroundColor: AppColors.primary,
+              backgroundColor: AppColors.terracotta,
               foregroundColor: Colors.white,
               icon: const Icon(Icons.add),
               label: const Text('Share Clothes', style: TextStyle(fontWeight: FontWeight.w600)),
@@ -628,6 +628,101 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
     );
   }
 
+  void _confirmApproveMember(CommunityMemberModel member) {
+    final memberName = member.resolvedName;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Approve Membership', style: TextStyle(fontWeight: FontWeight.w700)),
+        content: Text(
+          'Allow $memberName to join ${widget.community.name}? They will gain access to browse and borrow from the shared closet.',
+          style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.exactMatch),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              final commProv = context.read<CommunityProvider>();
+              final messenger = ScaffoldMessenger.of(context);
+              final success = await commProv.approveMember(widget.community.id, member.userId);
+              if (mounted) {
+                if (success) {
+                  messenger.showSnackBar(
+                    SnackBar(
+                      content: Text('$memberName has been approved to join!'),
+                      backgroundColor: AppColors.exactMatch,
+                    ),
+                  );
+                } else {
+                  messenger.showSnackBar(
+                    SnackBar(
+                      content: Text(commProv.error ?? 'Failed to approve membership.'),
+                      backgroundColor: AppColors.missing,
+                    ),
+                  );
+                }
+              }
+            },
+            child: const Text('Approve'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmRejectMember(CommunityMemberModel member) {
+    final memberName = member.resolvedName;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Decline Request', style: TextStyle(fontWeight: FontWeight.w700)),
+        content: Text(
+          'Decline $memberName\'s request to join ${widget.community.name}?',
+          style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.missing),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              final commProv = context.read<CommunityProvider>();
+              final messenger = ScaffoldMessenger.of(context);
+              final success = await commProv.rejectMember(widget.community.id, member.userId);
+              if (mounted) {
+                if (success) {
+                  messenger.showSnackBar(
+                    SnackBar(
+                      content: Text('Membership request from $memberName was declined.'),
+                    ),
+                  );
+                } else {
+                  messenger.showSnackBar(
+                    SnackBar(
+                      content: Text(commProv.error ?? 'Failed to decline request.'),
+                      backgroundColor: AppColors.missing,
+                    ),
+                  );
+                }
+              }
+            },
+            child: const Text('Decline'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildMembersTab(CommunityProvider commProv, bool isAdminOrOwner) {
     final currentComm = commProv.selectedCommunity ?? widget.community;
     final allMembers = commProv.members;
@@ -646,25 +741,39 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
           ),
           const SizedBox(height: 8),
           ...pending.map((m) {
+            final dateStr = m.requestedAt.toLocal().toString().split(' ').first;
             return Card(
               margin: const EdgeInsets.only(bottom: 8),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10), side: const BorderSide(color: Colors.orange)),
               child: ListTile(
-                leading: const CircleAvatar(backgroundColor: AppColors.accentSoft, child: Icon(Icons.person_outline, color: AppColors.primary)),
-                title: Text('Applicant: ${m.userId.substring(0, 8)}...', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
-                subtitle: const Text('Requested to join', style: TextStyle(fontSize: 11, color: Colors.orange)),
+                leading: CircleAvatar(
+                  backgroundColor: AppColors.accentSoft,
+                  child: Text(
+                    m.initials,
+                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: AppColors.primary),
+                  ),
+                ),
+                title: Text(m.resolvedName, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                subtitle: Text(
+                  m.bio != null && m.bio!.trim().isNotEmpty
+                      ? '$dateStr • ${m.bio!.trim()}'
+                      : 'Requested $dateStr',
+                  style: const TextStyle(fontSize: 11, color: Colors.orange),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     IconButton(
                       icon: const Icon(Icons.check_circle, color: AppColors.exactMatch),
                       tooltip: 'Approve',
-                      onPressed: () => commProv.approveMember(widget.community.id, m.userId),
+                      onPressed: () => _confirmApproveMember(m),
                     ),
                     IconButton(
                       icon: const Icon(Icons.cancel, color: AppColors.missing),
-                      tooltip: 'Reject',
-                      onPressed: () => commProv.rejectMember(widget.community.id, m.userId),
+                      tooltip: 'Decline',
+                      onPressed: () => _confirmRejectMember(m),
                     ),
                   ],
                 ),
@@ -687,15 +796,25 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
             child: ListTile(
               leading: CircleAvatar(
                 backgroundColor: m.role == 'owner' ? Colors.deepPurple.shade100 : AppColors.accentSoft,
-                child: Icon(
-                  m.role == 'owner' ? Icons.star : Icons.person,
-                  color: m.role == 'owner' ? Colors.deepPurple : AppColors.primary,
-                  size: 18,
+                child: Text(
+                  m.initials,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 12,
+                    color: m.role == 'owner' ? Colors.deepPurple : AppColors.primary,
+                  ),
                 ),
               ),
               title: Row(
                 children: [
-                  Text(isMe ? 'You' : 'Member: ${m.userId.substring(0, 8)}...', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                  Expanded(
+                    child: Text(
+                      isMe ? 'You (${m.resolvedName})' : m.resolvedName,
+                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                   const SizedBox(width: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -707,6 +826,14 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
                   ),
                 ],
               ),
+              subtitle: m.bio != null && m.bio!.trim().isNotEmpty
+                  ? Text(
+                      m.bio!.trim(),
+                      style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    )
+                  : null,
               trailing: isAdminOrOwner && !isMe
                   ? PopupMenuButton<String>(
                       icon: const Icon(Icons.more_vert, size: 18),

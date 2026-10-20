@@ -694,6 +694,11 @@ void main() {
       await tester.tap(approveBtn);
       await tester.pumpAndSettle();
 
+      // Confirm in dialog
+      expect(find.text('Approve Membership'), findsOneWidget);
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Approve'));
+      await tester.pumpAndSettle();
+
       expect(fakeCommProv.approveMemberCalled, isTrue);
     });
 

@@ -60,6 +60,7 @@ class ApiEndpoints {
   static String wardrobeItemPhoto(String id) => '$baseUrl/api/wardrobe/items/$id/photo';
   static String get wardrobeCategories => '$baseUrl/api/wardrobe/categories';
   static String get detectWardrobeItem => '$baseUrl/api/wardrobe/detect-item';
+  static String get wardrobeBulkItems => '$baseUrl/api/wardrobe/items/bulk';
 
   // Matching
   static String get matchOutfit => '$baseUrl/api/matching/match-outfit';

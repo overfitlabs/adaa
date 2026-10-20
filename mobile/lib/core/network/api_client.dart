@@ -250,6 +250,61 @@ class ApiClient {
     throw ApiException(_extractError(res.body), res.statusCode);
   }
 
+  static Future<Map<String, dynamic>> bulkCreateWardrobeItems({
+    required List<DetectedFashionItem> items,
+    String? sourceAnalysisId,
+  }) async {
+    final uri = Uri.parse(ApiEndpoints.wardrobeBulkItems);
+    final payload = {
+      'source_analysis_id': sourceAnalysisId,
+      'items': items.map((i) {
+        return {
+          'client_id': i.id,
+          'name': i.name,
+          'category': i.category,
+          'sub_category': i.subCategory,
+          'primary_color': i.primaryColor,
+          'secondary_color': i.secondaryColor,
+          'pattern': i.attributes.pattern,
+          'material': i.attributes.material,
+          'fit': i.attributes.fit,
+          'season': i.attributes.season,
+          'formality': i.attributes.formality,
+          'image_path': i.extractedImagePath,
+          'extracted_image_url': i.extractedImageUrl,
+          'tags': [
+            if (i.subCategory != null) i.subCategory!,
+            if (i.attributes.formality != null) i.attributes.formality!,
+          ],
+        };
+      }).toList(),
+    };
+
+    final res = await http.post(
+      uri,
+      headers: _defaultHeaders,
+      body: jsonEncode(payload),
+    ).timeout(_timeout);
+
+    if (res.statusCode == 201) {
+      final data = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
+      final results = data['results'] as List<dynamic>? ?? [];
+      final savedItems = <WardrobeItem>[];
+      for (final r in results) {
+        if (r['success'] == true && r['item'] != null) {
+          savedItems.add(WardrobeItem.fromJson(r['item']));
+        }
+      }
+      return {
+        'saved_count': data['saved_count'] ?? 0,
+        'failed_count': data['failed_count'] ?? 0,
+        'saved_items': savedItems,
+        'raw_results': results,
+      };
+    }
+    throw ApiException(_extractError(res.body), res.statusCode);
+  }
+
   static Future<List<WardrobeItem>> getWardrobeItems({
     String? category,
     String? search,

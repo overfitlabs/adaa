@@ -225,7 +225,7 @@ class _AuthDialogState extends State<AuthDialog> {
                 style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
               ),
               const TextSpan(
-                text: '.\n\nPlease open the link on this device to return to WardrobeLens and activate your account.',
+                text: '.\n\nPlease open the link on this device to return to adaa and activate your account.',
               ),
             ],
           ),
@@ -334,11 +334,13 @@ class _AuthDialogState extends State<AuthDialog> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              _isSignUp ? 'Create Account' : 'Welcome to WardrobeLens',
+              _isSignUp ? 'join adaa' : 'welcome to adaa',
               style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
+                fontSize: 22,
+                fontWeight: FontWeight.w500,
                 letterSpacing: -0.3,
+                color: AppColors.espresso,
+                fontFamily: 'serif',
               ),
             ),
             IconButton(
@@ -350,11 +352,11 @@ class _AuthDialogState extends State<AuthDialog> {
         const SizedBox(height: 4),
         Text(
           _isSignUp
-              ? 'Join your campus fashion sharing community'
-              : 'Sign in to access your private wardrobe and community closet',
-          style: TextStyle(
+              ? 'join your fashion & personal style community'
+              : 'sign in to access your digital wardrobe and style circle',
+          style: const TextStyle(
             fontSize: 13,
-            color: Colors.grey.shade600,
+            color: AppColors.textSecondary,
           ),
         ),
         const SizedBox(height: 20),

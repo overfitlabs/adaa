@@ -111,14 +111,13 @@ void main() {
     });
   });
 
-  group('WardrobeLensApp Widget Tests', () {
-    testWidgets('App renders Home Screen with WardrobeLens branding', (WidgetTester tester) async {
-      await tester.pumpWidget(const WardrobeLensApp());
+  group('AdaaApp Widget Tests', () {
+    testWidgets('App renders Home Screen with adaa branding', (WidgetTester tester) async {
+      await tester.pumpWidget(const AdaaApp());
       await tester.pump();
 
-      // Check title elements
-      expect(find.text('WARDROBE'), findsOneWidget);
-      expect(find.text('LENS'), findsOneWidget);
+      // Check adaa wordmark
+      expect(find.text('adaa'), findsOneWidget);
 
       // Check hero action
       expect(find.text('Upload Outfit Photo'), findsOneWidget);
@@ -686,6 +685,14 @@ class FakeWardrobeProvider extends ChangeNotifier implements WardrobeProvider {
   @override
   Future<WardrobeItem?> refreshItem(String id) async {
     return null;
+  }
+
+  @override
+  Future<Map<String, dynamic>> bulkAddItems(
+    List<DetectedFashionItem> detectedItems, {
+    String? sourceAnalysisId,
+  }) async {
+    return {'saved_count': detectedItems.length, 'failed_count': 0, 'saved_items': <WardrobeItem>[], 'errors': []};
   }
 
   @override

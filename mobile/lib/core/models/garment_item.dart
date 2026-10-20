@@ -48,6 +48,9 @@ class DetectedFashionItem {
   StyleAttributes attributes;
   double confidence;
   String? boundingBoxDescription;
+  List<int>? box2d;
+  String? extractedImagePath;
+  String? extractedImageUrl;
 
   DetectedFashionItem({
     required this.id,
@@ -59,6 +62,9 @@ class DetectedFashionItem {
     required this.attributes,
     this.confidence = 0.9,
     this.boundingBoxDescription,
+    this.box2d,
+    this.extractedImagePath,
+    this.extractedImageUrl,
   });
 
   factory DetectedFashionItem.fromJson(Map<String, dynamic> json) {
@@ -74,6 +80,9 @@ class DetectedFashionItem {
           : StyleAttributes(),
       confidence: (json['confidence'] as num?)?.toDouble() ?? 0.9,
       boundingBoxDescription: json['bounding_box_description'],
+      box2d: (json['box_2d'] as List<dynamic>?)?.map((e) => (e as num).toInt()).toList(),
+      extractedImagePath: json['extracted_image_path'],
+      extractedImageUrl: json['extracted_image_url'],
     );
   }
 
@@ -88,6 +97,9 @@ class DetectedFashionItem {
       'attributes': attributes.toJson(),
       'confidence': confidence,
       'bounding_box_description': boundingBoxDescription,
+      'box_2d': box2d,
+      'extracted_image_path': extractedImagePath,
+      'extracted_image_url': extractedImageUrl,
     };
   }
 }

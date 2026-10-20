@@ -69,8 +69,9 @@ class AnalysisProvider extends ChangeNotifier {
     } catch (_) {}
   }
 
-  Future<bool> matchAgainstWardrobe() async {
-    if (_currentAnalysis == null || _currentAnalysis!.items.isEmpty) return false;
+  Future<bool> matchAgainstWardrobe({List<DetectedFashionItem>? customItems}) async {
+    final itemsToMatch = customItems ?? _currentAnalysis?.items;
+    if (itemsToMatch == null || itemsToMatch.isEmpty) return false;
 
     _isMatching = true;
     _error = null;
@@ -78,8 +79,8 @@ class AnalysisProvider extends ChangeNotifier {
 
     try {
       final result = await ApiClient.matchOutfitAgainstWardrobe(
-        items: _currentAnalysis!.items,
-        analysisId: _currentAnalysis!.analysisId,
+        items: itemsToMatch,
+        analysisId: _currentAnalysis?.analysisId,
       );
       _currentMatchResult = result;
       _error = null;

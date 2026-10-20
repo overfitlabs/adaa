@@ -1,17 +1,34 @@
-# wardrobelens
+# adaa
 
-A new Flutter project.
+Modern Indian fashion sensibility with refined editorial styling. Warm, tactile, confident, understated, and fashion-first personal wardrobe and style intelligence.
 
-## Getting Started
+## Features
 
-This project is a starting point for a Flutter application.
+- **Personal Digital Wardrobe**: Catalog, tag, and organize your clothing collection with AI-powered garment attribute detection.
+- **AI Outfit Intelligence**: Deconstruct inspiration photos from street style, moodboards, or flat-lays to identify every garment piece and match against your personal closet.
+- **Style Circles & Shared Closets**: Create and join private student or designer communities to browse, share, and borrow curated clothing pieces.
+- **YouCam Virtual Try-On**: Preview outfit inspirations rendered on user photos with realistic clothing transfer.
+- **Capsule & Style Recommendations**: Receive high-low mix suggestions and personalized wardrobe insights.
 
-A few resources to get you started if this is your first Flutter project:
+## Design Identity
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+- **Brand**: `adaa` (always lowercase)
+- **Palette**:
+  - Terracotta (`#A05B49`)
+  - Espresso (`#342820`)
+  - Warm Ivory (`#F5F0E8`)
+  - Handloom Sand (`#D6C4A8`)
+  - Linen White (`#FFFFFF`)
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Running Locally
+
+```bash
+flutter pub get
+flutter run --dart-define=API_BASE_URL=http://127.0.0.1:8000
+```
+
+To run against the production Render API:
+
+```bash
+flutter run --dart-define=API_BASE_URL=https://wardrobelens.onrender.com
+```
