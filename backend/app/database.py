@@ -110,6 +110,26 @@ REQUIRED_COLUMNS = {
         ("status", "VARCHAR(30) DEFAULT 'active'"),
         ("notes", "TEXT"),
     ],
+    "item_requests": [
+        ("status", "VARCHAR(30) DEFAULT 'pending'"),
+        ("message", "TEXT"),
+        ("start_date", "DATETIME"),
+        ("end_date", "DATETIME"),
+        ("responded_at", "DATETIME"),
+        ("completed_at", "DATETIME"),
+    ],
+    "notifications": [
+        ("user_id", "VARCHAR(36)"),
+        ("actor_id", "VARCHAR(36)"),
+        ("actor_name", "VARCHAR(100)"),
+        ("event_type", "VARCHAR(50)"),
+        ("title", "VARCHAR(150)"),
+        ("message", "TEXT"),
+        ("reference_id", "VARCHAR(36)"),
+        ("reference_type", "VARCHAR(30)"),
+        ("community_id", "VARCHAR(36)"),
+        ("is_read", "BOOLEAN DEFAULT 0"),
+    ],
 }
 
 
@@ -194,12 +214,25 @@ def init_db(target_engine=None):
                 conn.execute(text("CREATE INDEX IF NOT EXISTS ix_comm_list_item_id ON community_listings (wardrobe_item_id)"))
                 conn.execute(text("CREATE INDEX IF NOT EXISTS ix_comm_list_owner_id ON community_listings (owner_id)"))
                 conn.execute(text("CREATE INDEX IF NOT EXISTS ix_comm_list_status ON community_listings (status)"))
+            if inspector.has_table("item_requests"):
+                conn.execute(text("CREATE INDEX IF NOT EXISTS ix_item_req_owner_status ON item_requests (owner_id, status)"))
+                conn.execute(text("CREATE INDEX IF NOT EXISTS ix_item_req_requester_status ON item_requests (requester_id, status)"))
+                conn.execute(text("CREATE INDEX IF NOT EXISTS ix_item_req_listing_status ON item_requests (listing_id, status)"))
+                conn.execute(text("CREATE INDEX IF NOT EXISTS ix_item_req_community_id ON item_requests (community_id)"))
+            if inspector.has_table("notifications"):
+                conn.execute(text("CREATE INDEX IF NOT EXISTS ix_notif_user_created ON notifications (user_id, created_at)"))
+                conn.execute(text("CREATE INDEX IF NOT EXISTS ix_notif_user_read ON notifications (user_id, is_read)"))
+                conn.execute(text("CREATE INDEX IF NOT EXISTS ix_notif_event_type ON notifications (event_type)"))
+                conn.execute(text("CREATE INDEX IF NOT EXISTS ix_notif_community_id ON notifications (community_id)"))
 
             # Record baseline migrations in schema_migrations
             migrations_to_record = [
                 ("0001_core_tables", "Core wardrobe and styling tables"),
                 ("0002_community_foundation", "Community and shared closet tables"),
                 ("0003_postgresql_compat", "PostgreSQL dialect support and indexes"),
+                ("0004_item_requests", "Item-level borrowing requests and tracking"),
+                ("0005_notifications", "User in-app notifications and activity center"),
+                ("0006_saved_outfits_security", "User-scoped saved outfits and RLS security"),
             ]
             for version_code, desc in migrations_to_record:
                 if is_sqlite:

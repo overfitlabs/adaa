@@ -18,6 +18,9 @@ from app.api import (
     routes_recommendations,
     routes_storage,
     routes_communities,
+    routes_requests,
+    routes_users,
+    routes_notifications,
 )
 
 
@@ -66,6 +69,9 @@ app.include_router(routes_outfits.router)
 app.include_router(routes_tryon.router)
 app.include_router(routes_recommendations.router)
 app.include_router(routes_communities.router)
+app.include_router(routes_requests.router)
+app.include_router(routes_users.router)
+app.include_router(routes_notifications.router)
 
 
 @app.get("/")

@@ -148,6 +148,52 @@ class CommunityListing(Base):
 
     community = relationship("Community", back_populates="listings")
     wardrobe_item = relationship("WardrobeItem")
+    requests = relationship("ItemRequest", back_populates="listing", cascade="all, delete-orphan")
+
+
+class ItemRequest(Base):
+    __tablename__ = "item_requests"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    listing_id = Column(String(36), ForeignKey("community_listings.id", ondelete="CASCADE"), nullable=False, index=True)
+    wardrobe_item_id = Column(String(36), ForeignKey("wardrobe_items.id", ondelete="CASCADE"), nullable=False, index=True)
+    community_id = Column(String(36), ForeignKey("communities.id", ondelete="CASCADE"), nullable=False, index=True)
+    requester_id = Column(String(36), nullable=False, index=True)
+    owner_id = Column(String(36), nullable=False, index=True)
+    status = Column(String(30), nullable=False, default="pending", server_default="pending", index=True)  # pending, accepted, declined, cancelled, completed
+    message = Column(Text, nullable=True)
+    start_date = Column(DateTime, nullable=True)
+    end_date = Column(DateTime, nullable=True)
+    responded_at = Column(DateTime, nullable=True)
+    completed_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    listing = relationship("CommunityListing", back_populates="requests")
+    wardrobe_item = relationship("WardrobeItem")
+    community = relationship("Community")
+
+
+class Notification(Base):
+    __tablename__ = "notifications"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    user_id = Column(String(36), nullable=False, index=True)
+    actor_id = Column(String(36), nullable=True)
+    actor_name = Column(String(100), nullable=True)
+    event_type = Column(String(50), nullable=False, index=True)
+    title = Column(String(150), nullable=False)
+    message = Column(Text, nullable=False)
+    reference_id = Column(String(36), nullable=True)
+    reference_type = Column(String(30), nullable=True)
+    community_id = Column(String(36), nullable=True, index=True)
+    is_read = Column(Boolean, nullable=False, default=False, server_default="0", index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "event_type", "reference_id", "reference_type", name="uq_notification_event"),
+    )
 
 
 class SchemaMigration(Base):
@@ -156,3 +202,4 @@ class SchemaMigration(Base):
     version = Column(String(50), primary_key=True)
     name = Column(String(100), nullable=False)
     applied_at = Column(DateTime, default=datetime.utcnow)
+

@@ -12,6 +12,7 @@ from app.models import (
     Community,
     CommunityListing,
     CommunityMembership,
+    ItemRequest,
     WardrobeItem,
 )
 from app.schemas import (
@@ -21,11 +22,14 @@ from app.schemas import (
     CommunityMemberResponse,
     CommunityMembershipSummary,
     CommunityResponse,
+    ItemRequestCreate,
+    ItemRequestResponse,
     MemberRoleUpdate,
     SharedClosetItemResponse,
     WardrobeItemResponse,
 )
 from app.services.image_storage import image_storage_service
+from app.services import notification_service
 
 logger = logging.getLogger("wardrobelens.routes_communities")
 
@@ -397,14 +401,22 @@ def browse_cross_community_shared_closet(
 
     rows = q.order_by(CommunityListing.created_at.desc()).offset(offset).limit(limit).all()
 
+    owner_ids = [listing.owner_id for listing, _, _ in rows]
+    profiles_map = _resolve_member_profiles(db, owner_ids)
+
     results = []
     for listing, item, comm in rows:
+        prof = profiles_map.get(listing.owner_id, {})
+        owner_name = prof.get("display_name") or f"Member ({listing.owner_id[:6]})"
         results.append(
             SharedClosetItemResponse(
                 listing_id=listing.id,
                 community_id=comm.id,
                 community_name=comm.name,
                 owner_id=listing.owner_id,
+                owner_name=owner_name,
+                owner_avatar_url=prof.get("avatar_url"),
+                owner_bio=prof.get("bio"),
                 status=listing.status,
                 notes=listing.notes,
                 created_at=listing.created_at,
@@ -493,16 +505,30 @@ def _resolve_member_profiles(db: Session, user_ids: List[str]) -> dict:
         from sqlalchemy import text
         placeholders = ", ".join([f":uid_{i}" for i in range(len(unique_ids))])
         params = {f"uid_{i}": uid for i, uid in enumerate(unique_ids)}
-        query = text(f"SELECT id, full_name, avatar_url, bio FROM profiles WHERE id IN ({placeholders})")
+        query = text(f"SELECT id, full_name, avatar_url, bio, show_profile_photo, show_bio FROM profiles WHERE id IN ({placeholders})")
         rows = db.execute(query, params).mappings().fetchall()
         for r in rows:
+            show_photo = r.get("show_profile_photo")
+            show_bio = r.get("show_bio")
             profiles_map[str(r["id"])] = {
                 "display_name": r.get("full_name"),
-                "avatar_url": r.get("avatar_url"),
-                "bio": r.get("bio"),
+                "avatar_url": r.get("avatar_url") if (show_photo is None or show_photo) else None,
+                "bio": r.get("bio") if (show_bio is None or show_bio) else None,
             }
     except Exception as e:
-        logger.debug("Profiles table lookup skipped or not available: %s", str(e))
+        logger.debug("Profiles table lookup fallback: %s", str(e))
+        try:
+            # Fallback for environments where new privacy columns are not yet present
+            query_fallback = text(f"SELECT id, full_name, avatar_url, bio FROM profiles WHERE id IN ({placeholders})")
+            rows = db.execute(query_fallback, params).mappings().fetchall()
+            for r in rows:
+                profiles_map[str(r["id"])] = {
+                    "display_name": r.get("full_name"),
+                    "avatar_url": r.get("avatar_url"),
+                    "bio": r.get("bio"),
+                }
+        except Exception:
+            pass
     return profiles_map
 
 
@@ -590,6 +616,10 @@ def request_to_join_community(
         mem.decided_by_id = None
         db.commit()
         db.refresh(mem)
+
+        # Notify admins
+        _notify_community_admins_of_request(db, comm, current_user.id, mem.id)
+        db.commit()
         return mem
 
     # Create new membership request
@@ -603,7 +633,44 @@ def request_to_join_community(
     db.add(new_mem)
     db.commit()
     db.refresh(new_mem)
+
+    # Notify admins
+    _notify_community_admins_of_request(db, comm, current_user.id, new_mem.id)
+    db.commit()
     return new_mem
+
+
+def _notify_community_admins_of_request(db: Session, comm: Community, applicant_id: str, mem_id: str):
+    try:
+        applicant_prof = _resolve_member_profiles(db, [applicant_id]).get(applicant_id, {})
+        applicant_name = applicant_prof.get("display_name") or f"Member ({applicant_id[:6]})"
+
+        admins = (
+            db.query(CommunityMembership)
+            .filter(
+                CommunityMembership.community_id == comm.id,
+                CommunityMembership.role.in_(["owner", "admin"]),
+                CommunityMembership.status == "approved",
+            )
+            .all()
+        )
+        recipient_ids = {comm.creator_id} | {a.user_id for a in admins}
+        for recipient_id in recipient_ids:
+            if recipient_id and recipient_id != applicant_id:
+                notification_service.create_notification(
+                    db=db,
+                    user_id=recipient_id,
+                    actor_id=applicant_id,
+                    actor_name=applicant_name,
+                    event_type="membership_requested",
+                    title="New membership request",
+                    message=f"{applicant_name} requested to join {comm.name}.",
+                    reference_id=mem_id,
+                    reference_type="community",
+                    community_id=comm.id,
+                )
+    except Exception as e:
+        logger.warning("Failed to dispatch membership_requested notification: %s", str(e))
 
 
 @router.get("/{community_id}/membership", response_model=CommunityMemberResponse)
@@ -645,6 +712,27 @@ def approve_join_request(
     target_mem.decided_by_id = current_user.id
     db.commit()
     db.refresh(target_mem)
+
+    # Notify applicant of approval
+    comm = db.query(Community).filter(Community.id == community_id).first()
+    comm_name = comm.name if comm else "the community"
+    admin_prof = _resolve_member_profiles(db, [current_user.id]).get(current_user.id, {})
+    admin_name = admin_prof.get("display_name") or "Community Admin"
+
+    notification_service.create_notification(
+        db=db,
+        user_id=target_user_id,
+        actor_id=current_user.id,
+        actor_name=admin_name,
+        event_type="membership_approved",
+        title="Membership approved",
+        message=f"Your request to join {comm_name} was approved!",
+        reference_id=community_id,
+        reference_type="community",
+        community_id=community_id,
+    )
+    db.commit()
+
     return target_mem
 
 
@@ -672,6 +760,27 @@ def reject_join_request(
     target_mem.decided_by_id = current_user.id
     db.commit()
     db.refresh(target_mem)
+
+    # Notify applicant of rejection
+    comm = db.query(Community).filter(Community.id == community_id).first()
+    comm_name = comm.name if comm else "the community"
+    admin_prof = _resolve_member_profiles(db, [current_user.id]).get(current_user.id, {})
+    admin_name = admin_prof.get("display_name") or "Community Admin"
+
+    notification_service.create_notification(
+        db=db,
+        user_id=target_user_id,
+        actor_id=current_user.id,
+        actor_name=admin_name,
+        event_type="membership_rejected",
+        title="Membership request update",
+        message=f"Your request to join {comm_name} was not approved.",
+        reference_id=community_id,
+        reference_type="community",
+        community_id=community_id,
+    )
+    db.commit()
+
     return target_mem
 
 
@@ -878,6 +987,9 @@ def get_community_listings(
 
     rows = q.order_by(CommunityListing.created_at.desc()).offset(offset).limit(limit).all()
 
+    owner_ids = [listing.owner_id for listing, _ in rows]
+    profiles_map = _resolve_member_profiles(db, owner_ids)
+
     return [
         CommunityListingResponse(
             id=listing.id,
@@ -885,6 +997,9 @@ def get_community_listings(
             community_name=comm.name,
             wardrobe_item_id=listing.wardrobe_item_id,
             owner_id=listing.owner_id,
+            owner_name=profiles_map.get(listing.owner_id, {}).get("display_name") or f"Member ({listing.owner_id[:6]})",
+            owner_avatar_url=profiles_map.get(listing.owner_id, {}).get("avatar_url"),
+            owner_bio=profiles_map.get(listing.owner_id, {}).get("bio"),
             status=listing.status,
             notes=listing.notes,
             created_at=listing.created_at,
@@ -1070,14 +1185,161 @@ def get_listing_detail(
     if not item:
         raise HTTPException(status_code=404, detail="Wardrobe item not found.")
 
+    profiles_map = _resolve_member_profiles(db, [listing.owner_id])
+    prof = profiles_map.get(listing.owner_id, {})
+    owner_name = prof.get("display_name") or f"Member ({listing.owner_id[:6]})"
+
     return CommunityListingResponse(
         id=listing.id,
         community_id=community_id,
         community_name=comm.name,
         wardrobe_item_id=listing.wardrobe_item_id,
         owner_id=listing.owner_id,
+        owner_name=owner_name,
+        owner_avatar_url=prof.get("avatar_url"),
+        owner_bio=prof.get("bio"),
         status=listing.status,
         notes=listing.notes,
         created_at=listing.created_at,
         item=_model_to_item_response(item),
     )
+
+
+# ============================================================================
+# Item Borrowing Requests
+# ============================================================================
+
+
+@router.post(
+    "/{community_id}/listings/{listing_id}/requests",
+    response_model=ItemRequestResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_borrow_request(
+    community_id: str,
+    listing_id: str,
+    body: ItemRequestCreate,
+    current_user: AuthenticatedUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Submit a borrow request for an active community garment listing.
+    Enforces all security rules:
+    1. Caller must hold an approved membership in the community.
+    2. Listing must exist in the community and have status == 'active'.
+    3. Caller cannot request their own item.
+    4. Start date must not be after end date.
+    5. Requesters cannot submit duplicate pending requests for the same listing.
+    """
+    comm = db.query(Community).filter(Community.id == community_id).first()
+    if not comm:
+        raise HTTPException(status_code=404, detail="Community not found.")
+
+    # 1. Require approved membership in community
+    _require_approved_member(db, community_id, current_user.id)
+
+    # 2. Require active listing in this community
+    listing = (
+        db.query(CommunityListing)
+        .filter(
+            CommunityListing.id == listing_id,
+            CommunityListing.community_id == community_id,
+            CommunityListing.status == "active",
+        )
+        .first()
+    )
+    if not listing:
+        raise HTTPException(status_code=404, detail="Active community listing not found.")
+
+    # 3. Caller cannot request their own piece
+    if listing.owner_id == current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot submit a borrow request for your own closet piece.",
+        )
+
+    # 4. Date validation
+    if body.start_date and body.end_date and body.start_date > body.end_date:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Start date cannot be after end date.",
+        )
+
+    # 5. Duplicate pending check
+    existing_pending = (
+        db.query(ItemRequest)
+        .filter(
+            ItemRequest.listing_id == listing.id,
+            ItemRequest.requester_id == current_user.id,
+            ItemRequest.status == "pending",
+        )
+        .first()
+    )
+    if existing_pending:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="You already have a pending borrow request for this item.",
+        )
+
+    # 6. Create request
+    new_request = ItemRequest(
+        listing_id=listing.id,
+        wardrobe_item_id=listing.wardrobe_item_id,
+        community_id=community_id,
+        requester_id=current_user.id,
+        owner_id=listing.owner_id,
+        status="pending",
+        message=body.message.strip() if body.message and body.message.strip() else None,
+        start_date=body.start_date,
+        end_date=body.end_date,
+    )
+    db.add(new_request)
+    db.commit()
+    db.refresh(new_request)
+
+    profiles_map = _resolve_member_profiles(db, [new_request.requester_id, new_request.owner_id])
+    requester_prof = profiles_map.get(new_request.requester_id, {})
+    owner_prof = profiles_map.get(new_request.owner_id, {})
+
+    item = db.query(WardrobeItem).filter(WardrobeItem.id == new_request.wardrobe_item_id).first()
+    item_name = item.name if item else "closet piece"
+    requester_name = requester_prof.get("display_name") or f"Member ({new_request.requester_id[:6]})"
+
+    # Notify item owner of incoming borrow request
+    notification_service.create_notification(
+        db=db,
+        user_id=new_request.owner_id,
+        actor_id=current_user.id,
+        actor_name=requester_name,
+        event_type="borrow_request_created",
+        title="New borrow request",
+        message=f'{requester_name} requested to borrow "{item_name}".',
+        reference_id=new_request.id,
+        reference_type="borrow_request",
+        community_id=community_id,
+    )
+    db.commit()
+
+    return ItemRequestResponse(
+        id=new_request.id,
+        listing_id=new_request.listing_id,
+        wardrobe_item_id=new_request.wardrobe_item_id,
+        community_id=new_request.community_id,
+        community_name=comm.name,
+        requester_id=new_request.requester_id,
+        requester_name=requester_prof.get("display_name") or f"Member ({new_request.requester_id[:6]})",
+        requester_avatar_url=requester_prof.get("avatar_url"),
+        owner_id=new_request.owner_id,
+        owner_name=owner_prof.get("display_name") or f"Member ({new_request.owner_id[:6]})",
+        owner_avatar_url=owner_prof.get("avatar_url"),
+        status=new_request.status,
+        message=new_request.message,
+        start_date=new_request.start_date,
+        end_date=new_request.end_date,
+        responded_at=new_request.responded_at,
+        completed_at=new_request.completed_at,
+        created_at=new_request.created_at,
+        updated_at=new_request.updated_at,
+        item=_model_to_item_response(item) if item else None,
+    )
+

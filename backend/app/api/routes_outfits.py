@@ -42,8 +42,52 @@ def create_saved_outfit(
     db: Session = Depends(get_db),
     current_user: Optional[AuthenticatedUser] = Depends(get_optional_current_user),
 ):
+    if not data.item_ids:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="An outfit must contain at least one wardrobe item.",
+        )
+
+    user_id = current_user.id if current_user else None
+
+    # 1. Validate that all referenced wardrobe items exist
+    wardrobe_records = db.query(WardrobeItem).filter(WardrobeItem.id.in_(data.item_ids)).all()
+    if len(wardrobe_records) != len(set(data.item_ids)):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="One or more referenced wardrobe items do not exist.",
+        )
+
+    # 2. Enforce strict wardrobe ownership: User cannot save outfits containing items owned by someone else
+    if user_id:
+        for item in wardrobe_records:
+            if item.user_id != user_id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Cannot create an outfit containing items from another user's wardrobe.",
+                )
+    else:
+        for item in wardrobe_records:
+            if item.user_id is not None:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Unauthenticated requests cannot access private user wardrobe items.",
+                )
+
+    # 3. Deduplication: Check if an identical outfit already exists for this user
+    target_item_set = set(data.item_ids)
+    existing_outfits = db.query(SavedOutfit).filter(SavedOutfit.user_id == user_id).all()
+    for ex in existing_outfits:
+        try:
+            ex_items = set(json.loads(ex.item_ids_json))
+            if ex_items == target_item_set:
+                # Duplicate avoided - return existing saved outfit record
+                return _outfit_to_response(ex, db)
+        except Exception:
+            continue
+
     outfit = SavedOutfit(
-        user_id=current_user.id if current_user else None,
+        user_id=user_id,
         name=data.name.strip(),
         occasion=data.occasion.strip() if data.occasion else None,
         notes=data.notes.strip() if data.notes else None,

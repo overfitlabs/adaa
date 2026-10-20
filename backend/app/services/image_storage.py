@@ -39,6 +39,7 @@ class ImageStorageService:
         (self.base_dir / "wardrobe").mkdir(exist_ok=True)
         (self.base_dir / "inspirations").mkdir(exist_ok=True)
         (self.base_dir / "tryon").mkdir(exist_ok=True)
+        (self.base_dir / "profiles").mkdir(exist_ok=True)
 
     def _configure_cloudinary(self) -> None:
         if not settings.is_cloudinary_configured:

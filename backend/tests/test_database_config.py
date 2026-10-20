@@ -126,7 +126,10 @@ def test_init_db_schema_isolation_does_not_touch_profiles():
         "communities",
         "community_memberships",
         "community_listings",
+        "item_requests",
+        "notifications",
         "schema_migrations",
     }
     assert registered_tables == expected_app_tables
+
 

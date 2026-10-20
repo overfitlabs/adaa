@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import List, Optional
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, model_validator
 
 
 # Garment / Item Models
@@ -216,6 +216,41 @@ class StyleRecommendation(BaseModel):
     occasion: str
     suggested_item_ids: List[str]
     styling_tips: List[str]
+    items: Optional[List[WardrobeItemResponse]] = None
+
+
+# AI Stylist & Outfit Generation Schemas
+class OutfitGenerationRequest(BaseModel):
+    occasion: Optional[str] = Field("Everyday", description="Occasion (e.g. Everyday, Smart Casual, Formal, Work, Casual Weekend, Date Night, Athletic, Party)")
+    vibe: Optional[str] = Field(None, description="Style or vibe (e.g. Minimalist, Streetwear, Vintage, Classic, Monochromatic, Preppy, Casual)")
+    instructions: Optional[str] = Field(None, description="Optional custom styling instructions")
+    exclude_item_ids: Optional[List[str]] = Field(default_factory=list, description="Item IDs to exclude for refinement")
+    refine_index: Optional[int] = Field(0, description="Refinement iteration index to cycle alternative combinations")
+
+
+class RecommendedOutfit(BaseModel):
+    id: str
+    name: str
+    occasion: str
+    vibe: str
+    compatibility_score: float = Field(..., ge=0.0, le=1.0)
+    explanation: str
+    styling_tips: List[str] = Field(default_factory=list)
+    item_ids: List[str]
+    items: List[WardrobeItemResponse]
+    is_saved: bool = False
+    saved_outfit_id: Optional[str] = None
+
+
+class OutfitGenerationResponse(BaseModel):
+    status: str = Field(..., description="'success', 'empty_wardrobe', or 'insufficient_items'")
+    message: str
+    occasion: str
+    vibe: Optional[str] = None
+    applied_profile_preferences: Optional[List[str]] = Field(default_factory=list)
+    missing_categories: Optional[List[str]] = Field(default_factory=list)
+    outfits: List[RecommendedOutfit] = Field(default_factory=list)
+
 
 
 # Community Schemas
@@ -289,6 +324,9 @@ class CommunityListingResponse(BaseModel):
     community_name: Optional[str] = None
     wardrobe_item_id: str
     owner_id: str
+    owner_name: Optional[str] = None
+    owner_avatar_url: Optional[str] = None
+    owner_bio: Optional[str] = None
     status: str
     notes: Optional[str] = None
     created_at: datetime
@@ -302,7 +340,162 @@ class SharedClosetItemResponse(BaseModel):
     community_id: str
     community_name: str
     owner_id: str
+    owner_name: Optional[str] = None
+    owner_avatar_url: Optional[str] = None
+    owner_bio: Optional[str] = None
     status: str
     notes: Optional[str] = None
     created_at: datetime
     item: WardrobeItemResponse
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# Item-level Borrowing Request Schemas
+class ItemRequestCreate(BaseModel):
+    message: Optional[str] = Field(None, max_length=500, description="Optional note to the owner")
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+
+    @model_validator(mode="after")
+    def validate_dates(self) -> "ItemRequestCreate":
+        if self.start_date and self.end_date and self.start_date > self.end_date:
+            raise ValueError("Start date cannot be after end date.")
+        return self
+
+
+class ItemRequestStatusUpdate(BaseModel):
+    status: str = Field(..., description="accepted, declined, cancelled, or completed")
+
+
+class ItemRequestResponse(BaseModel):
+    id: str
+    listing_id: str
+    wardrobe_item_id: str
+    community_id: str
+    community_name: Optional[str] = None
+    requester_id: str
+    requester_name: Optional[str] = None
+    requester_avatar_url: Optional[str] = None
+    owner_id: str
+    owner_name: Optional[str] = None
+    owner_avatar_url: Optional[str] = None
+    status: str
+    message: Optional[str] = None
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+    responded_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    created_at: datetime
+    updated_at: datetime
+    item: Optional[WardrobeItemResponse] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# User Profile Schemas
+class FitPreferences(BaseModel):
+    tops_size: Optional[str] = None
+    bottoms_size: Optional[str] = None
+    shoe_size: Optional[str] = None
+    preferred_fit: Optional[str] = None  # slim, regular, relaxed, oversized
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ProfilePrivacySettings(BaseModel):
+    show_profile_photo: bool = True
+    show_bio: bool = True
+    show_age: bool = False
+    show_phone: bool = False
+    show_email: bool = False
+    show_fit_preferences: bool = False
+    show_preferred_styles: bool = True
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ProfilePrivacyUpdate(BaseModel):
+    show_profile_photo: Optional[bool] = None
+    show_bio: Optional[bool] = None
+    show_age: Optional[bool] = None
+    show_phone: Optional[bool] = None
+    show_email: Optional[bool] = None
+    show_fit_preferences: Optional[bool] = None
+    show_preferred_styles: Optional[bool] = None
+
+
+class UserProfileUpdate(BaseModel):
+    display_name: Optional[str] = Field(None, min_length=1, max_length=60, description="User public display name")
+    bio: Optional[str] = Field(None, max_length=280, description="Short user bio")
+    avatar_url: Optional[str] = Field(None, max_length=500, description="Avatar image URL")
+    age: Optional[int] = Field(None, ge=13, le=120, description="User age in years")
+    phone_number: Optional[str] = Field(None, max_length=40, description="Contact phone number")
+    tops_size: Optional[str] = Field(None, max_length=30)
+    bottoms_size: Optional[str] = Field(None, max_length=30)
+    shoe_size: Optional[str] = Field(None, max_length=30)
+    preferred_fit: Optional[str] = Field(None, max_length=30)
+    preferred_styles: Optional[List[str]] = None
+    privacy_settings: Optional[ProfilePrivacyUpdate] = None
+
+
+class MyUserProfileResponse(BaseModel):
+    id: str
+    email: str
+    display_name: str
+    avatar_url: Optional[str] = None
+    bio: Optional[str] = None
+    age: Optional[int] = None
+    phone_number: Optional[str] = None
+    fit_preferences: Optional[FitPreferences] = None
+    preferred_styles: List[str] = Field(default_factory=list)
+    privacy_settings: ProfilePrivacySettings = Field(default_factory=ProfilePrivacySettings)
+    shared_communities_count: int = 0
+    shared_items_count: int = 0
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PublicUserProfileResponse(BaseModel):
+    id: str
+    display_name: str
+    avatar_url: Optional[str] = None
+    bio: Optional[str] = None
+    age: Optional[int] = None
+    phone_number: Optional[str] = None
+    email: Optional[str] = None
+    fit_preferences: Optional[FitPreferences] = None
+    preferred_styles: Optional[List[str]] = None
+    shared_communities_count: int = 0
+    shared_items_count: int = 0
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# Notification Models
+class NotificationResponse(BaseModel):
+    id: str
+    user_id: str
+    actor_id: Optional[str] = None
+    actor_name: Optional[str] = None
+    event_type: str
+    title: str
+    message: str
+    reference_id: Optional[str] = None
+    reference_type: Optional[str] = None
+    community_id: Optional[str] = None
+    is_read: bool = False
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class NotificationUnreadCountResponse(BaseModel):
+    unread_count: int
+
+
+class MarkAllNotificationsReadResponse(BaseModel):
+    marked_count: int
+
+
