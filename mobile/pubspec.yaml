@@ -41,6 +41,7 @@ dependencies:
   file_picker: ^13.1.0
   http_parser: ^4.1.2
   supabase_flutter: ^2.8.3
+  shared_preferences_android: ">=2.4.28 <2.5.0"
 
 dev_dependencies:
   flutter_test:

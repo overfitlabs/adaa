@@ -1,57 +1,86 @@
 import 'package:flutter/material.dart';
 
-/// Centralized color palette for `adaa`.
-/// Modern Indian fashion sensibility with refined editorial styling.
-/// Warm, tactile, confident, understated, and fashion-first.
+/// Centralized Stitch design system color palette for `adaa`.
+/// Editorial luxury fashion sensibility: deep forest green, muted sage,
+/// warm ivory surfaces, restrained ochre gold accents, and tactile sand cards.
 class AppColors {
-  // Brand Core Palette
-  static const Color terracotta = Color(0xFFA05B49);     // Signature Terracotta #A05B49
-  static const Color terracottaDark = Color(0xFF834333); // Deep Rust #834333
-  static const Color terracottaSoft = Color(0xFFF7ECE9); // Warm Blush Wash #F7ECE9
+  // Stitch Editorial Core Palette
+  static const Color forest = Color(0xFF1E382B);          // Deep Forest Green #1E382B (Primary anchor)
+  static const Color forestDark = Color(0xFF082217);      // High-contrast Forest #082217
+  static const Color forestContainer = Color(0xFF1E382B); // Primary container
   
-  static const Color espresso = Color(0xFF342820);       // Rich Espresso #342820
-  static const Color espressoDark = Color(0xFF231A14);   // Deep Noir Espresso
-  static const Color espressoLight = Color(0xFF4D3C32);  // Soft Espresso
+  static const Color sage = Color(0xFF4A6B56);            // Muted Sage Green #4A6B56 (Secondary)
+  static const Color sageDark = Color(0xFF2D4D3A);        // Deep Sage #2D4D3A
+  static const Color sageContainer = Color(0xFFC4E9CE);   // Soft Sage Container #C4E9CE
+  static const Color sageWash = Color(0xFFE2ECE5);        // Light Sage Wash #E2ECE5
   
-  static const Color warmIvory = Color(0xFFF5F0E8);      // Tactile Warm Ivory Canvas #F5F0E8
-  static const Color sand = Color(0xFFD6C4A8);           // Handloom Sand #D6C4A8
-  static const Color sandSoft = Color(0xFFEFE7DC);       // Soft Sand
-  static const Color sandLight = Color(0xFFFBF9F5);      // Pure Linen Tint
-  static const Color white = Color(0xFFFFFFFF);          // Clean White
+  static const Color gold = Color(0xFFD49B4B);            // Restrained Ochre Gold #D49B4B (AI / Sparkle)
+  static const Color goldDim = Color(0xFFF9BB68);         // Warm Gold Tint #F9BB68
+  static const Color goldFixed = Color(0xFFFFDDB5);       // Soft Gold Badge #FFDDB5
+  
+  static const Color canvas = Color(0xFFFCF9F4);          // Warm Editorial Ivory Canvas #FCF9F4
+  static const Color canvasIvory = Color(0xFFFBF8F3);     // Soft Studio Ivory #FBF8F3
+  static const Color surfaceContainer = Color(0xFFF0EDE9);// Neutral Container #F0EDE9
+  static const Color surfaceContainerLow = Color(0xFFF6F3EE); // Low Surface #F6F3EE
+  static const Color surfaceContainerHigh = Color(0xFFEBE8E3);// High Surface #EBE8E3
+  static const Color surfaceContainerHighest = Color(0xFFE5E2DD);// Highest Surface #E5E2DD
+  static const Color cardSand = Color(0xFFEFE8DD);        // Garment Backdrop Sand #EFE8DD
+  static const Color white = Color(0xFFFFFFFF);           // Pure White
+  
+  static const Color textDark = Color(0xFF1C1C19);        // Primary Dark Text #1C1C19
+  static const Color textMuted = Color(0xFF424844);       // Muted Editorial Text #424844
+  static const Color textSubtle = Color(0xFF727973);      // Subtle Secondary Text #727973
+  static const Color outline = Color(0xFF727973);         // Outline #727973
+  static const Color outlineVariant = Color(0xFFC2C8C2);  // Hairline Outline #C2C8C2
+  
+  static const Color error = Color(0xFFBA1A1A);           // Editorial Error #BA1A1A
+  static const Color errorContainer = Color(0xFFFFDAD6);  // Soft Error Container #FFDAD6
 
-  // Semantic UI Mappings (Maintains backward compatibility across codebase)
-  static const Color primary = espresso;                 // Espresso anchors primary action & typography
-  static const Color primaryDark = espressoDark;
-  static const Color accent = terracotta;                // Terracotta is the signature brand accent
-  static const Color accentSoft = terracottaSoft;        // Warm terracotta wash for badges/containers
+  // Semantic UI Mappings (Full backward compatibility for existing screens & tests)
+  static const Color primary = forest;                   // Forest Green primary
+  static const Color primaryDark = forestDark;
+  static const Color accent = gold;                      // Gold sparkle / AI accent
+  static const Color accentSoft = sageWash;              // Soft sage wash for badges
 
-  static const Color background = warmIvory;             // Warm Ivory Canvas
-  static const Color surface = white;                    // Clean White Surface Cards
-  static const Color surfaceElevated = Color(0xFFFCFAF7);// Ivory-tinted Elevated Surface
+  static const Color background = canvas;                // Warm Ivory Canvas
+  static const Color surface = canvas;                   // Warm Canvas
+  static const Color surfaceElevated = surfaceContainerLow; // Elevated Surface
+  static const Color surfaceCard = cardSand;             // Garment Card Neutral
 
-  static const Color textPrimary = espresso;             // Espresso text for maximum warmth & contrast
-  static const Color textSecondary = Color(0xFF736257);  // Warm muted espresso
-  static const Color textMuted = Color(0xFFA49488);      // Subtle sand-grey
-  static const Color textTertiary = textMuted;
+  static const Color textPrimary = textDark;             // Primary text
+  static const Color textSecondary = textMuted;          // Secondary text
+  static const Color textTertiary = textSubtle;          // Subtle text
 
-  static const Color border = Color(0xFFE3DACF);         // Refined sand hairline border
-  static const Color borderLight = Color(0xFFEFE8DF);
+  static const Color border = outlineVariant;            // Hairline border
+  static const Color borderLight = surfaceContainerHigh;
 
-  // Status & Match Indicators (Warm & Editorial)
-  static const Color exactMatch = Color(0xFF2E7D52);     // Forest Olive
-  static const Color approxMatch = Color(0xFFC8822B);    // Warm Ochre Amber
+  // Backward-compatible color tokens
+  static const Color terracotta = gold;
+  static const Color terracottaDark = Color(0xFF834333);
+  static const Color terracottaSoft = Color(0xFFF7ECE9);
+  static const Color espresso = forest;
+  static const Color espressoDark = forestDark;
+  static const Color espressoLight = sage;
+  static const Color warmIvory = canvas;
+  static const Color sand = cardSand;
+  static const Color sandSoft = surfaceContainerLow;
+  static const Color sandLight = canvas;
+
+  // Status & Match Indicators
+  static const Color exactMatch = Color(0xFF2E7D52);     // Forest Green Match
+  static const Color approxMatch = gold;                 // Warm Ochre Amber
   static const Color missing = Color(0xFFC04B37);        // Terracotta Rust
 
-  // Subtle elevation shadows
+  // Stitch Diffused Forest-tinted Shadows
   static final BoxShadow cardShadow = BoxShadow(
-    color: espresso.withValues(alpha: 0.06),
-    blurRadius: 8,
-    offset: const Offset(0, 2),
+    color: forest.withValues(alpha: 0.06),
+    blurRadius: 20,
+    offset: const Offset(0, 8),
   );
 
   static final BoxShadow subtleShadow = BoxShadow(
-    color: espresso.withValues(alpha: 0.04),
-    blurRadius: 4,
-    offset: const Offset(0, 1),
+    color: forest.withValues(alpha: 0.04),
+    blurRadius: 8,
+    offset: const Offset(0, 2),
   );
 }

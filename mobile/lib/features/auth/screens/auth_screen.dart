@@ -4,12 +4,14 @@ import 'package:provider/provider.dart';
 
 import '../../../core/auth/session_manager.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/adaa_wordmark.dart';
 import '../../../state/auth_provider.dart';
 import '../../home/screens/home_screen.dart';
 
 /// Full-page strict authentication screen for `adaa`.
-/// Shown whenever there is no valid authenticated session.
+/// Embodies Stitch editorial luxury: warm ivory background, Deep Forest Green pill CTA,
+/// Playfair Display headlines, and refined form inputs.
 class AuthScreen extends StatefulWidget {
   final bool initialIsSignUp;
 
@@ -95,7 +97,7 @@ class _AuthScreenState extends State<AuthScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(result.message ?? 'An account with this email already exists. Please sign in.'),
-            backgroundColor: Colors.amber.shade800,
+            backgroundColor: AppColors.gold,
           ),
         );
         setState(() {
@@ -114,7 +116,6 @@ class _AuthScreenState extends State<AuthScreen> {
 
   void _navigateHomeIfMounted() {
     if (!mounted) return;
-    // If AuthScreen was pushed on top of the navigator stack, pop or replace with HomeScreen
     if (Navigator.of(context).canPop()) {
       Navigator.of(context).pop();
     } else {
@@ -132,17 +133,9 @@ class _AuthScreenState extends State<AuthScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Confirmation link resent to $email. Please check your inbox.'),
-          backgroundColor: Colors.green.shade700,
+          backgroundColor: AppColors.forest,
         ),
       );
-    }
-  }
-
-  Future<void> _continueWithGoogle(AuthProvider auth) async {
-    SessionManager.clearAllUserData(context);
-    final success = await auth.signInWithGoogle();
-    if (success && mounted) {
-      _navigateHomeIfMounted();
     }
   }
 
@@ -151,48 +144,75 @@ class _AuthScreenState extends State<AuthScreen> {
     final auth = context.watch<AuthProvider>();
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.canvas,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 440),
+              constraints: const BoxConstraints(maxWidth: 420),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // App Brand Logo & Wordmark
-                  const Center(
+                  // Stitch Brand Logo & Wordmark
+                  const Padding(
+                    padding: EdgeInsets.only(bottom: 24),
                     child: AdaaWordmark(
                       size: AdaaWordmarkSize.large,
-                      color: AppColors.espresso,
-                      withDotAccent: true,
                       showSubtitle: true,
-                      subtitle: 'style intelligence & closet',
+                      subtitle: 'campus sharing & wardrobe',
+                      useLogoAsset: false,
                     ),
+                  ),
+
+                  // Headline & Subtitle (Playfair Display)
+                  Text(
+                    _isVerificationPending
+                        ? 'Verify Your Email'
+                        : _isSignUp
+                            ? 'Create Style Profile.'
+                            : 'Welcome back.',
+                    style: AppTypography.displaySmall.copyWith(
+                      color: AppColors.forest,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    _isVerificationPending
+                        ? 'We sent a verification link to your registered email.'
+                        : _isSignUp
+                            ? 'Begin your intelligent digital wardrobe journey.'
+                            : 'Enter your credentials to access your curated personal wardrobe.',
+                    style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary),
+                    textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 28),
 
-                  // Authentication Card
+                  // Main Interactive Card
                   Container(
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: AppColors.border),
-                      boxShadow: [AppColors.cardShadow],
+                      color: AppColors.surfaceContainerLow,
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: AppColors.outlineVariant, width: 0.8),
+                      boxShadow: [AppColors.subtleShadow],
                     ),
                     child: _isVerificationPending
                         ? _buildVerificationPendingView(auth)
                         : _buildFormView(auth),
                   ),
 
-                  const SizedBox(height: 20),
-                  const Center(
-                    child: Text(
-                      'adaa strictly protects your wardrobe and privacy.',
-                      style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                  const SizedBox(height: 24),
+
+                  // Footer note
+                  Text(
+                    'adaa • personal style intelligence & campus sharing',
+                    style: AppTypography.labelSmall.copyWith(
+                      color: AppColors.textSubtle,
+                      letterSpacing: 0.8,
                     ),
                   ),
                 ],
@@ -210,42 +230,42 @@ class _AuthScreenState extends State<AuthScreen> {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: AppColors.accentSoft.withValues(alpha: 0.5),
+          padding: const EdgeInsets.all(18),
+          decoration: const BoxDecoration(
+            color: AppColors.sageContainer,
             shape: BoxShape.circle,
           ),
-          child: const Icon(Icons.mark_email_unread_outlined, color: AppColors.primary, size: 36),
+          child: const Icon(Icons.mark_email_unread_outlined, color: AppColors.forest, size: 36),
         ),
-        const SizedBox(height: 16),
-        const Text(
-          'Verify Your Email',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
+        const SizedBox(height: 18),
+        Text(
+          'Verification Sent',
+          style: AppTypography.headlineSmall.copyWith(color: AppColors.forest),
         ),
         const SizedBox(height: 8),
         Text(
           'We sent a verification link to:\n$_pendingEmail',
           textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.4),
+          style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary, height: 1.4),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 24),
         SizedBox(
           width: double.infinity,
-          height: 46,
+          height: 50,
           child: ElevatedButton(
             onPressed: _resendCooldownSeconds > 0
                 ? null
                 : () => _resendConfirmation(auth, _pendingEmail),
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
+              backgroundColor: AppColors.forest,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9999)),
             ),
             child: Text(
               _resendCooldownSeconds > 0
                   ? 'Resend Link in $_resendCooldownSeconds s'
                   : 'Resend Verification Email',
-              style: const TextStyle(fontWeight: FontWeight.w600),
+              style: AppTypography.labelLarge.copyWith(color: Colors.white),
             ),
           ),
         ),
@@ -257,7 +277,7 @@ class _AuthScreenState extends State<AuthScreen> {
               _isSignUp = false;
             });
           },
-          child: const Text('Back to Sign In', style: TextStyle(color: AppColors.primary)),
+          child: Text('Back to Sign In', style: AppTypography.labelLarge.copyWith(color: AppColors.forest)),
         ),
       ],
     );
@@ -269,13 +289,12 @@ class _AuthScreenState extends State<AuthScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Segmented Toggle for Sign In vs Sign Up
+          // Segmented Pill Toggle for Sign In vs Create Account
           Container(
             padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
-              color: AppColors.background,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.border),
+              color: AppColors.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(9999),
             ),
             child: Row(
               children: [
@@ -287,21 +306,21 @@ class _AuthScreenState extends State<AuthScreen> {
                         auth.clearError();
                       });
                     },
-                    borderRadius: BorderRadius.circular(8),
-                    child: Container(
+                    borderRadius: BorderRadius.circular(9999),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
                       padding: const EdgeInsets.symmetric(vertical: 10),
                       decoration: BoxDecoration(
-                        color: !_isSignUp ? AppColors.surface : Colors.transparent,
-                        borderRadius: BorderRadius.circular(8),
+                        color: !_isSignUp ? AppColors.forest : Colors.transparent,
+                        borderRadius: BorderRadius.circular(9999),
                         boxShadow: !_isSignUp ? [AppColors.subtleShadow] : null,
                       ),
                       child: Text(
                         'Sign In',
                         textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: !_isSignUp ? FontWeight.w800 : FontWeight.w600,
-                          color: !_isSignUp ? AppColors.textPrimary : AppColors.textSecondary,
+                        style: AppTypography.labelLarge.copyWith(
+                          color: !_isSignUp ? Colors.white : AppColors.textSecondary,
+                          fontWeight: !_isSignUp ? FontWeight.w700 : FontWeight.w500,
                         ),
                       ),
                     ),
@@ -315,21 +334,21 @@ class _AuthScreenState extends State<AuthScreen> {
                         auth.clearError();
                       });
                     },
-                    borderRadius: BorderRadius.circular(8),
-                    child: Container(
+                    borderRadius: BorderRadius.circular(9999),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
                       padding: const EdgeInsets.symmetric(vertical: 10),
                       decoration: BoxDecoration(
-                        color: _isSignUp ? AppColors.surface : Colors.transparent,
-                        borderRadius: BorderRadius.circular(8),
+                        color: _isSignUp ? AppColors.forest : Colors.transparent,
+                        borderRadius: BorderRadius.circular(9999),
                         boxShadow: _isSignUp ? [AppColors.subtleShadow] : null,
                       ),
                       child: Text(
                         'Create Account',
                         textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: _isSignUp ? FontWeight.w800 : FontWeight.w600,
-                          color: _isSignUp ? AppColors.textPrimary : AppColors.textSecondary,
+                        style: AppTypography.labelLarge.copyWith(
+                          color: _isSignUp ? Colors.white : AppColors.textSecondary,
+                          fontWeight: _isSignUp ? FontWeight.w700 : FontWeight.w500,
                         ),
                       ),
                     ),
@@ -338,25 +357,25 @@ class _AuthScreenState extends State<AuthScreen> {
               ],
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 22),
 
           // Error banner
           if (auth.errorMessage != null) ...[
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.red.shade50,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.red.shade200),
+                color: AppColors.errorContainer,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
               ),
               child: Row(
                 children: [
-                  Icon(Icons.error_outline, size: 18, color: Colors.red.shade700),
+                  const Icon(Icons.error_outline, size: 18, color: AppColors.error),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       auth.errorMessage!,
-                      style: TextStyle(fontSize: 12, color: Colors.red.shade900),
+                      style: AppTypography.bodySmall.copyWith(color: AppColors.error, fontWeight: FontWeight.w500),
                     ),
                   ),
                 ],
@@ -370,11 +389,11 @@ class _AuthScreenState extends State<AuthScreen> {
             TextFormField(
               controller: _nameController,
               textCapitalization: TextCapitalization.words,
+              style: AppTypography.bodyMedium.copyWith(color: AppColors.textDark),
               decoration: InputDecoration(
                 labelText: 'Full Name',
-                hintText: 'e.g. Alex Morgan',
-                prefixIcon: const Icon(Icons.person_outline, size: 20),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                hintText: 'e.g. Elena Rostova',
+                prefixIcon: const Icon(Icons.person_outline, size: 20, color: AppColors.forest),
               ),
               validator: (val) {
                 if (_isSignUp && (val == null || val.trim().isEmpty)) {
@@ -391,11 +410,11 @@ class _AuthScreenState extends State<AuthScreen> {
             controller: _emailController,
             keyboardType: TextInputType.emailAddress,
             autocorrect: false,
+            style: AppTypography.bodyMedium.copyWith(color: AppColors.textDark),
             decoration: InputDecoration(
               labelText: 'Email Address',
-              hintText: 'you@college.edu',
-              prefixIcon: const Icon(Icons.email_outlined, size: 20),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              hintText: 'your.email@domain.com',
+              prefixIcon: const Icon(Icons.email_outlined, size: 20, color: AppColors.forest),
             ),
             validator: (val) {
               if (val == null || val.trim().isEmpty) {
@@ -413,14 +432,18 @@ class _AuthScreenState extends State<AuthScreen> {
           TextFormField(
             controller: _passwordController,
             obscureText: _obscurePassword,
+            style: AppTypography.bodyMedium.copyWith(color: AppColors.textDark),
             decoration: InputDecoration(
               labelText: 'Password',
-              prefixIcon: const Icon(Icons.lock_outline, size: 20),
+              prefixIcon: const Icon(Icons.lock_outline, size: 20, color: AppColors.forest),
               suffixIcon: IconButton(
-                icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility, size: 20),
+                icon: Icon(
+                  _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                  size: 20,
+                  color: AppColors.textSecondary,
+                ),
                 onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
               ),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             ),
             validator: (val) {
               if (val == null || val.isEmpty) {
@@ -432,18 +455,18 @@ class _AuthScreenState extends State<AuthScreen> {
               return null;
             },
           ),
-          const SizedBox(height: 22),
+          const SizedBox(height: 24),
 
-          // Submit Button
+          // Primary Submit Pill Button
           SizedBox(
-            height: 48,
+            height: 52,
             child: ElevatedButton(
               onPressed: auth.isLoading ? null : () => _submit(auth),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
+                backgroundColor: AppColors.forest,
                 foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9999)),
                 elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
               child: auth.isLoading
                   ? const SizedBox(
@@ -453,34 +476,8 @@ class _AuthScreenState extends State<AuthScreen> {
                     )
                   : Text(
                       _isSignUp ? 'Create Account' : 'Sign In',
-                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                      style: AppTypography.labelLarge.copyWith(color: Colors.white),
                     ),
-            ),
-          ),
-
-          // Google Sign-In Option
-          const SizedBox(height: 18),
-          Row(
-            children: [
-              Expanded(child: Divider(color: AppColors.border)),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 10),
-                child: Text('OR', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
-              ),
-              Expanded(child: Divider(color: AppColors.border)),
-            ],
-          ),
-          const SizedBox(height: 18),
-          SizedBox(
-            height: 48,
-            child: OutlinedButton.icon(
-              onPressed: auth.isLoading ? null : () => _continueWithGoogle(auth),
-              icon: const Icon(Icons.g_mobiledata, size: 24, color: AppColors.primary),
-              label: const Text('Continue with Google', style: TextStyle(fontWeight: FontWeight.w600)),
-              style: OutlinedButton.styleFrom(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                side: const BorderSide(color: AppColors.border),
-              ),
             ),
           ),
         ],

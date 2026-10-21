@@ -14,6 +14,7 @@ import '../../../state/community_provider.dart';
 import '../../../state/profile_provider.dart';
 import '../../../state/wardrobe_provider.dart';
 import '../../requests/screens/requests_screen.dart';
+import 'privacy_visibility_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   final VoidCallback? onNavigateToCloset;
@@ -1245,10 +1246,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   onTap: () => _showServerSettingsDialog(context),
                 ),
                 const Divider(height: 1),
-                const ListTile(
-                  leading: Icon(Icons.shield_outlined, color: AppColors.primary),
-                  title: Text('Privacy & Sharing', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                  subtitle: Text('Personal wardrobe items are private by default', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                ListTile(
+                  leading: const Icon(Icons.shield_outlined, color: AppColors.primary),
+                  title: const Text('Privacy & Visibility', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                  subtitle: const Text('Personal wardrobe items are private by default. Manage circle boundaries', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                  trailing: const Icon(Icons.chevron_right, size: 18),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const PrivacyVisibilityScreen()),
+                    );
+                  },
                 ),
                 if (isAuthenticated) ...[
                   const Divider(height: 1),

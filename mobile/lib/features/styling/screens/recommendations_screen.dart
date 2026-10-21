@@ -11,10 +11,12 @@ import '../../wardrobe/screens/wardrobe_detail_screen.dart';
 
 class RecommendationsScreen extends StatefulWidget {
   final bool autoGenerate;
+  final String? initialOccasion;
 
   const RecommendationsScreen({
     super.key,
     this.autoGenerate = true,
+    this.initialOccasion,
   });
 
   @override
@@ -34,6 +36,10 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
     'Date Night',
     'Athletic',
     'Party',
+    'Weekend Brunch',
+    'Boardroom Polish',
+    'Cocktail Hour',
+    'Airport Layering',
   ];
 
   static const List<String> _vibes = [
@@ -50,6 +56,9 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final stylist = context.read<StylistProvider>();
+      if (widget.initialOccasion != null && widget.initialOccasion!.isNotEmpty) {
+        stylist.setOccasion(widget.initialOccasion!);
+      }
       _instructionsController.text = stylist.customInstructions;
       if (widget.autoGenerate && stylist.outfits.isEmpty) {
         stylist.generateOutfits();

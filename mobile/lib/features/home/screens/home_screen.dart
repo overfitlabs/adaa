@@ -633,98 +633,32 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Hero Inspiration Card with prominent actions
+            // Stitch Personalized Greeting Header
+            _buildStitchGreetingHeader(),
+            const SizedBox(height: 16),
+
+            // Wardrobe Capsule Summary Card
+            _buildStitchCapsuleCard(wardrobe),
+            const SizedBox(height: 18),
+
+            // 4 Stitch Quick Action Tiles (2x2 Grid)
+            _buildStitchQuickTilesGrid(outfits),
+            const SizedBox(height: 24),
+
+            // Look of the Day / Stylist Pick
+            _buildStitchLookOfTheDay(),
+            const SizedBox(height: 24),
+
+            // Curated for Occasion Carousel
+            _buildStitchOccasionCarousel(),
+            const SizedBox(height: 24),
+
+            // Hero AI Outfit Intelligence Scanner
             _buildInspirationHero(),
-
-            const SizedBox(height: 20),
-
-            // Quick Overview Counters
-            Row(
-              children: [
-                Expanded(
-                  child: _buildMetricCard(
-                    title: 'Wardrobe',
-                    count: '${wardrobe.items.length}',
-                    icon: Icons.checkroom_outlined,
-                    onTap: () => setState(() => _currentTabIndex = 2),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _buildMetricCard(
-                    title: 'Saved Looks',
-                    count: '${outfits.outfits.length}',
-                    icon: Icons.auto_awesome_mosaic_outlined,
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const OutfitsScreen()),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _buildMetricCard(
-                    title: 'Communities',
-                    count: '${communityProv.myCommunities.length}',
-                    icon: Icons.groups_outlined,
-                    onTap: () => setState(() => _currentTabIndex = 1),
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 28),
+            const SizedBox(height: 24),
 
             // Community Shared Closet Feed Section
             _buildCommunityFeedSection(communityProv),
-
-            const SizedBox(height: 28),
-
-            // Quick Action Tiles
-            const Text(
-              'FASHION SUITE',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.2,
-                color: AppColors.textSecondary,
-              ),
-            ),
-            const SizedBox(height: 12),
-            _buildFeatureTile(
-              title: 'Digital Wardrobe',
-              subtitle: 'Catalog, search, and categorize your personal clothes',
-              icon: Icons.checkroom,
-              onTap: () => setState(() => _currentTabIndex = 2),
-            ),
-            const SizedBox(height: 10),
-            _buildFeatureTile(
-              title: 'Communities & Shared Closets',
-              subtitle: 'Explore student style circles and browse shared wardrobes',
-              icon: Icons.groups_outlined,
-              onTap: () => setState(() => _currentTabIndex = 1),
-            ),
-            const SizedBox(height: 10),
-            _buildFeatureTile(
-              title: 'YouCam Virtual Try-On',
-              subtitle: 'Preview inspiration looks rendered onto your own photo',
-              icon: Icons.face_retouching_natural,
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const TryOnScreen()),
-              ),
-            ),
-            const SizedBox(height: 10),
-            _buildFeatureTile(
-              title: 'Styling & Recommendations',
-              subtitle: 'Discover personalized high-low mixes and capsule tips',
-              icon: Icons.style_outlined,
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const RecommendationsScreen()),
-              ),
-            ),
-
             const SizedBox(height: 28),
 
             // Recent Analyses Section
@@ -816,6 +750,568 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildStitchGreetingHeader() {
+    final auth = context.watch<AuthProvider>();
+    final rawName = auth.displayName.trim();
+    final firstName = rawName.isNotEmpty && rawName != 'Guest'
+        ? rawName.split(' ').first
+        : 'there';
+
+    final hour = DateTime.now().hour;
+    final timeGreeting = hour < 12
+        ? 'Good morning'
+        : hour < 17
+            ? 'Good afternoon'
+            : 'Good evening';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(Icons.auto_awesome, size: 14, color: AppColors.gold),
+            const SizedBox(width: 6),
+            Text(
+              'YOUR AI STYLE STUDIO',
+              style: AppTypography.labelSmall.copyWith(
+                color: AppColors.gold,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.4,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        Text(
+          '$timeGreeting, $firstName',
+          style: AppTypography.displaySmall.copyWith(
+            color: AppColors.forest,
+            fontWeight: FontWeight.w600,
+            fontSize: 24,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Ready to curate your look today?',
+          style: AppTypography.bodyMedium.copyWith(
+            color: AppColors.textSecondary,
+            fontSize: 13,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStitchCapsuleCard(WardrobeProvider wardrobe) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+        boxShadow: [AppColors.subtleShadow],
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: const BoxDecoration(
+              color: AppColors.sageContainer,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.checkroom, color: AppColors.forest, size: 22),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      'Wardrobe Capsule',
+                      style: AppTypography.titleMedium.copyWith(
+                        color: AppColors.forest,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Container(width: 4, height: 4, decoration: const BoxDecoration(color: AppColors.sage, shape: BoxShape.circle)),
+                    const SizedBox(width: 6),
+                    Text(
+                      wardrobe.items.isNotEmpty ? '${wardrobe.items.length} Pieces' : 'Ready',
+                      style: AppTypography.labelSmall.copyWith(
+                        color: AppColors.sage,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  wardrobe.items.isNotEmpty
+                      ? '${wardrobe.items.length} digitized pieces ready to mix'
+                      : 'Snap pieces to deconstruct & catalog your collection',
+                  style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary),
+                ),
+              ],
+            ),
+          ),
+          TextButton(
+            onPressed: () => setState(() => _currentTabIndex = 2),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Open',
+                  style: AppTypography.labelMedium.copyWith(
+                    color: AppColors.forest,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const Icon(Icons.chevron_right, size: 16, color: AppColors.forest),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStitchQuickTilesGrid(OutfitsProvider outfits) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'STUDIO SUITE',
+              style: AppTypography.labelSmall.copyWith(
+                color: AppColors.textSecondary,
+                letterSpacing: 1.2,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        GridView.count(
+          crossAxisCount: 2,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          childAspectRatio: 1.45,
+          children: [
+            // Tile 1: Organize Wardrobe (Terracotta / Sand tint)
+            _buildQuickTileCard(
+              bgColor: const Color(0xFFF6EBE5),
+              iconBg: const Color(0xFFEBD8CE),
+              iconColor: const Color(0xFF733F2E),
+              textColor: const Color(0xFF462417),
+              subColor: const Color(0xFF733F2E),
+              icon: Icons.checkroom,
+              title: 'Organize\nWardrobe',
+              subtitle: 'AI Cataloging',
+              onTap: () => setState(() => _currentTabIndex = 2),
+            ),
+            // Tile 2: AI Style Suggestions (Sage tint)
+            _buildQuickTileCard(
+              bgColor: const Color(0xFFEBF2EC),
+              iconBg: const Color(0xFFD4E3D7),
+              iconColor: const Color(0xFF2E543A),
+              textColor: const Color(0xFF183521),
+              subColor: const Color(0xFF2E543A),
+              icon: Icons.auto_awesome,
+              title: 'AI Style\nSuggestions',
+              subtitle: 'Fresh Pairings',
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const RecommendationsScreen()),
+              ),
+            ),
+            // Tile 3: Virtual Try-On (Lavender tint)
+            _buildQuickTileCard(
+              bgColor: const Color(0xFFEFEBF6),
+              iconBg: const Color(0xFFDDD6EC),
+              iconColor: const Color(0xFF4A396B),
+              textColor: const Color(0xFF2A1E45),
+              subColor: const Color(0xFF4A396B),
+              icon: Icons.view_in_ar,
+              title: 'Virtual\nTry-On',
+              subtitle: 'Look Simulation',
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const TryOnScreen()),
+              ),
+            ),
+            // Tile 4: Saved Favorites (Champagne tint)
+            _buildQuickTileCard(
+              bgColor: const Color(0xFFF6F2EB),
+              iconBg: const Color(0xFFE7DECF),
+              iconColor: const Color(0xFF5C4D35),
+              textColor: const Color(0xFF382D1B),
+              subColor: const Color(0xFF5C4D35),
+              icon: Icons.favorite,
+              title: 'Saved\nFavorites',
+              subtitle: '${outfits.outfits.length} Outfits',
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const OutfitsScreen()),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildQuickTileCard({
+    required Color bgColor,
+    required Color iconBg,
+    required Color iconColor,
+    required Color textColor,
+    required Color subColor,
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: iconBg.withValues(alpha: 0.6)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: iconBg,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: iconColor, size: 18),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: AppTypography.titleSmall.copyWith(
+                    color: textColor,
+                    fontWeight: FontWeight.w700,
+                    height: 1.15,
+                    fontSize: 12.5,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: AppTypography.labelSmall.copyWith(
+                    color: subColor.withValues(alpha: 0.8),
+                    fontSize: 10,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStitchLookOfTheDay() {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.border),
+        boxShadow: [AppColors.subtleShadow],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header Row
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      'Look of the Day',
+                      style: AppTypography.headlineSmall.copyWith(
+                        color: AppColors.forest,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(width: 5, height: 5, decoration: const BoxDecoration(color: AppColors.gold, shape: BoxShape.circle)),
+                  ],
+                ),
+                Text(
+                  'STYLIST PICK',
+                  style: AppTypography.labelSmall.copyWith(
+                    color: AppColors.sage,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.0,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Hero Banner
+          Stack(
+            children: [
+              Container(
+                height: 180,
+                width: double.infinity,
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Color(0xFF2E4E3E),
+                      AppColors.forest,
+                      Color(0xFF13241C),
+                    ],
+                  ),
+                ),
+                padding: const EdgeInsets.all(18),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        'TAILORING • AUTUMN CAPSULE',
+                        style: AppTypography.labelSmall.copyWith(
+                          color: Colors.white,
+                          fontSize: 9,
+                          letterSpacing: 1.2,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Autumn Tailoring',
+                      style: AppTypography.headlineSmall.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Pairing your tailored blazer with relaxed wide-leg trousers.',
+                      style: AppTypography.bodySmall.copyWith(
+                        color: Colors.white.withValues(alpha: 0.85),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Positioned(
+                top: 12,
+                left: 12,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.9),
+                    borderRadius: BorderRadius.circular(9999),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.auto_awesome, size: 12, color: AppColors.gold),
+                      const SizedBox(width: 4),
+                      Text(
+                        'DAILY EDIT',
+                        style: AppTypography.labelSmall.copyWith(
+                          color: AppColors.forest,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 9.5,
+                          letterSpacing: 0.8,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          // Action row
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const TryOnScreen()),
+                    ),
+                    icon: const Icon(Icons.auto_awesome, size: 16, color: AppColors.gold),
+                    label: const Text('Virtual Try-On'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.forest,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9999)),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const RecommendationsScreen()),
+                  ),
+                  style: IconButton.styleFrom(
+                    backgroundColor: AppColors.sageContainer,
+                    foregroundColor: AppColors.forest,
+                  ),
+                  icon: const Icon(Icons.tune, size: 20),
+                  tooltip: 'Tune Styling',
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStitchOccasionCarousel() {
+    final occasions = [
+      {'title': 'Weekend Brunch', 'sub': 'Relaxed & chic', 'icon': Icons.local_cafe_outlined, 'pcs': '4 pcs'},
+      {'title': 'Boardroom Polish', 'sub': 'Sharp tailoring', 'icon': Icons.business_center_outlined, 'pcs': '3 pcs'},
+      {'title': 'Cocktail Hour', 'sub': 'Evening glamour', 'icon': Icons.nightlife_outlined, 'pcs': '4 pcs'},
+      {'title': 'Airport Layering', 'sub': 'Cozy elegant', 'icon': Icons.flight_takeoff_outlined, 'pcs': '5 pcs'},
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Curated for Occasion',
+              style: AppTypography.headlineSmall.copyWith(
+                color: AppColors.forest,
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const RecommendationsScreen()),
+              ),
+              child: Text(
+                'Explore all',
+                style: AppTypography.labelSmall.copyWith(color: AppColors.sage, fontWeight: FontWeight.w700),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          height: 120,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: occasions.length,
+            separatorBuilder: (context, index) => const SizedBox(width: 10),
+            itemBuilder: (ctx, idx) {
+              final occ = occasions[idx];
+              return InkWell(
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => RecommendationsScreen(initialOccasion: occ['title'] as String)),
+                ),
+                borderRadius: BorderRadius.circular(14),
+                child: Container(
+                  width: 136,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppColors.border),
+                    boxShadow: [AppColors.subtleShadow],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Icon(occ['icon'] as IconData, size: 20, color: AppColors.forest),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppColors.sageContainer,
+                              borderRadius: BorderRadius.circular(9999),
+                            ),
+                            child: Text(
+                              occ['pcs'] as String,
+                              style: AppTypography.labelSmall.copyWith(fontSize: 9.5, fontWeight: FontWeight.w700, color: AppColors.forest),
+                            ),
+                          ),
+                        ],
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            occ['title'] as String,
+                            style: AppTypography.titleSmall.copyWith(color: AppColors.forest, fontWeight: FontWeight.w700, fontSize: 13),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            occ['sub'] as String,
+                            style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary, fontSize: 10.5),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 
@@ -1223,106 +1719,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
       ],
-    );
-  }
-
-  Widget _buildMetricCard({
-    required String title,
-    required String count,
-    required IconData icon,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.border),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Icon(icon, color: AppColors.primary, size: 20),
-                const Icon(Icons.chevron_right, color: AppColors.textMuted, size: 16),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Text(
-              count,
-              style: const TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            Text(
-              title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFeatureTile({
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.border),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: AppColors.terracottaSoft,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(icon, color: AppColors.terracotta, size: 20),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(Icons.arrow_forward_ios, size: 14, color: AppColors.textMuted),
-          ],
-        ),
-      ),
     );
   }
 }

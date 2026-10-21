@@ -65,26 +65,51 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
       ),
       body: Column(
         children: [
-          // Search Bar
+          // Search & Filter Header Row
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Search by title, brand, fabric, color, or notes...',
-                prefixIcon: const Icon(Icons.search, size: 20),
-                suffixIcon: _searchController.text.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear, size: 18),
-                        onPressed: () {
-                          _searchController.clear();
-                          prov.setSearchQuery('');
-                        },
-                      )
-                    : null,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              ),
-              onChanged: (val) => prov.setSearchQuery(val),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _searchController,
+                    decoration: InputDecoration(
+                      hintText: 'Search by title, brand, fabric, color, or notes...',
+                      prefixIcon: const Icon(Icons.search, size: 20),
+                      suffixIcon: _searchController.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear, size: 18),
+                              onPressed: () {
+                                _searchController.clear();
+                                prov.setSearchQuery('');
+                              },
+                            )
+                          : null,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    ),
+                    onChanged: (val) => prov.setSearchQuery(val),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceContainer,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: IconButton(
+                    icon: const Icon(Icons.tune, size: 20, color: AppColors.forest),
+                    tooltip: 'Filter options',
+                    onPressed: () {
+                      if (prov.selectedCategory != 'all') {
+                        prov.setCategory('all');
+                      }
+                    },
+                  ),
+                ),
+              ],
             ),
           ),
 
@@ -99,16 +124,22 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  prov.selectedCategory == 'all'
-                      ? 'ALL GARMENTS (${prov.items.length})'
-                      : '${prov.selectedCategory.toUpperCase()} (${prov.items.length})',
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.8,
-                    color: AppColors.textSecondary,
-                  ),
+                Row(
+                  children: [
+                    const Icon(Icons.auto_awesome, size: 14, color: AppColors.gold),
+                    const SizedBox(width: 6),
+                    Text(
+                      prov.selectedCategory == 'all'
+                          ? 'ALL GARMENTS (${prov.items.length})'
+                          : '${prov.selectedCategory.toUpperCase()} (${prov.items.length})',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.8,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
                 ),
                 if (prov.isLoading)
                   const SizedBox(
@@ -131,8 +162,8 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
-        icon: const Icon(Icons.add),
-        label: const Text('Add Piece', style: TextStyle(fontWeight: FontWeight.w600)),
+        icon: const Icon(Icons.add, color: AppColors.gold),
+        label: const Text('Add Piece', style: TextStyle(fontWeight: FontWeight.w700)),
         onPressed: () {
           Navigator.push(
             context,
@@ -257,45 +288,75 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: AppColors.border),
+          boxShadow: [AppColors.subtleShadow],
         ),
+        padding: const EdgeInsets.all(8),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
-              child: Stack(
-                children: [
-                  PrivateImageView(
-                    imageUrl: item.imageUrl,
-                    width: double.infinity,
-                    height: double.infinity,
-                    fit: BoxFit.cover,
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                    onRefreshUrl: () => context.read<WardrobeProvider>().loadWardrobe(),
-                  ),
-                  Positioned(
-                    top: 8,
-                    right: 8,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.9),
-                        borderRadius: BorderRadius.circular(12),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  color: AppColors.sandSoft,
+                  child: Stack(
+                    children: [
+                      PrivateImageView(
+                        imageUrl: item.imageUrl,
+                        width: double.infinity,
+                        height: double.infinity,
+                        fit: BoxFit.cover,
+                        onRefreshUrl: () => context.read<WardrobeProvider>().loadWardrobe(),
                       ),
-                      child: Text(
-                        item.category.toUpperCase(),
-                        style: const TextStyle(
-                          fontSize: 9,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.primary,
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: Container(
+                          width: 28,
+                          height: 28,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.88),
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.08),
+                                blurRadius: 4,
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.favorite_border,
+                            size: 15,
+                            color: AppColors.textSecondary,
+                          ),
                         ),
                       ),
-                    ),
+                      Positioned(
+                        bottom: 8,
+                        left: 8,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.92),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            item.category.toUpperCase(),
+                            style: const TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.forest,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
             Padding(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.fromLTRB(4, 8, 4, 4),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -306,7 +367,7 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
                     style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary,
+                      color: AppColors.forest,
                     ),
                   ),
                   const SizedBox(height: 2),

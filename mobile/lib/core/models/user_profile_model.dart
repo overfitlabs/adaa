@@ -114,6 +114,16 @@ class ProfilePrivacySettingsModel {
       showPreferredStyles: showPreferredStyles ?? this.showPreferredStyles,
     );
   }
+
+  bool get isPhotoVisible => showProfilePhoto;
+  bool get isBioVisible => showBio;
+  bool get isAgeVisible => showAge;
+  bool get isPhoneVisible => showPhone;
+  bool get isEmailVisible => showEmail;
+  bool get isSizesVisible => showFitPreferences;
+  bool get isFitPreferencesVisible => showFitPreferences;
+  bool get isStylesVisible => showPreferredStyles;
+  bool get isGenderVisible => false;
 }
 
 class UserProfileModel {

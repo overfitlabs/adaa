@@ -10,6 +10,7 @@ class ProfileProvider extends ChangeNotifier {
   String? _error;
 
   UserProfileModel? get profile => _profile;
+  ProfilePrivacySettingsModel get privacySettings => _profile?.privacySettings ?? const ProfilePrivacySettingsModel();
   bool get isLoading => _isLoading;
   bool get isSaving => _isSaving;
   String? get error => _error;
@@ -18,6 +19,40 @@ class ProfileProvider extends ChangeNotifier {
   set profile(UserProfileModel? value) {
     _profile = value;
     notifyListeners();
+  }
+
+  Future<void> loadPrivacySettings({bool silent = false}) => loadProfile(silent: silent);
+
+  Future<bool> updatePrivacySetting(String field, bool value) async {
+    final current = privacySettings;
+    ProfilePrivacySettingsModel updated;
+    switch (field) {
+      case 'photo':
+        updated = current.copyWith(showProfilePhoto: value);
+        break;
+      case 'bio':
+        updated = current.copyWith(showBio: value);
+        break;
+      case 'age':
+        updated = current.copyWith(showAge: value);
+        break;
+      case 'phone':
+        updated = current.copyWith(showPhone: value);
+        break;
+      case 'email':
+        updated = current.copyWith(showEmail: value);
+        break;
+      case 'sizes':
+      case 'fit_preferences':
+        updated = current.copyWith(showFitPreferences: value);
+        break;
+      case 'styles':
+        updated = current.copyWith(showPreferredStyles: value);
+        break;
+      default:
+        updated = current;
+    }
+    return updatePrivacy(updated);
   }
 
   Future<void> loadProfile({bool silent = false}) async {
