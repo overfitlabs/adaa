@@ -30,6 +30,7 @@ class WebResponsiveShell extends StatefulWidget {
 class _WebResponsiveShellState extends State<WebResponsiveShell> {
   int _activeFeatureIndex = 0;
   Timer? _carouselTimer;
+  Timer? _clockTimer;
   bool _isAutoAdvancePaused = false;
   bool _isDemoLoggingIn = false;
   String? _demoError;
@@ -81,6 +82,9 @@ class _WebResponsiveShellState extends State<WebResponsiveShell> {
   void initState() {
     super.initState();
     _startCarouselTimer();
+    _clockTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+      if (mounted) setState(() {});
+    });
   }
 
   void _startCarouselTimer() {
@@ -97,7 +101,15 @@ class _WebResponsiveShellState extends State<WebResponsiveShell> {
   @override
   void dispose() {
     _carouselTimer?.cancel();
+    _clockTimer?.cancel();
     super.dispose();
+  }
+
+  String get _currentLocalTime {
+    final now = DateTime.now();
+    final hour = now.hour == 0 ? 12 : (now.hour > 12 ? now.hour - 12 : now.hour);
+    final minute = now.minute.toString().padLeft(2, '0');
+    return '$hour:$minute';
   }
 
   Future<void> _handleDemoLogin(AuthProvider auth) async {
@@ -196,41 +208,56 @@ class _WebResponsiveShellState extends State<WebResponsiveShell> {
             ),
           ),
 
-          // Main Two-Panel Layout
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Left Panel: Editorial Branding & Feature Showcase
-              Expanded(
-                flex: 5,
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 540),
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 32),
-                      child: _buildIntroPanel(context),
+          // Main Balanced Two-Panel Composition
+          Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1080),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // Left Panel: Editorial Branding & Feature Showcase
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 480),
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.only(
+                            left: 20,
+                            right: 36,
+                            top: 24,
+                            bottom: 24,
+                          ),
+                          child: _buildIntroPanel(context),
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              ),
 
-              // Subtle Vertical Divider
-              Container(
-                width: 1,
-                color: AppColors.borderLight.withValues(alpha: 0.7),
-              ),
-
-              // Right Panel: Centered Interactive Phone Frame
-              Expanded(
-                flex: 5,
-                child: Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: _buildPhoneFrame(context, screenSize),
+                  // Subtle Thin Vertical Divider
+                  Container(
+                    width: 1,
+                    height: math.min(760.0, screenSize.height - 64.0),
+                    color: AppColors.borderLight.withValues(alpha: 0.85),
                   ),
-                ),
+
+                  // Right Panel: Interactive Phone Frame Centered in its Allocated Area
+                  Expanded(
+                    child: Center(
+                      child: Padding(
+                        padding: const EdgeInsets.only(
+                          left: 36,
+                          right: 20,
+                          top: 20,
+                          bottom: 20,
+                        ),
+                        child: _buildPhoneFrame(context, screenSize),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ],
       ),
@@ -558,63 +585,209 @@ class _WebResponsiveShellState extends State<WebResponsiveShell> {
           ),
         ],
       ),
-      child: Stack(
-        children: [
-          // Inner Phone Screen Canvas containing the live Flutter application
-          ClipRRect(
-            borderRadius: BorderRadius.circular(38),
-            child: Container(
-              color: AppColors.background,
-              child: MediaQuery(
-                // Inject mobile-like screen parameters inside the phone frame
-                data: MediaQuery.of(context).copyWith(
-                  size: Size(targetWidth - 16, targetHeight - 16),
-                  padding: const EdgeInsets.only(top: 40, bottom: 20),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(38),
+        child: Container(
+          color: AppColors.background,
+          child: Stack(
+            children: [
+              // Inner Phone Screen Canvas containing the live Flutter application
+              Positioned.fill(
+                child: MediaQuery(
+                  // Inject mobile-like screen parameters inside the phone frame
+                  data: MediaQuery.of(context).copyWith(
+                    size: Size(targetWidth - 16, targetHeight - 16),
+                    padding: const EdgeInsets.only(top: 44, bottom: 20),
+                  ),
+                  child: widget.child,
                 ),
-                child: widget.child,
+              ),
+
+              // Realistic Phone Status Bar Simulation (part of frame, not app content)
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                height: 44,
+                child: IgnorePointer(
+                  child: _buildPhoneStatusBar(context),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPhoneStatusBar(BuildContext context) {
+    return Container(
+      height: 44,
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            AppColors.background.withValues(alpha: 0.95),
+            AppColors.background.withValues(alpha: 0.80),
+            AppColors.background.withValues(alpha: 0.0),
+          ],
+          stops: const [0.0, 0.75, 1.0],
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // Left: Local Time
+          SizedBox(
+            width: 68,
+            child: Text(
+              _currentLocalTime,
+              style: const TextStyle(
+                color: AppColors.forest,
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -0.2,
               ),
             ),
           ),
 
-          // Dynamic Island / Camera Notch Detail at Top Bezel
-          Align(
-            alignment: Alignment.topCenter,
-            child: Container(
-              margin: const EdgeInsets.only(top: 10),
-              width: 96,
-              height: 24,
-              decoration: BoxDecoration(
-                color: Colors.black,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Container(
-                    margin: const EdgeInsets.only(right: 12),
-                    width: 10,
-                    height: 10,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF1A1F1C),
-                      shape: BoxShape.circle,
+          // Center: Dynamic Island camera cutout
+          Expanded(
+            child: Center(
+              child: Container(
+                width: 82,
+                height: 22,
+                decoration: BoxDecoration(
+                  color: Colors.black,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.18),
+                      blurRadius: 4,
+                      offset: const Offset(0, 1),
                     ),
-                    child: Center(
-                      child: Container(
-                        width: 4,
-                        height: 4,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFF0F1A24),
-                          shape: BoxShape.circle,
+                  ],
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Container(
+                      margin: const EdgeInsets.only(right: 10),
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF151916),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Center(
+                        child: Container(
+                          width: 3.5,
+                          height: 3.5,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF0B1420),
+                            shape: BoxShape.circle,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
+            ),
+          ),
+
+          // Right: Cellular + Wi-Fi + Battery indicators
+          SizedBox(
+            width: 68,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                _buildCellularSignal(),
+                const SizedBox(width: 5),
+                const Icon(
+                  Icons.wifi,
+                  size: 13,
+                  color: AppColors.forest,
+                ),
+                const SizedBox(width: 5),
+                _buildBatteryIndicator(),
+              ],
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildCellularSignal() {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _buildSignalBar(height: 3.5),
+        const SizedBox(width: 1.5),
+        _buildSignalBar(height: 5.5),
+        const SizedBox(width: 1.5),
+        _buildSignalBar(height: 7.5),
+        const SizedBox(width: 1.5),
+        _buildSignalBar(height: 9.5),
+      ],
+    );
+  }
+
+  Widget _buildSignalBar({required double height}) {
+    return Container(
+      width: 2.2,
+      height: height,
+      decoration: BoxDecoration(
+        color: AppColors.forest,
+        borderRadius: BorderRadius.circular(0.8),
+      ),
+    );
+  }
+
+  Widget _buildBatteryIndicator() {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Container(
+          width: 19,
+          height: 10,
+          padding: const EdgeInsets.all(1.2),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(2.8),
+            border: Border.all(
+              color: AppColors.forest,
+              width: 1.1,
+            ),
+          ),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Container(
+              width: 13,
+              decoration: BoxDecoration(
+                color: AppColors.forest,
+                borderRadius: BorderRadius.circular(1.2),
+              ),
+            ),
+          ),
+        ),
+        Container(
+          width: 1.4,
+          height: 3.5,
+          decoration: const BoxDecoration(
+            color: AppColors.forest,
+            borderRadius: BorderRadius.only(
+              topRight: Radius.circular(0.8),
+              bottomRight: Radius.circular(0.8),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
