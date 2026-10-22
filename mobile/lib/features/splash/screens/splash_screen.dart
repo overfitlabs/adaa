@@ -10,7 +10,7 @@ import '../../../state/wardrobe_provider.dart';
 import '../../home/screens/home_screen.dart';
 import '../../auth/screens/auth_screen.dart';
 
-/// Stitch-designed ADAA Splash Screen (`c8f74c6fe2cc4b08a3cd5a0ef5c9536b` & `2511290488316267073`).
+/// Stitch-designed adaa Splash Screen (`c8f74c6fe2cc4b08a3cd5a0ef5c9536b` & `2511290488316267073`).
 /// Features warm ivory canvas, organic botanical shadows, radiant ambient aura,
 /// brand logo centerpiece, 4-point gold sparkle, and shimmering champagne progress bar.
 class SplashScreen extends StatefulWidget {

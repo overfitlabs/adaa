@@ -9,7 +9,7 @@ import '../theme/app_typography.dart';
 import '../../state/auth_provider.dart';
 import 'adaa_wordmark.dart';
 
-/// Responsive desktop presentation shell for ADAA.
+/// Responsive desktop presentation shell for adaa.
 ///
 /// On desktop and wide viewports (width >= 960px):
 /// - Displays a luxury two-panel layout.
@@ -40,7 +40,7 @@ class _WebResponsiveShellState extends State<WebResponsiveShell> {
       'title': 'Digital Wardrobe',
       'subtitle': 'Smart Closet Cataloging',
       'description':
-          'Digitize your garments automatically. ADAA extracts categories, materials, and colors from photos for effortless cataloging.',
+          'Digitize your garments. adaa extracts categories, materials, and colors from photos for effortless cataloging.',
       'icon': Icons.checkroom,
       'badge': 'AI CATALOG',
       'tint': Color(0xFFF6EBE5),
@@ -208,6 +208,46 @@ class _WebResponsiveShellState extends State<WebResponsiveShell> {
             ),
           ),
 
+          // Subtle status pill in the overall page's top-right corner.
+          Positioned(
+            top: 20,
+            right: 24,
+            child: IgnorePointer(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFBF8F3).withValues(alpha: 0.92),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(
+                    color: AppColors.borderLight.withValues(alpha: 0.9),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 7,
+                      height: 7,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF398345),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 7),
+                    Text(
+                      'Live Preview',
+                      style: AppTypography.labelSmall.copyWith(
+                        color: AppColors.textSecondary,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
           // Main Balanced Two-Panel Composition
           Center(
             child: ConstrainedBox(
@@ -272,13 +312,24 @@ class _WebResponsiveShellState extends State<WebResponsiveShell> {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Brand Wordmark & Tagline
-        const AdaaWordmark(
-          size: AdaaWordmarkSize.large,
-          showSubtitle: true,
-          subtitle: 'your style, smarter',
+        // Approved combined wordmark + tagline artwork.
+        // Keep the existing widget as a graceful fallback if the asset is unavailable.
+        Align(
+          alignment: Alignment.centerLeft,
+          child: Image.asset(
+            'assets/branding/brand_name_tagline_logo_web.png',
+            width: 240,
+            height: 58,
+            fit: BoxFit.contain,
+            alignment: Alignment.centerLeft,
+            errorBuilder: (context, error, stackTrace) => const AdaaWordmark(
+              size: AdaaWordmarkSize.large,
+              showSubtitle: true,
+              subtitle: 'your style, smarter',
+            ),
+          ),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 14),
 
         // Editorial Heading
         Text(
@@ -525,32 +576,6 @@ class _WebResponsiveShellState extends State<WebResponsiveShell> {
 
         const SizedBox(height: 24),
 
-        // Footer / Tech & Studio badges
-        Row(
-          children: [
-            Container(
-              width: 8,
-              height: 8,
-              decoration: const BoxDecoration(
-                color: Color(0xFF2E7D32),
-                shape: BoxShape.circle,
-              ),
-            ),
-            const SizedBox(width: 6),
-            const Text(
-              'Live Cloud Backend Connected',
-              style: TextStyle(fontSize: 11, color: AppColors.textSecondary, fontWeight: FontWeight.w600),
-            ),
-            const Spacer(),
-            Text(
-              'ADAA Studio',
-              style: AppTypography.labelSmall.copyWith(
-                color: AppColors.textMuted,
-                letterSpacing: 1.0,
-              ),
-            ),
-          ],
-        ),
       ],
     );
   }

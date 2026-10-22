@@ -1,4 +1,4 @@
-/// Configuration for ADAA demo access on web and desktop.
+/// Configuration for adaa demo access on web and desktop.
 ///
 /// Values can be supplied at build time using Flutter's `--dart-define` flags:
 /// `--dart-define=DEMO_EMAIL=...`

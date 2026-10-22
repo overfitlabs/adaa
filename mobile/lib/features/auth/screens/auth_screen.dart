@@ -162,7 +162,7 @@ class _AuthScreenState extends State<AuthScreen> {
                       size: AdaaWordmarkSize.large,
                       showSubtitle: true,
                       subtitle: 'campus sharing & wardrobe',
-                      useLogoAsset: false,
+                      useLogoAsset: true,
                     ),
                   ),
 
