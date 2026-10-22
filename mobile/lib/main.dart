@@ -6,6 +6,7 @@ import 'core/auth/session_manager.dart';
 import 'core/config/supabase_config.dart';
 import 'core/network/api_client.dart';
 import 'core/theme/app_theme.dart';
+import 'core/widgets/web_responsive_shell.dart';
 import 'features/auth/screens/auth_gate.dart';
 import 'state/analysis_provider.dart';
 import 'state/auth_provider.dart';
@@ -66,6 +67,7 @@ class AdaaApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
         navigatorKey: SessionManager.navigatorKey,
+        builder: (context, child) => WebResponsiveShell(child: child!),
         home: const AuthGate(),
       ),
     );

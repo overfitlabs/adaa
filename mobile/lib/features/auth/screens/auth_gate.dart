@@ -1,5 +1,4 @@
-import 'dart:io';
-
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -26,16 +25,18 @@ class AuthGate extends StatefulWidget {
 class _AuthGateState extends State<AuthGate> {
   bool _splashCompleted = false;
 
+  bool get _isTestEnvironment {
+    if (kIsWeb) return false;
+    return const bool.fromEnvironment('FLUTTER_TEST_ENV') ||
+        WidgetsBinding.instance.runtimeType.toString().contains('Test');
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
 
-    final isTestEnvironment = const bool.fromEnvironment('FLUTTER_TEST_ENV') ||
-        (bool.hasEnvironment('dart.library.io') &&
-            _isFlutterTest());
-
     // When an authenticated session is active on app launch, greet with the Stitch splash screen
-    if (widget.showSplash && !isTestEnvironment && !_splashCompleted && auth.isAuthenticated) {
+    if (widget.showSplash && !_isTestEnvironment && !_splashCompleted && auth.isAuthenticated) {
       return SplashScreen(
         autoNavigate: false,
         displayDuration: const Duration(milliseconds: 1000),
@@ -55,10 +56,3 @@ class _AuthGateState extends State<AuthGate> {
   }
 }
 
-bool _isFlutterTest() {
-  try {
-    return Platform.environment.containsKey('FLUTTER_TEST');
-  } catch (_) {
-    return false;
-  }
-}

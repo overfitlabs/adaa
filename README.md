@@ -1,202 +1,160 @@
-# WardrobeLens 👗🔍
+# adaa 👗✨
+*your style, smarter*
 
-WardrobeLens is an AI-powered personal fashion assistant that decodes outfit photos, matches garments against your personal digital wardrobe, detects missing pieces, suggests personalized styling combinations, and provides photorealistic virtual try-on powered by Perfect Corp's YouCam S2S API.
+adaa is an AI-powered personal wardrobe studio and fashion-sharing platform. It catalogs garment photos with automatic attribute recognition, decodes outfit inspirations, curates personalized daily lookbooks, provides photorealistic virtual try-on, and empowers campus communities to share and borrow curated pieces safely.
 
 ---
 
 ## Architecture Overview
 
-WardrobeLens is built as a unified monorepo:
+adaa is structured as a unified repository:
 
-- **Mobile Application (`/mobile`)**: Flutter (targeting Android first, with iOS & Web support), structured by feature with clean boundaries between UI, business logic, networking, and state management.
-- **Backend Service (`/backend`)**: Python with FastAPI, SQLAlchemy ORM (SQLite for local self-contained storage), Pillow image validation, Gemini 2.5 Flash for multimodal vision analysis, YouCam AI Clothes Virtual Try-On integration, and Pytest.
+- **Mobile & Web Client (`/mobile`)**: Flutter application targeting **Android** and **Web** (with desktop responsive presentation shell), built with clean separation between UI components, state management (ChangeNotifier providers), and networking clients.
+- **Backend Service (`/backend`)**: High-performance Python FastAPI service with SQLAlchemy ORM (SQLite / PostgreSQL), Gemini 2.5 Flash multimodal vision analysis, YouCam AI clothing virtual try-on integration, and Starlette/Pydantic v2 schemas.
+- **Authentication & Database (`/supabase`)**: Supabase Auth (JWT with PKCE) and PostgreSQL database migrations for robust session isolation and field-level privacy controls.
 
 ```
 app/
 ├── backend/
-│   ├── .venv/                      # Python virtual environment (gitignored)
 │   ├── app/
-│   │   ├── api/                    # RESTful endpoints (analysis, wardrobe, matching, outfits, tryon, recommendations)
-│   │   ├── models.py               # SQLAlchemy ORM models (WardrobeItem, OutfitAnalysis, SavedOutfit, TryOnTask)
+│   │   ├── api/                    # RESTful endpoints (analysis, wardrobe, matching, outfits, tryon, communities, users)
+│   │   ├── models.py               # SQLAlchemy ORM database models
 │   │   ├── schemas.py              # Pydantic v2 validation models
-│   │   ├── config.py               # Environment configuration
-│   │   ├── database.py             # SQLite database session and engine management
-│   │   └── services/
-│   │       ├── vision_provider.py  # Gemini 2.5 Flash + Mock vision providers
-│   │       ├── matching_engine.py  # Multi-attribute garment matching engine
-│   │       ├── tryon_provider.py   # Official YouCam Virtual Try-On + Mock providers
-│   │       └── storage_service.py  # Local secure file storage and integrity verification
-│   ├── tests/                      # Pytest automated test suite
-│   ├── requirements.txt            # Manifest of Python dependencies
-│   ├── .env.example                # Template of backend environment variables
-│   └── pytest.ini
+│   │   ├── config.py               # Application settings & environment configuration
+│   │   ├── database.py             # Database session and engine lifecycle
+│   │   └── services/               # Gemini Vision, YouCam try-on, matching engine, storage
+│   ├── tests/                      # Automated pytest suite
+│   ├── requirements.txt            # Python dependencies
+│   └── .env.example                # Template of backend environment variables
 ├── mobile/
+│   ├── assets/
+│   │   └── branding/               # Approved adaa wordmarks, icons, and logos
 │   ├── lib/
 │   │   ├── core/
-│   │   │   ├── theme/              # High-fashion editorial theme and color system
-│   │   │   ├── network/            # Http ApiClient with timeout and error extraction
+│   │   │   ├── config/             # Supabase & Demo configuration
+│   │   │   ├── theme/              # High-fashion editorial theme (Warm Ivory, Forest, Gold)
+│   │   │   ├── network/            # HTTP ApiClient with session lifecycle handling
+│   │   │   ├── widgets/            # Wordmark, responsive desktop shell, image loaders
 │   │   │   └── models/             # Dart data models
 │   │   ├── features/
-│   │   │   ├── home/               # Outfit photo inspiration upload & quick actions
-│   │   │   ├── analysis/           # Breakdown of detected garments with attribute editing
-│   │   │   ├── wardrobe/           # Digital closet, category filtering, search, AI auto-detection
-│   │   │   ├── matching/           # Completeness score, exact vs approx matches, missing pieces
-│   │   │   ├── outfits/            # Curated looks gallery and outfit builder
-│   │   │   ├── tryon/              # YouCam virtual try-on workflow & asynchronous polling
-│   │   │   └── styling/            # Capsule recommendations & style guidance
-│   │   ├── state/                  # ChangeNotifier providers (Wardrobe, Analysis, TryOn, Outfits)
+│   │   │   ├── splash/             # Native & Flutter Stitch launch splash
+│   │   │   ├── auth/               # Strict Supabase authentication & session isolation
+│   │   │   ├── home/               # Editorial greeting, wardrobe capsule, studio quick tiles
+│   │   │   ├── wardrobe/           # Digital closet, category chips, 4/5 garment cards
+│   │   │   ├── styling/            # AI Stylist, occasion lookbooks, recommendation engine
+│   │   │   ├── outfits/            # Saved looks gallery, curations & try-on links
+│   │   │   ├── tryon/              # Virtual try-on workflow & asynchronous polling
+│   │   │   ├── communities/        # Campus fashion circles & shared closets
+│   │   │   ├── requests/           # Garment borrow request lifecycle & decision tracking
+│   │   │   └── profile/            # User profile, sizing preferences & privacy controls
+│   │   ├── state/                  # Providers (Auth, Wardrobe, Stylist, Outfits, Communities)
 │   │   └── main.dart
-│   ├── test/                       # Flutter unit and widget tests
-│   └── pubspec.yaml
-├── .gitignore
+│   ├── test/                       # Flutter unit and widget test suites
+│   ├── web/                        # Web manifest, favicon, and HTML entry point
+│   └── vercel.json                 # Vercel web deployment configuration
+├── vercel.json                     # Root Vercel monorepo deployment configuration
+├── render.yaml                     # Render cloud service deployment specification
 └── README.md
 ```
 
 ---
 
-## Prerequisites
+## Live Deployments & APIs
 
-Before starting, ensure the following developer tools are installed:
+- **Backend API**: `https://adaa-umsc.onrender.com`
+- **Web App (Vercel)**: Deployed via Vercel with output directory `mobile/build/web/`
+- **Interactive Web Experience**: On desktop browsers, visitors experience a two-panel editorial shell with an interactive smartphone frame running the live Flutter app, plus instant one-click demo login.
+
+---
+
+## Quick Start & Local Setup
+
+### 1. Prerequisites
 
 - **Python 3.12+**
-- **Flutter SDK 3.27+** (`flutter doctor` should verify Android and Chrome toolchains)
+- **Flutter SDK 3.27+** (`flutter doctor` should verify Chrome and Android toolchains)
 - **Git**
-- **Android Studio / Command Line Tools** (with Android SDK 34+ or physical device with USB debugging enabled)
+- **Android Studio / Command Line Tools** (for Android APK builds)
 
 ---
 
-## 1. Backend Setup
+### 2. Backend Service Setup
 
-### A. Create and Activate Virtual Environment
-
-From the project root:
-
-**Windows (PowerShell):**
 ```powershell
+# Navigate to backend
 cd backend
+
+# Create and activate virtual environment
 python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-```
+.\.venv\Scripts\Activate.ps1   # Windows PowerShell
+# source .venv/bin/activate    # macOS / Linux
 
-**macOS / Linux:**
-```bash
-cd backend
-python3 -m venv .venv
-source .venv/bin/activate
-```
-
-### B. Install Dependencies
-
-```bash
+# Install dependencies
 pip install -r requirements.txt
-```
 
-### C. Configure Environment Variables
-
-Copy `.env.example` to `.env`:
-
-```bash
+# Configure environment
 cp .env.example .env
+
+# Run locally
+uvicorn app.main:app --reload --port 8000
 ```
-
-Edit `.env` to supply credentials:
-
-```ini
-# Environment
-ENVIRONMENT=development
-HOST=0.0.0.0
-PORT=8000
-DEBUG=true
-
-# Vision AI Provider (gemini | mock)
-VISION_PROVIDER=gemini
-GEMINI_API_KEY=your_google_gemini_api_key_here
-GEMINI_MODEL=gemini-2.5-flash
-
-# YouCam / Perfect Corp Virtual Try-On API (youcam | mock)
-TRYON_PROVIDER=youcam
-YOUCAM_API_KEY=your_youcam_api_key_here
-YOUCAM_BASE_URL=https://yce-api-01.makeupar.com/s2s/v2.0
-
-# Database & Local File Storage
-DATABASE_URL=sqlite:///./wardrobelens.db
-STORAGE_DIR=./storage
-MAX_UPLOAD_SIZE_MB=15
-ALLOWED_EXTENSIONS=jpg,jpeg,png,webp
-```
-
-> **Note on Mock Providers**: If you don't have a Gemini API key or YouCam API key yet, leave `VISION_PROVIDER=mock` and `TRYON_PROVIDER=mock`. High-fidelity mock services will run without requiring external keys or making paid calls.
-
-### D. Run Backend Tests
-
-```bash
-pytest -v
-```
-
-### E. Start Backend Server
-
-```bash
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-```
-
-Interactive API documentation will be available at:
-- Swagger UI: `http://localhost:8000/docs`
-- Health check: `http://localhost:8000/health`
 
 ---
 
-## 2. Mobile App Setup (Flutter)
+### 3. Flutter Mobile & Web Setup
 
-### A. Install Flutter Dependencies
-
-From the project root:
-
-```bash
+```powershell
+# Navigate to mobile
 cd mobile
+
+# Resolve dependencies
 flutter pub get
-```
 
-### B. Run Flutter Automated Tests & Analysis
+# Run on Chrome (Web) against production API
+flutter run -d chrome --dart-define=API_BASE_URL=https://adaa-umsc.onrender.com
 
-```bash
-flutter analyze
-flutter test
-```
-
-### C. Run Mobile App
-
-#### Running on Android Emulator / Physical Device:
-```bash
-flutter run
-```
-*Note: The app automatically detects the Android emulator environment and maps API requests to `http://10.0.2.2:8000`.*
-
-#### Running on Web / Desktop for Development:
-```bash
-flutter run -d chrome
+# Run on connected Android device / emulator
+flutter run -d android --dart-define=API_BASE_URL=https://adaa-umsc.onrender.com
 ```
 
 ---
 
-## Core Features & Workflow
+## Production Builds
 
-1. **AI Outfit Breakdown**: Upload any outfit photo (influencer shot, street style, mannequin, or flat-lay on a bed). WardrobeLens uses Gemini 2.5 Flash to identify tops, bottoms, jackets, footwear, and accessories with detailed cuts, fabrics, colors, and formality tags.
-2. **Interactive Item Cards**: Inspect and edit detected information, correct shades or silhouettes, and re-trigger matching.
-3. **Digital Wardrobe**: Photograph your clothes. AI pre-fills garment attributes. Search by color, material, or category tag. Everything persists in local SQLite storage.
-4. **Intelligent Closet Matching**: Compares inspiration pieces against your wardrobe using a weighted multi-factor scoring algorithm (category compatibility, color harmony, and style attributes).
-   - **Exact Match** ($\ge 85\%$ score)
-   - **Approximate Match** ($\ge 45\%$ score) with top alternatives
-   - **Missing Pieces** clearly identified so you know what piece to shop or substitute
-5. **Saved Outfits & Looks**: Group wardrobe pieces into saved looks for occasions (work, dinners, weekend leisure) and save inspiration replicas.
-6. **YouCam Virtual Try-On**:
-   - Integrates Perfect Corp's official YouCam S2S API (`/file`, `/task/clothes-vto`, and polling `/task/{task_id}`).
-   - Upload your own portrait photo and preview any inspiration look or wardrobe piece realistically draped on your body.
-7. **Styling & Capsule Recommendations**: Algorithmic suggestions for high-low mixes (outerwear + casual base), tonal/monochrome combinations, and capsule foundation planning.
+### Android Release APK
+
+```powershell
+cd mobile
+flutter build apk --release --dart-define=API_BASE_URL=https://adaa-umsc.onrender.com
+```
+
+Output: `mobile/build/app/outputs/flutter-apk/app-release.apk`
+
+### Flutter Web Release (Vercel)
+
+```powershell
+cd mobile
+flutter build web --release \
+  --dart-define=API_BASE_URL=https://adaa-umsc.onrender.com \
+  --dart-define=DEMO_EMAIL=YOUR_DEMO_EMAIL \
+  --dart-define=DEMO_PASSWORD=YOUR_DEMO_PASSWORD
+```
+
+Output: `mobile/build/web/`
+
+> **Security Note**: Build-time variables injected via `--dart-define` into Flutter Web become inspectable in client-side JavaScript bundles. The demo account must only contain curated, non-sensitive showcase data. Never supply personal or administrative credentials.
 
 ---
 
-## Privacy & Security
+## Vercel Web Deployment
 
-- **Local Storage First**: Photos are stored locally in `./storage` and served with path sanitization to prevent directory traversal.
-- **Payload Verification**: All uploads are verified for image integrity using Pillow before processing.
-- **Zero Credential Exposure**: API keys reside solely on the FastAPI backend in `.env` and are never embedded into mobile code.
+When deploying via the Vercel CLI or Git integration:
+
+```powershell
+# From mobile/ directory:
+cd mobile
+vercel deploy              # Preview deployment
+vercel deploy --prod       # Production deployment
+```
+
+Vercel is pre-configured with `mobile/vercel.json` (and root `vercel.json`) pointing to `build/web` with SPA rewrite rules.
