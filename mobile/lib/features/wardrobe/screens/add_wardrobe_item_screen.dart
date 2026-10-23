@@ -1,4 +1,5 @@
 import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -8,6 +9,7 @@ import '../../../core/models/garment_item.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../state/wardrobe_provider.dart';
+import '../../../core/widgets/adaa_wordmark.dart';
 
 class AddWardrobeItemScreen extends StatefulWidget {
   const AddWardrobeItemScreen({super.key});
@@ -97,7 +99,10 @@ class _AddWardrobeItemScreenState extends State<AddWardrobeItemScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to pick image: $e'), backgroundColor: AppColors.missing),
+          SnackBar(
+            content: Text('Failed to pick image: $e'),
+            backgroundColor: AppColors.missing,
+          ),
         );
       }
     }
@@ -119,17 +124,31 @@ class _AddWardrobeItemScreenState extends State<AddWardrobeItemScreen> {
           final cat = detected.category.toLowerCase().trim();
           if (_categoryOptions.contains(cat)) {
             _categoryController.text = cat;
-          } else if (cat.contains('jacket') || cat.contains('coat') || cat.contains('blazer')) {
+          } else if (cat.contains('jacket') ||
+              cat.contains('coat') ||
+              cat.contains('blazer')) {
             _categoryController.text = 'outerwear';
-          } else if (cat.contains('jean') || cat.contains('trouser') || cat.contains('pant') || cat.contains('skirt') || cat.contains('short')) {
+          } else if (cat.contains('jean') ||
+              cat.contains('trouser') ||
+              cat.contains('pant') ||
+              cat.contains('skirt') ||
+              cat.contains('short')) {
             _categoryController.text = 'bottoms';
-          } else if (cat.contains('shoe') || cat.contains('boot') || cat.contains('sneaker') || cat.contains('footwear')) {
+          } else if (cat.contains('shoe') ||
+              cat.contains('boot') ||
+              cat.contains('sneaker') ||
+              cat.contains('footwear')) {
             _categoryController.text = 'shoes';
-          } else if (cat.contains('bag') || cat.contains('clutch') || cat.contains('tote')) {
+          } else if (cat.contains('bag') ||
+              cat.contains('clutch') ||
+              cat.contains('tote')) {
             _categoryController.text = 'bags';
           } else if (cat.contains('dress') || cat.contains('gown')) {
             _categoryController.text = 'dresses';
-          } else if (cat.contains('shirt') || cat.contains('top') || cat.contains('sweater') || cat.contains('hoodie')) {
+          } else if (cat.contains('shirt') ||
+              cat.contains('top') ||
+              cat.contains('sweater') ||
+              cat.contains('hoodie')) {
             _categoryController.text = 'tops';
           } else {
             _categoryController.text = 'other';
@@ -149,7 +168,9 @@ class _AddWardrobeItemScreenState extends State<AddWardrobeItemScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('AI detected garment attributes! Verify and edit details below.'),
+            content: Text(
+              'AI detected garment attributes! Verify and edit details below.',
+            ),
             backgroundColor: AppColors.exactMatch,
           ),
         );
@@ -157,7 +178,10 @@ class _AddWardrobeItemScreenState extends State<AddWardrobeItemScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Auto-detect note: $e'), backgroundColor: AppColors.approxMatch),
+          SnackBar(
+            content: Text('Auto-detect note: $e'),
+            backgroundColor: AppColors.approxMatch,
+          ),
         );
       }
     } finally {
@@ -169,7 +193,9 @@ class _AddWardrobeItemScreenState extends State<AddWardrobeItemScreen> {
     if (_selectedImage == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please select or capture a photo of the clothing item.'),
+          content: Text(
+            'Please select or capture a photo of the clothing item.',
+          ),
           backgroundColor: AppColors.missing,
         ),
       );
@@ -191,17 +217,39 @@ class _AddWardrobeItemScreenState extends State<AddWardrobeItemScreen> {
       name: _nameController.text.trim(),
       category: _categoryController.text.trim().toLowerCase(),
       primaryColor: _primaryColorController.text.trim(),
-      subCategory: _subCategoryController.text.trim().isEmpty ? null : _subCategoryController.text.trim(),
-      secondaryColor: _secondaryColorController.text.trim().isEmpty ? null : _secondaryColorController.text.trim(),
-      brand: _brandController.text.trim().isEmpty ? null : _brandController.text.trim(),
-      size: _sizeController.text.trim().isEmpty ? null : _sizeController.text.trim(),
-      condition: _conditionController.text.trim().isEmpty ? null : _conditionController.text.trim(),
-      notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
-      material: _materialController.text.trim().isEmpty ? null : _materialController.text.trim(),
-      pattern: _patternController.text.trim().isEmpty ? null : _patternController.text.trim(),
-      fit: _fitController.text.trim().isEmpty ? null : _fitController.text.trim(),
-      season: _seasonController.text.trim().isEmpty ? null : _seasonController.text.trim(),
-      formality: _formalityController.text.trim().isEmpty ? null : _formalityController.text.trim(),
+      subCategory: _subCategoryController.text.trim().isEmpty
+          ? null
+          : _subCategoryController.text.trim(),
+      secondaryColor: _secondaryColorController.text.trim().isEmpty
+          ? null
+          : _secondaryColorController.text.trim(),
+      brand: _brandController.text.trim().isEmpty
+          ? null
+          : _brandController.text.trim(),
+      size: _sizeController.text.trim().isEmpty
+          ? null
+          : _sizeController.text.trim(),
+      condition: _conditionController.text.trim().isEmpty
+          ? null
+          : _conditionController.text.trim(),
+      notes: _notesController.text.trim().isEmpty
+          ? null
+          : _notesController.text.trim(),
+      material: _materialController.text.trim().isEmpty
+          ? null
+          : _materialController.text.trim(),
+      pattern: _patternController.text.trim().isEmpty
+          ? null
+          : _patternController.text.trim(),
+      fit: _fitController.text.trim().isEmpty
+          ? null
+          : _fitController.text.trim(),
+      season: _seasonController.text.trim().isEmpty
+          ? null
+          : _seasonController.text.trim(),
+      formality: _formalityController.text.trim().isEmpty
+          ? null
+          : _formalityController.text.trim(),
       tags: tags,
       file: _selectedImage,
     );
@@ -218,7 +266,10 @@ class _AddWardrobeItemScreenState extends State<AddWardrobeItemScreen> {
       Navigator.pop(context);
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(prov.error ?? 'Failed to save item.'), backgroundColor: AppColors.missing),
+        SnackBar(
+          content: Text(prov.error ?? 'Failed to save item.'),
+          backgroundColor: AppColors.missing,
+        ),
       );
     }
   }
@@ -226,31 +277,64 @@ class _AddWardrobeItemScreenState extends State<AddWardrobeItemScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.canvas,
       appBar: AppBar(
-        title: const Text('Add Garment'),
-        actions: [
-          TextButton(
-            onPressed: _isSaving ? null : _saveItem,
-            child: _isSaving
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
-                  )
-                : const Text(
-                    'Save',
-                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
-                  ),
+        backgroundColor: AppColors.surface,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        toolbarHeight: 68,
+        automaticallyImplyLeading: false,
+        leadingWidth: 56,
+        leading: Padding(
+          padding: const EdgeInsets.all(10),
+          child: IconButton(
+            tooltip: 'Go back',
+            icon: const Icon(
+              Icons.arrow_back_ios_new,
+              size: 20,
+              color: AppColors.forest,
+            ),
+            onPressed: () => Navigator.of(context).maybePop(),
           ),
-        ],
+        ),
+        title: const AdaaWordmark(
+          size: AdaaWordmarkSize.medium,
+          color: AppColors.espresso,
+          withDotAccent: true,
+          showSubtitle: true,
+          subtitle: 'style intelligence & closet',
+        ),
+        centerTitle: true,
+        titleSpacing: 0,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
         child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              const Text(
+                'Add to Your Wardrobe',
+                style: TextStyle(
+                  fontFamily: 'Playfair Display',
+                  fontSize: 30,
+                  height: 1.2,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.forest,
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Capture a piece and let adaa help catalogue its details.',
+                style: TextStyle(
+                  fontSize: 14,
+                  height: 1.5,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 22),
               // Image Picker Area
               _buildImagePickerBox(),
 
@@ -265,16 +349,34 @@ class _AddWardrobeItemScreenState extends State<AddWardrobeItemScreen> {
                             ? const SizedBox(
                                 width: 16,
                                 height: 16,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: AppColors.forest,
+                                ),
                               )
-                            : const Icon(Icons.auto_awesome, size: 18, color: AppColors.primary),
+                            : const Icon(
+                                Icons.auto_awesome,
+                                size: 18,
+                                color: AppColors.forest,
+                              ),
                         label: Text(
-                          _isDetecting ? 'Detecting Garment...' : 'Auto-Detect Details with AI',
-                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                          _isDetecting
+                              ? 'Detecting Garment...'
+                              : 'Auto-Detect Details with AI',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
                         ),
                         style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: AppColors.primary, width: 1.2),
-                          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+                          side: const BorderSide(
+                            color: AppColors.forest,
+                            width: 1.2,
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 10,
+                            horizontal: 16,
+                          ),
                         ),
                       ),
                     ),
@@ -289,7 +391,7 @@ class _AddWardrobeItemScreenState extends State<AddWardrobeItemScreen> {
                   padding: const EdgeInsets.all(14),
                   margin: const EdgeInsets.only(bottom: 20),
                   decoration: BoxDecoration(
-                    color: AppColors.accentSoft,
+                    color: AppColors.surfaceContainerLow,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Row(
@@ -297,13 +399,19 @@ class _AddWardrobeItemScreenState extends State<AddWardrobeItemScreen> {
                       SizedBox(
                         width: 18,
                         height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppColors.forest,
+                        ),
                       ),
                       SizedBox(width: 12),
                       Expanded(
                         child: Text(
                           'AI is analyzing your garment details...',
-                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                     ],
@@ -314,9 +422,9 @@ class _AddWardrobeItemScreenState extends State<AddWardrobeItemScreen> {
                 'GARMENT DETAILS',
                 style: TextStyle(
                   fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.2,
-                  color: AppColors.textSecondary,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.4,
+                  color: AppColors.forest,
                 ),
               ),
               const SizedBox(height: 14),
@@ -327,14 +435,17 @@ class _AddWardrobeItemScreenState extends State<AddWardrobeItemScreen> {
                   labelText: 'Item Title *',
                   hintText: 'e.g. Classic White Linen Button-Down',
                 ),
-                validator: (val) => val == null || val.trim().isEmpty ? 'Please enter a title' : null,
+                validator: (val) => val == null || val.trim().isEmpty
+                    ? 'Please enter a title'
+                    : null,
               ),
 
               const SizedBox(height: 14),
 
               // Category Selector Dropdown
               DropdownButtonFormField<String>(
-                initialValue: _categoryOptions.contains(_categoryController.text)
+                initialValue:
+                    _categoryOptions.contains(_categoryController.text)
                     ? _categoryController.text
                     : 'tops',
                 decoration: const InputDecoration(labelText: 'Category *'),
@@ -345,7 +456,9 @@ class _AddWardrobeItemScreenState extends State<AddWardrobeItemScreen> {
                   );
                 }).toList(),
                 onChanged: (val) {
-                  if (val != null) setState(() => _categoryController.text = val);
+                  if (val != null) {
+                    setState(() => _categoryController.text = val);
+                  }
                 },
               ),
 
@@ -360,7 +473,9 @@ class _AddWardrobeItemScreenState extends State<AddWardrobeItemScreen> {
                         labelText: 'Primary Color *',
                         hintText: 'e.g. Navy, Cream',
                       ),
-                      validator: (val) => val == null || val.trim().isEmpty ? 'Color is required' : null,
+                      validator: (val) => val == null || val.trim().isEmpty
+                          ? 'Color is required'
+                          : null,
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -405,7 +520,8 @@ class _AddWardrobeItemScreenState extends State<AddWardrobeItemScreen> {
               const SizedBox(height: 14),
 
               DropdownButtonFormField<String>(
-                initialValue: _conditionOptions.contains(_conditionController.text)
+                initialValue:
+                    _conditionOptions.contains(_conditionController.text)
                     ? _conditionController.text
                     : 'Good',
                 decoration: const InputDecoration(
@@ -413,13 +529,12 @@ class _AddWardrobeItemScreenState extends State<AddWardrobeItemScreen> {
                   hintText: 'Select condition',
                 ),
                 items: _conditionOptions.map((cond) {
-                  return DropdownMenuItem(
-                    value: cond,
-                    child: Text(cond),
-                  );
+                  return DropdownMenuItem(value: cond, child: Text(cond));
                 }).toList(),
                 onChanged: (val) {
-                  if (val != null) setState(() => _conditionController.text = val);
+                  if (val != null) {
+                    setState(() => _conditionController.text = val);
+                  }
                 },
               ),
 
@@ -503,7 +618,9 @@ class _AddWardrobeItemScreenState extends State<AddWardrobeItemScreen> {
                 child: ElevatedButton.icon(
                   onPressed: _isSaving ? null : _saveItem,
                   icon: const Icon(Icons.checkroom),
-                  label: Text(_isSaving ? 'Saving Garment...' : 'Save To Wardrobe'),
+                  label: Text(
+                    _isSaving ? 'Saving Garment...' : 'Save To Wardrobe',
+                  ),
                 ),
               ),
               const SizedBox(height: 30),
@@ -523,7 +640,7 @@ class _AddWardrobeItemScreenState extends State<AddWardrobeItemScreen> {
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.border, width: 1.5),
+          border: Border.all(color: AppColors.outlineVariant, width: 1.5),
         ),
         child: _selectedImage != null
             ? Stack(
@@ -548,9 +665,12 @@ class _AddWardrobeItemScreenState extends State<AddWardrobeItemScreen> {
                     bottom: 10,
                     right: 10,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.8),
+                        color: AppColors.forest.withValues(alpha: 0.8),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: const Row(
@@ -559,7 +679,11 @@ class _AddWardrobeItemScreenState extends State<AddWardrobeItemScreen> {
                           SizedBox(width: 4),
                           Text(
                             'Change Photo',
-                            style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ],
                       ),
@@ -572,8 +696,12 @@ class _AddWardrobeItemScreenState extends State<AddWardrobeItemScreen> {
                 children: [
                   CircleAvatar(
                     radius: 28,
-                    backgroundColor: AppColors.accentSoft,
-                    child: Icon(Icons.camera_alt_outlined, color: AppColors.primary, size: 26),
+                    backgroundColor: AppColors.surfaceContainerLow,
+                    child: Icon(
+                      Icons.camera_alt_outlined,
+                      color: AppColors.forest,
+                      size: 26,
+                    ),
                   ),
                   SizedBox(height: 12),
                   Text(
@@ -583,7 +711,10 @@ class _AddWardrobeItemScreenState extends State<AddWardrobeItemScreen> {
                   SizedBox(height: 4),
                   Text(
                     'AI will auto-populate categories, colors, and attributes',
-                    style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textSecondary,
+                    ),
                   ),
                 ],
               ),
@@ -605,16 +736,28 @@ class _AddWardrobeItemScreenState extends State<AddWardrobeItemScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
-                leading: const Icon(Icons.photo_library_outlined, color: AppColors.primary),
-                title: const Text('Choose from Gallery', style: TextStyle(fontWeight: FontWeight.w600)),
+                leading: const Icon(
+                  Icons.photo_library_outlined,
+                  color: AppColors.forest,
+                ),
+                title: const Text(
+                  'Choose from Gallery',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
                 onTap: () {
                   Navigator.pop(ctx);
                   _pickImage(ImageSource.gallery);
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.camera_alt_outlined, color: AppColors.primary),
-                title: const Text('Take Photo with Camera', style: TextStyle(fontWeight: FontWeight.w600)),
+                leading: const Icon(
+                  Icons.camera_alt_outlined,
+                  color: AppColors.forest,
+                ),
+                title: const Text(
+                  'Take Photo with Camera',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
                 onTap: () {
                   Navigator.pop(ctx);
                   _pickImage(ImageSource.camera);

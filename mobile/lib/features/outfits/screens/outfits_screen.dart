@@ -8,6 +8,7 @@ import '../../../core/widgets/private_image_view.dart';
 import '../../../state/outfits_provider.dart';
 import '../../tryon/screens/tryon_screen.dart';
 import 'create_outfit_screen.dart';
+import '../../../core/widgets/adaa_wordmark.dart';
 
 class OutfitsScreen extends StatefulWidget {
   const OutfitsScreen({super.key});
@@ -48,12 +49,18 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Delete Saved Look?', style: TextStyle(fontWeight: FontWeight.w700)),
+        title: const Text(
+          'Delete Saved Look?',
+          style: TextStyle(fontWeight: FontWeight.w700),
+        ),
         content: Text('Are you sure you want to delete "${outfit.name}"?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.missing),
@@ -74,46 +81,54 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
 
     final query = _searchController.text.toLowerCase().trim();
     final filteredOutfits = prov.outfits.where((outfit) {
-      final matchesQuery = query.isEmpty ||
+      final matchesQuery =
+          query.isEmpty ||
           outfit.name.toLowerCase().contains(query) ||
           (outfit.occasion?.toLowerCase().contains(query) ?? false) ||
           (outfit.notes?.toLowerCase().contains(query) ?? false);
-      final matchesOccasion = _selectedOccasion == 'all' ||
+      final matchesOccasion =
+          _selectedOccasion == 'all' ||
           (outfit.occasion?.toLowerCase().contains(_selectedOccasion) ?? false);
       return matchesQuery && matchesOccasion;
     }).toList();
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.canvas,
       appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Saved Outfits & Looks', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
-            Text(
-              '${prov.outfits.length} ${prov.outfits.length == 1 ? "look" : "looks"} curated',
-              style: const TextStyle(fontSize: 11, color: AppColors.textSecondary, fontWeight: FontWeight.w500),
+        backgroundColor: AppColors.surface,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        toolbarHeight: 68,
+        automaticallyImplyLeading: false,
+        leadingWidth: 56,
+        leading: Padding(
+          padding: const EdgeInsets.all(10),
+          child: IconButton(
+            tooltip: 'Go back',
+            icon: const Icon(
+              Icons.arrow_back_ios_new,
+              size: 20,
+              color: AppColors.forest,
             ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add_circle_outline),
-            tooltip: 'Create Look',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const CreateOutfitScreen()),
-              );
-            },
+            onPressed: () => Navigator.of(context).maybePop(),
           ),
-        ],
+        ),
+        title: const AdaaWordmark(
+          size: AdaaWordmarkSize.medium,
+          color: AppColors.espresso,
+          withDotAccent: true,
+          showSubtitle: true,
+          subtitle: 'style intelligence & closet',
+        ),
+        centerTitle: true,
+        titleSpacing: 0,
       ),
       body: Column(
         children: [
           // Search & Filter Header Row
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 6),
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
             child: Row(
               children: [
                 Expanded(
@@ -130,26 +145,12 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
                               },
                             )
                           : null,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                     ),
                     onChanged: (_) => setState(() {}),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceContainer,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: IconButton(
-                    icon: const Icon(Icons.tune, size: 20, color: AppColors.forest),
-                    tooltip: 'Filter looks',
-                    onPressed: () {
-                      setState(() => _selectedOccasion = 'all');
-                    },
                   ),
                 ),
               ],
@@ -176,7 +177,9 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
                     label,
                     style: TextStyle(
                       fontSize: 11,
-                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                      fontWeight: isSelected
+                          ? FontWeight.w700
+                          : FontWeight.w500,
                       color: isSelected ? Colors.white : AppColors.textPrimary,
                     ),
                   ),
@@ -219,15 +222,24 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
                   ],
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.sandSoft,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
+                    border: Border.all(
+                      color: AppColors.gold.withValues(alpha: 0.3),
+                    ),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.auto_awesome, size: 12, color: AppColors.gold),
+                      const Icon(
+                        Icons.auto_awesome,
+                        size: 12,
+                        color: AppColors.gold,
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         'AI Styled',
@@ -251,33 +263,22 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
             child: prov.isLoading && prov.outfits.isEmpty
                 ? const Center(child: CircularProgressIndicator())
                 : filteredOutfits.isEmpty
-                    ? _buildEmptyState(context)
-                    : RefreshIndicator(
-                        onRefresh: () => prov.loadOutfits(),
-                        child: ListView.separated(
-                          padding: const EdgeInsets.all(16),
-                          itemCount: filteredOutfits.length,
-                          separatorBuilder: (context, index) => const SizedBox(height: 14),
-                          itemBuilder: (ctx, idx) {
-                            final outfit = filteredOutfits[idx];
-                            return _buildOutfitCard(ctx, outfit);
-                          },
-                        ),
-                      ),
+                ? _buildEmptyState(context)
+                : RefreshIndicator(
+                    onRefresh: () => prov.loadOutfits(),
+                    child: ListView.separated(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: filteredOutfits.length,
+                      separatorBuilder: (context, index) =>
+                          const SizedBox(height: 14),
+                      itemBuilder: (ctx, idx) {
+                        final outfit = filteredOutfits[idx];
+                        return _buildOutfitCard(ctx, outfit);
+                      },
+                    ),
+                  ),
           ),
         ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-        icon: const Icon(Icons.checkroom, color: AppColors.gold),
-        label: const Text('Build New Look', style: TextStyle(fontWeight: FontWeight.w700)),
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const CreateOutfitScreen()),
-          );
-        },
       ),
     );
   }
@@ -313,7 +314,10 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
                       Padding(
                         padding: const EdgeInsets.only(top: 2),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: AppColors.sageContainer,
                             borderRadius: BorderRadius.circular(6),
@@ -332,7 +336,11 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
                 ),
               ),
               IconButton(
-                icon: const Icon(Icons.delete_outline, size: 20, color: AppColors.textMuted),
+                icon: const Icon(
+                  Icons.delete_outline,
+                  size: 20,
+                  color: AppColors.textMuted,
+                ),
                 tooltip: 'Delete look',
                 onPressed: () => _confirmDelete(context, outfit),
               ),
@@ -343,7 +351,10 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
             const SizedBox(height: 8),
             Text(
               outfit.notes!,
-              style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+              style: const TextStyle(
+                fontSize: 13,
+                color: AppColors.textSecondary,
+              ),
             ),
           ],
 
@@ -358,7 +369,11 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.checkroom, size: 12, color: AppColors.textSecondary),
+                    const Icon(
+                      Icons.checkroom,
+                      size: 12,
+                      color: AppColors.textSecondary,
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       '${outfit.items.length} PIECES IN THIS LOOK',
@@ -377,9 +392,8 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => TryOnScreen(
-                          prefilledWardrobeItemId: firstItemId,
-                        ),
+                        builder: (_) =>
+                            TryOnScreen(prefilledWardrobeItemId: firstItemId),
                       ),
                     );
                   },
@@ -398,7 +412,11 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
                           ),
                         ),
                         SizedBox(width: 2),
-                        Icon(Icons.arrow_forward, size: 12, color: AppColors.forest),
+                        Icon(
+                          Icons.arrow_forward,
+                          size: 12,
+                          color: AppColors.forest,
+                        ),
                       ],
                     ),
                   ),
@@ -428,7 +446,11 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
                         fit: BoxFit.cover,
                         errorWidget: Container(
                           color: AppColors.sandSoft,
-                          child: const Icon(Icons.checkroom, size: 18, color: AppColors.forest),
+                          child: const Icon(
+                            Icons.checkroom,
+                            size: 18,
+                            color: AppColors.forest,
+                          ),
                         ),
                       ),
                     ),
@@ -439,7 +461,10 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
           ] else ...[
             Text(
               '${outfit.itemIds.length} items linked',
-              style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+              style: const TextStyle(
+                fontSize: 12,
+                color: AppColors.textSecondary,
+              ),
             ),
           ],
         ],
@@ -460,7 +485,11 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
                 color: AppColors.sandSoft,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.auto_awesome_mosaic_outlined, size: 48, color: AppColors.primary),
+              child: const Icon(
+                Icons.auto_awesome_mosaic_outlined,
+                size: 48,
+                color: AppColors.primary,
+              ),
             ),
             const SizedBox(height: 20),
             const Text(
@@ -471,7 +500,11 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
             const Text(
               'Assemble combinations from your wardrobe or save matched outfits from your analyses.',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.4),
+              style: TextStyle(
+                fontSize: 13,
+                color: AppColors.textSecondary,
+                height: 1.4,
+              ),
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(

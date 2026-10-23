@@ -37,34 +37,42 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
     final prov = context.watch<WardrobeProvider>();
 
     return Scaffold(
-      appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Digital Wardrobe', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
-            Text(
-              prov.items.isNotEmpty
-                  ? '${prov.items.length} ${prov.items.length == 1 ? "garment" : "garments"} in closet'
-                  : 'Personal closet & garment manager',
-              style: const TextStyle(fontSize: 11, color: AppColors.textSecondary, fontWeight: FontWeight.w500),
-            ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add_a_photo_outlined),
-            tooltip: 'Add Garment',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const AddWardrobeItemScreen()),
-              );
-            },
-          ),
-        ],
-      ),
+      backgroundColor: AppColors.canvas,
       body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.start,
         children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                const Text(
+                  'Digital Wardrobe',
+                  style: TextStyle(
+                    fontFamily: 'Playfair Display',
+                    fontSize: 28,
+                    height: 1.25,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.forest,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  prov.items.isNotEmpty
+                      ? '${prov.items.length} ${prov.items.length == 1 ? "garment" : "garments"} in your closet'
+                      : 'Your personal closet, thoughtfully organised.',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    height: 1.45,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
           // Search & Filter Header Row
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
@@ -74,7 +82,8 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
                   child: TextField(
                     controller: _searchController,
                     decoration: InputDecoration(
-                      hintText: 'Search by title, brand, fabric, color, or notes...',
+                      hintText:
+                          'Search by title, brand, fabric, color, or notes...',
                       prefixIcon: const Icon(Icons.search, size: 20),
                       suffixIcon: _searchController.text.isNotEmpty
                           ? IconButton(
@@ -85,28 +94,12 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
                               },
                             )
                           : null,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                     ),
                     onChanged: (val) => prov.setSearchQuery(val),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceContainer,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: IconButton(
-                    icon: const Icon(Icons.tune, size: 20, color: AppColors.forest),
-                    tooltip: 'Filter options',
-                    onPressed: () {
-                      if (prov.selectedCategory != 'all') {
-                        prov.setCategory('all');
-                      }
-                    },
                   ),
                 ),
               ],
@@ -126,7 +119,11 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.auto_awesome, size: 14, color: AppColors.gold),
+                    const Icon(
+                      Icons.auto_awesome,
+                      size: 14,
+                      color: AppColors.gold,
+                    ),
                     const SizedBox(width: 6),
                     Text(
                       prov.selectedCategory == 'all'
@@ -145,7 +142,10 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
                   const SizedBox(
                     width: 14,
                     height: 14,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: AppColors.forest,
+                    ),
                   ),
               ],
             ),
@@ -154,16 +154,13 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
           const SizedBox(height: 4),
 
           // Content Area (Loading, Error, Empty, or Grid)
-          Expanded(
-            child: _buildBodyContent(context, prov),
-          ),
+          Expanded(child: _buildBodyContent(context, prov)),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: AppColors.primary,
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: AppColors.forest,
         foregroundColor: Colors.white,
-        icon: const Icon(Icons.add, color: AppColors.gold),
-        label: const Text('Add Piece', style: TextStyle(fontWeight: FontWeight.w700)),
+        child: const Icon(Icons.add),
         onPressed: () {
           Navigator.push(
             context,
@@ -186,7 +183,11 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.cloud_off_outlined, size: 48, color: AppColors.missing),
+              const Icon(
+                Icons.cloud_off_outlined,
+                size: 48,
+                color: AppColors.missing,
+              ),
               const SizedBox(height: 12),
               const Text(
                 'Unable to Load Wardrobe',
@@ -196,7 +197,10 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
               Text(
                 prov.error!,
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textSecondary,
+                ),
               ),
               const SizedBox(height: 16),
               ElevatedButton.icon(
@@ -249,7 +253,8 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
         itemBuilder: (ctx, idx) {
           final cat = categories[idx]['category'].toString();
           final count = categories[idx]['count'] ?? 0;
-          final isSelected = prov.selectedCategory.toLowerCase() == cat.toLowerCase();
+          final isSelected =
+              prov.selectedCategory.toLowerCase() == cat.toLowerCase();
 
           return ChoiceChip(
             label: Text(
@@ -261,10 +266,10 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
               ),
             ),
             selected: isSelected,
-            selectedColor: AppColors.primary,
+            selectedColor: AppColors.forest,
             backgroundColor: AppColors.surface,
             side: BorderSide(
-              color: isSelected ? AppColors.primary : AppColors.border,
+              color: isSelected ? AppColors.forest : AppColors.outlineVariant,
             ),
             onSelected: (_) => prov.setCategory(cat),
           );
@@ -278,16 +283,14 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (_) => WardrobeDetailScreen(item: item),
-          ),
+          MaterialPageRoute(builder: (_) => WardrobeDetailScreen(item: item)),
         );
       },
       child: Container(
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.border),
+          border: Border.all(color: AppColors.outlineVariant),
           boxShadow: [AppColors.subtleShadow],
         ),
         padding: const EdgeInsets.all(8),
@@ -298,7 +301,7 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: Container(
-                  color: AppColors.sandSoft,
+                  color: AppColors.surfaceContainerLow,
                   child: Stack(
                     children: [
                       PrivateImageView(
@@ -306,7 +309,8 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
                         width: double.infinity,
                         height: double.infinity,
                         fit: BoxFit.cover,
-                        onRefreshUrl: () => context.read<WardrobeProvider>().loadWardrobe(),
+                        onRefreshUrl: () =>
+                            context.read<WardrobeProvider>().loadWardrobe(),
                       ),
                       Positioned(
                         top: 8,
@@ -335,7 +339,10 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
                         bottom: 8,
                         left: 8,
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.white.withValues(alpha: 0.92),
                             borderRadius: BorderRadius.circular(12),
@@ -377,7 +384,10 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
                         : '${item.primaryColor} • ${item.material ?? item.fit ?? 'Garment'}',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: AppColors.textSecondary,
+                    ),
                   ),
                 ],
               ),
@@ -389,7 +399,8 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
   }
 
   Widget _buildEmptyState(BuildContext context, WardrobeProvider prov) {
-    final bool hasFilter = _searchController.text.isNotEmpty || prov.selectedCategory != 'all';
+    final bool hasFilter =
+        _searchController.text.isNotEmpty || prov.selectedCategory != 'all';
 
     if (hasFilter) {
       return Center(
@@ -398,7 +409,11 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.search_off_outlined, size: 48, color: AppColors.textMuted),
+              const Icon(
+                Icons.search_off_outlined,
+                size: 48,
+                color: AppColors.textMuted,
+              ),
               const SizedBox(height: 16),
               const Text(
                 'No matching garments',
@@ -408,7 +423,10 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
               Text(
                 'No items found matching your current filter criteria.',
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: AppColors.textSecondary,
+                ),
               ),
               const SizedBox(height: 16),
               OutlinedButton.icon(
@@ -435,10 +453,14 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: const BoxDecoration(
-                color: AppColors.terracottaSoft,
+                color: AppColors.surfaceContainerLow,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.checkroom_outlined, size: 48, color: AppColors.terracotta),
+              child: const Icon(
+                Icons.checkroom_outlined,
+                size: 48,
+                color: AppColors.sage,
+              ),
             ),
             const SizedBox(height: 20),
             const Text(
@@ -449,14 +471,20 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
             const Text(
               'Take photos of your garments or flat-lays. adaa AI will detect categories, colors, and materials automatically.',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.4),
+              style: TextStyle(
+                fontSize: 13,
+                color: AppColors.textSecondary,
+                height: 1.4,
+              ),
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const AddWardrobeItemScreen()),
+                  MaterialPageRoute(
+                    builder: (_) => const AddWardrobeItemScreen(),
+                  ),
                 );
               },
               icon: const Icon(Icons.add_a_photo),

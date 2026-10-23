@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 
 import '../../../core/models/community_model.dart';
 import '../../../core/theme/app_colors.dart';
@@ -10,6 +11,7 @@ import '../../../state/wardrobe_provider.dart';
 import '../../wardrobe/screens/wardrobe_detail_screen.dart';
 import '../widgets/public_profile_sheet.dart';
 import 'shared_item_detail_screen.dart';
+import '../../../core/widgets/adaa_wordmark.dart';
 
 class CommunityDetailScreen extends StatefulWidget {
   final CommunityModel community;
@@ -57,18 +59,20 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
   void _onCategorySelected(String cat) {
     setState(() => _selectedCategory = cat);
     context.read<CommunityProvider>().loadCommunityListings(
-          widget.community.id,
-          category: _selectedCategory,
-          search: _searchController.text.trim().isEmpty ? null : _searchController.text.trim(),
-        );
+      widget.community.id,
+      category: _selectedCategory,
+      search: _searchController.text.trim().isEmpty
+          ? null
+          : _searchController.text.trim(),
+    );
   }
 
   void _onSearchChanged(String query) {
     context.read<CommunityProvider>().loadCommunityListings(
-          widget.community.id,
-          category: _selectedCategory,
-          search: query.trim().isEmpty ? null : query.trim(),
-        );
+      widget.community.id,
+      category: _selectedCategory,
+      search: query.trim().isEmpty ? null : query.trim(),
+    );
   }
 
   Future<void> _requestToJoin() async {
@@ -78,7 +82,9 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Join request submitted! An administrator will review your request.'),
+            content: Text(
+              'Join request submitted! An administrator will review your request.',
+            ),
             backgroundColor: AppColors.exactMatch,
           ),
         );
@@ -99,13 +105,21 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Leave Community?'),
-        content: Text('Are you sure you want to leave "${widget.community.name}"? Your shared items in this circle will be unlisted.'),
+        content: Text(
+          'Are you sure you want to leave "${widget.community.name}"? Your shared items in this circle will be unlisted.',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.missing),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Leave Circle', style: TextStyle(color: Colors.white)),
+            child: const Text(
+              'Leave Circle',
+              style: TextStyle(color: Colors.white),
+            ),
           ),
         ],
       ),
@@ -139,7 +153,9 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
     showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       isScrollControlled: true,
       builder: (ctx) => DraggableScrollableSheet(
         initialChildSize: 0.7,
@@ -155,18 +171,34 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Share to this Circle', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18)),
-                    IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(ctx)),
+                    const Text(
+                      'Share to this Circle',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 18,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(ctx),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 4),
-                Text('Select a garment from your personal digital closet to share with ${widget.community.name}.',
-                    style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                Text(
+                  'Select a garment from your personal digital closet to share with ${widget.community.name}.',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
                 const SizedBox(height: 16),
                 if (items.isEmpty)
                   const Expanded(
                     child: Center(
-                      child: Text('Your personal wardrobe is empty. Add garments first!'),
+                      child: Text(
+                        'Your personal wardrobe is empty. Add garments first!',
+                      ),
                     ),
                   )
                 else
@@ -180,27 +212,59 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
                         return ListTile(
                           leading: ClipRRect(
                             borderRadius: BorderRadius.circular(6),
-                            child: PrivateImageView(imageUrl: item.imageUrl, width: 44, height: 44, fit: BoxFit.cover),
+                            child: PrivateImageView(
+                              imageUrl: item.imageUrl,
+                              width: 44,
+                              height: 44,
+                              fit: BoxFit.cover,
+                            ),
                           ),
-                          title: Text(item.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-                          subtitle: Text('${item.category.toUpperCase()} • ${item.primaryColor}', style: const TextStyle(fontSize: 11)),
+                          title: Text(
+                            item.name,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
+                          ),
+                          subtitle: Text(
+                            '${item.category.toUpperCase()} • ${item.primaryColor}',
+                            style: const TextStyle(fontSize: 11),
+                          ),
                           trailing: ElevatedButton(
                             style: ElevatedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 8,
+                              ),
                             ),
                             onPressed: () async {
-                              final commProv = context.read<CommunityProvider>();
+                              final commProv = context
+                                  .read<CommunityProvider>();
                               final messenger = ScaffoldMessenger.of(context);
                               Navigator.pop(ctx);
-                              final success = await commProv.listWardrobeItem(widget.community.id, wardrobeItemId: item.id);
+                              final success = await commProv.listWardrobeItem(
+                                widget.community.id,
+                                wardrobeItemId: item.id,
+                              );
                               if (mounted) {
                                 if (success) {
                                   messenger.showSnackBar(
-                                    SnackBar(content: Text('"${item.name}" shared to ${widget.community.name}!'), backgroundColor: AppColors.exactMatch),
+                                    SnackBar(
+                                      content: Text(
+                                        '"${item.name}" shared to ${widget.community.name}!',
+                                      ),
+                                      backgroundColor: AppColors.exactMatch,
+                                    ),
                                   );
                                 } else {
                                   messenger.showSnackBar(
-                                    SnackBar(content: Text(commProv.error ?? 'Failed to share item.'), backgroundColor: AppColors.missing),
+                                    SnackBar(
+                                      content: Text(
+                                        commProv.error ??
+                                            'Failed to share item.',
+                                      ),
+                                      backgroundColor: AppColors.missing,
+                                    ),
                                   );
                                 }
                               }
@@ -228,16 +292,36 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
     final isAdminOrOwner = currentComm.isAdminOrOwner;
 
     return Scaffold(
+      backgroundColor: AppColors.canvas,
       appBar: AppBar(
-        title: Text(currentComm.name, overflow: TextOverflow.ellipsis),
-        actions: [
-          if (isApproved)
-            IconButton(
-              icon: const Icon(Icons.exit_to_app_outlined),
-              tooltip: 'Leave Community',
-              onPressed: _confirmLeaveCommunity,
+        backgroundColor: AppColors.surface,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        toolbarHeight: 68,
+        automaticallyImplyLeading: false,
+        leadingWidth: 56,
+        leading: Padding(
+          padding: const EdgeInsets.all(10),
+          child: IconButton(
+            tooltip: 'Go back',
+            icon: const Icon(
+              Icons.arrow_back_ios_new,
+              size: 20,
+              color: AppColors.forest,
             ),
-        ],
+            onPressed: () => Navigator.of(context).maybePop(),
+          ),
+        ),
+        title: const AdaaWordmark(
+          size: AdaaWordmarkSize.medium,
+          color: AppColors.espresso,
+          withDotAccent: true,
+          showSubtitle: true,
+          subtitle: 'style intelligence & closet',
+        ),
+        centerTitle: true,
+        titleSpacing: 0,
       ),
       body: NestedScrollView(
         headerSliverBuilder: (context, innerBoxIsScrolled) {
@@ -253,7 +337,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
                     controller: _tabController,
                     labelColor: AppColors.espresso,
                     unselectedLabelColor: AppColors.textMuted,
-                    indicatorColor: AppColors.terracotta,
+                    indicatorColor: AppColors.forest,
                     indicatorWeight: 2.5,
                     tabs: [
                       Tab(
@@ -281,20 +365,23 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
               ),
       ),
       floatingActionButton: isApproved
-          ? FloatingActionButton.extended(
-              backgroundColor: AppColors.terracotta,
+          ? FloatingActionButton(
+              backgroundColor: AppColors.forest,
               foregroundColor: Colors.white,
-              icon: const Icon(Icons.add),
-              label: const Text('Share Clothes', style: TextStyle(fontWeight: FontWeight.w600)),
+              child: const Icon(Icons.share_sharp),
               onPressed: () => _showShareGarmentSheet(context),
             )
           : null,
     );
   }
 
-  Widget _buildCommunityHeader(CommunityModel comm, bool isApproved, bool isPending) {
+  Widget _buildCommunityHeader(
+    CommunityModel comm,
+    bool isApproved,
+    bool isPending,
+  ) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
       color: AppColors.surface,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -307,7 +394,11 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
                   color: AppColors.accentSoft,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.groups_outlined, color: AppColors.primary, size: 28),
+                child: const Icon(
+                  Icons.groups_outlined,
+                  color: AppColors.primary,
+                  size: 28,
+                ),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -316,15 +407,23 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
                   children: [
                     Text(
                       comm.name,
-                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
-                            color: comm.isPrivate ? Colors.grey.shade200 : AppColors.accentSoft,
+                            color: comm.isPrivate
+                                ? Colors.grey.shade200
+                                : AppColors.accentSoft,
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
@@ -332,14 +431,19 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
                             style: TextStyle(
                               fontSize: 9,
                               fontWeight: FontWeight.w700,
-                              color: comm.isPrivate ? AppColors.textSecondary : AppColors.primary,
+                              color: comm.isPrivate
+                                  ? AppColors.textSecondary
+                                  : AppColors.primary,
                             ),
                           ),
                         ),
                         const SizedBox(width: 8),
                         Text(
                           '${comm.membersCount} members • ${comm.listingsCount} garments',
-                          style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                          ),
                         ),
                       ],
                     ),
@@ -352,12 +456,26 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
             const SizedBox(height: 12),
             Text(
               comm.description!,
-              style: const TextStyle(fontSize: 13, height: 1.4, color: AppColors.textPrimary),
+              style: const TextStyle(
+                fontSize: 13,
+                height: 1.4,
+                color: AppColors.textPrimary,
+              ),
             ),
           ],
           const SizedBox(height: 12),
-          // Membership status pill
-          _buildMembershipStatusBadge(comm),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _buildMembershipStatusBadge(comm),
+              if (isApproved)
+                IconButton(
+                  icon: const Icon(Icons.exit_to_app_outlined),
+                  tooltip: 'Leave Community',
+                  onPressed: _confirmLeaveCommunity,
+                ),
+            ],
+          ),
         ],
       ),
     );
@@ -411,7 +529,14 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
         children: [
           Icon(icon, size: 14, color: fgColor),
           const SizedBox(width: 6),
-          Text(label, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: fgColor)),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: fgColor,
+            ),
+          ),
         ],
       ),
     );
@@ -430,7 +555,11 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
                 color: AppColors.accentSoft,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.lock_outline, size: 48, color: AppColors.primary),
+              child: const Icon(
+                Icons.lock_outline,
+                size: 48,
+                color: AppColors.primary,
+              ),
             ),
             const SizedBox(height: 18),
             const Text(
@@ -443,7 +572,11 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
                   ? 'Your membership request is currently awaiting review by a community administrator. You will get full access once approved.'
                   : 'Join this circle to browse shared closets, borrow looks, and share garments with members.',
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.4),
+              style: const TextStyle(
+                fontSize: 13,
+                color: AppColors.textSecondary,
+                height: 1.4,
+              ),
             ),
             const SizedBox(height: 24),
             if (!isPending)
@@ -477,7 +610,10 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
             decoration: InputDecoration(
               hintText: 'Search community garments, brands, styles...',
               prefixIcon: const Icon(Icons.search, size: 20),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 10,
+              ),
               suffixIcon: _searchController.text.isNotEmpty
                   ? IconButton(
                       icon: const Icon(Icons.clear, size: 16),
@@ -504,10 +640,19 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
               final cat = _categoryOptions[idx];
               final isSel = _selectedCategory == cat;
               return ChoiceChip(
-                label: Text(cat.toUpperCase(), style: TextStyle(fontSize: 10, fontWeight: isSel ? FontWeight.w700 : FontWeight.w500)),
+                label: Text(
+                  cat.toUpperCase(),
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: isSel ? FontWeight.w700 : FontWeight.w500,
+                  ),
+                ),
                 selected: isSel,
+                showCheckmark: false, // Removes the tick mark
                 selectedColor: AppColors.primary,
-                labelStyle: TextStyle(color: isSel ? Colors.white : AppColors.textPrimary),
+                labelStyle: TextStyle(
+                  color: isSel ? Colors.white : AppColors.textPrimary,
+                ),
                 onSelected: (_) => _onCategorySelected(cat),
               );
             },
@@ -521,11 +666,27 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.checkroom_outlined, size: 40, color: AppColors.textMuted),
+                      const Icon(
+                        Icons.checkroom_outlined,
+                        size: 40,
+                        color: AppColors.textMuted,
+                      ),
                       const SizedBox(height: 10),
-                      const Text('No garments listed yet', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+                      const Text(
+                        'No garments listed yet',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                        ),
+                      ),
                       const SizedBox(height: 4),
-                      const Text('Be the first to share a piece with this community!', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                      const Text(
+                        'Be the first to share a piece with this community!',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
                     ],
                   ),
                 )
@@ -544,23 +705,28 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
                     if (item == null) return const SizedBox.shrink();
 
                     final currentUserId = context.read<AuthProvider>().user?.id;
-                    final isOwner = currentUserId != null && currentUserId == listing.ownerId;
+                    final isOwner =
+                        currentUserId != null &&
+                        currentUserId == listing.ownerId;
 
                     return GestureDetector(
                       onTap: () {
                         if (isOwner) {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (_) => WardrobeDetailScreen(item: item)),
+                            MaterialPageRoute(
+                              builder: (_) => WardrobeDetailScreen(item: item),
+                            ),
                           );
                         } else {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => SharedItemDetailScreen.fromListing(
-                                listing: listing,
-                                communityName: widget.community.name,
-                              ),
+                              builder: (_) =>
+                                  SharedItemDetailScreen.fromListing(
+                                    listing: listing,
+                                    communityName: widget.community.name,
+                                  ),
                             ),
                           );
                         }
@@ -582,20 +748,31 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
                                     width: double.infinity,
                                     height: double.infinity,
                                     fit: BoxFit.cover,
-                                    borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+                                    borderRadius: const BorderRadius.vertical(
+                                      top: Radius.circular(14),
+                                    ),
                                   ),
                                   Positioned(
                                     top: 6,
                                     right: 6,
                                     child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 6,
+                                        vertical: 2,
+                                      ),
                                       decoration: BoxDecoration(
-                                        color: Colors.white.withValues(alpha: 0.9),
+                                        color: Colors.white.withValues(
+                                          alpha: 0.9,
+                                        ),
                                         borderRadius: BorderRadius.circular(10),
                                       ),
                                       child: Text(
                                         item.category.toUpperCase(),
-                                        style: const TextStyle(fontSize: 8, fontWeight: FontWeight.w700, color: AppColors.primary),
+                                        style: const TextStyle(
+                                          fontSize: 8,
+                                          fontWeight: FontWeight.w700,
+                                          color: AppColors.primary,
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -611,7 +788,10 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
                                     item.name,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                    ),
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
@@ -620,7 +800,10 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
                                         : item.primaryColor,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(fontSize: 10, color: AppColors.textSecondary),
+                                    style: const TextStyle(
+                                      fontSize: 10,
+                                      color: AppColors.textSecondary,
+                                    ),
                                   ),
                                   const SizedBox(height: 5),
                                   // Owner attribution
@@ -638,7 +821,11 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
                                           backgroundColor: AppColors.accentSoft,
                                           child: Text(
                                             listing.ownerInitials,
-                                            style: const TextStyle(fontSize: 8, fontWeight: FontWeight.w800, color: AppColors.primary),
+                                            style: const TextStyle(
+                                              fontSize: 8,
+                                              fontWeight: FontWeight.w800,
+                                              color: AppColors.primary,
+                                            ),
                                           ),
                                         ),
                                         const SizedBox(width: 4),
@@ -647,7 +834,11 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
                                             listing.resolvedOwnerName,
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
-                                            style: const TextStyle(fontSize: 10, color: AppColors.textSecondary, fontWeight: FontWeight.w600),
+                                            style: const TextStyle(
+                                              fontSize: 10,
+                                              color: AppColors.textSecondary,
+                                              fontWeight: FontWeight.w600,
+                                            ),
                                           ),
                                         ),
                                       ],
@@ -656,7 +847,11 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
                                   const SizedBox(height: 3),
                                   const Text(
                                     'Shared with this community',
-                                    style: TextStyle(fontSize: 9, color: AppColors.textMuted, fontStyle: FontStyle.italic),
+                                    style: TextStyle(
+                                      fontSize: 9,
+                                      color: AppColors.textMuted,
+                                      fontStyle: FontStyle.italic,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -678,7 +873,10 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Approve Membership', style: TextStyle(fontWeight: FontWeight.w700)),
+        title: const Text(
+          'Approve Membership',
+          style: TextStyle(fontWeight: FontWeight.w700),
+        ),
         content: Text(
           'Allow $memberName to join ${widget.community.name}? They will gain access to browse and borrow from the shared closet.',
           style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
@@ -686,15 +884,23 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.exactMatch),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.exactMatch,
+            ),
             onPressed: () async {
               Navigator.pop(ctx);
               final commProv = context.read<CommunityProvider>();
               final messenger = ScaffoldMessenger.of(context);
-              final success = await commProv.approveMember(widget.community.id, member.userId);
+              final success = await commProv.approveMember(
+                widget.community.id,
+                member.userId,
+              );
               if (mounted) {
                 if (success) {
                   messenger.showSnackBar(
@@ -706,7 +912,9 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
                 } else {
                   messenger.showSnackBar(
                     SnackBar(
-                      content: Text(commProv.error ?? 'Failed to approve membership.'),
+                      content: Text(
+                        commProv.error ?? 'Failed to approve membership.',
+                      ),
                       backgroundColor: AppColors.missing,
                     ),
                   );
@@ -726,7 +934,10 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Decline Request', style: TextStyle(fontWeight: FontWeight.w700)),
+        title: const Text(
+          'Decline Request',
+          style: TextStyle(fontWeight: FontWeight.w700),
+        ),
         content: Text(
           'Decline $memberName\'s request to join ${widget.community.name}?',
           style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
@@ -734,7 +945,10 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppColors.missing),
@@ -742,18 +956,25 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
               Navigator.pop(ctx);
               final commProv = context.read<CommunityProvider>();
               final messenger = ScaffoldMessenger.of(context);
-              final success = await commProv.rejectMember(widget.community.id, member.userId);
+              final success = await commProv.rejectMember(
+                widget.community.id,
+                member.userId,
+              );
               if (mounted) {
                 if (success) {
                   messenger.showSnackBar(
                     SnackBar(
-                      content: Text('Membership request from $memberName was declined.'),
+                      content: Text(
+                        'Membership request from $memberName was declined.',
+                      ),
                     ),
                   );
                 } else {
                   messenger.showSnackBar(
                     SnackBar(
-                      content: Text(commProv.error ?? 'Failed to decline request.'),
+                      content: Text(
+                        commProv.error ?? 'Failed to decline request.',
+                      ),
                       backgroundColor: AppColors.missing,
                     ),
                   );
@@ -781,28 +1002,48 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
         if (isAdminOrOwner && pending.isNotEmpty) ...[
           Text(
             'PENDING REQUESTS (${pending.length})',
-            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.1, color: AppColors.textSecondary),
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.1,
+              color: AppColors.textSecondary,
+            ),
           ),
           const SizedBox(height: 8),
           ...pending.map((m) {
-            final dateStr = m.requestedAt.toLocal().toString().split(' ').first;
+            // final dateStr = m.requestedAt.toLocal().toString().split(' ').first;
+            final dateStr = DateFormat('dd-MM-yyyy')
+                .format(m.requestedAt.toLocal());
             return Card(
               margin: const EdgeInsets.only(bottom: 8),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10), side: const BorderSide(color: Colors.orange)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+                side: const BorderSide(color: AppColors.forestDark),
+              ),
               child: ListTile(
                 leading: CircleAvatar(
                   backgroundColor: AppColors.accentSoft,
                   child: Text(
                     m.initials,
-                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: AppColors.primary),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                      color: AppColors.primary,
+                    ),
                   ),
                 ),
-                title: Text(m.resolvedName, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                title: Text(
+                  m.resolvedName,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                  ),
+                ),
                 subtitle: Text(
                   m.bio != null && m.bio!.trim().isNotEmpty
                       ? '$dateStr • ${m.bio!.trim()}'
-                      : 'Requested $dateStr',
-                  style: const TextStyle(fontSize: 11, color: Colors.orange),
+                      : 'Requested on $dateStr',
+                  style: const TextStyle(fontSize: 11, color: AppColors.forest),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -810,7 +1051,10 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.check_circle, color: AppColors.exactMatch),
+                      icon: const Icon(
+                        Icons.check_circle,
+                        color: AppColors.exactMatch,
+                      ),
                       tooltip: 'Approve',
                       onPressed: () => _confirmApproveMember(m),
                     ),
@@ -829,23 +1073,35 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
 
         Text(
           'ACTIVE MEMBERS (${approved.length})',
-          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.1, color: AppColors.textSecondary),
+          style: const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 1.1,
+            color: AppColors.textSecondary,
+          ),
         ),
         const SizedBox(height: 8),
         ...approved.map((m) {
           final isMe = m.userId == currentUserId;
           return Card(
             margin: const EdgeInsets.only(bottom: 8),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10), side: const BorderSide(color: AppColors.border)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+              side: const BorderSide(color: AppColors.border),
+            ),
             child: ListTile(
               leading: CircleAvatar(
-                backgroundColor: m.role == 'owner' ? Colors.deepPurple.shade100 : AppColors.accentSoft,
+                backgroundColor: m.role == 'owner'
+                    ? Colors.deepPurple.shade100
+                    : AppColors.accentSoft,
                 child: Text(
                   m.initials,
                   style: TextStyle(
                     fontWeight: FontWeight.w700,
                     fontSize: 12,
-                    color: m.role == 'owner' ? Colors.deepPurple : AppColors.primary,
+                    color: m.role == 'owner'
+                        ? Colors.deepPurple
+                        : AppColors.primary,
                   ),
                 ),
               ),
@@ -854,26 +1110,46 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
                   Expanded(
                     child: Text(
                       isMe ? 'You (${m.resolvedName})' : m.resolvedName,
-                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   const SizedBox(width: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
-                      color: m.role == 'owner' ? Colors.deepPurple.shade50 : AppColors.accentSoft,
+                      color: m.role == 'owner'
+                          ? Colors.deepPurple.shade50
+                          : AppColors.accentSoft,
                       borderRadius: BorderRadius.circular(6),
                     ),
-                    child: Text(m.role.toUpperCase(), style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: m.role == 'owner' ? Colors.deepPurple : AppColors.primary)),
+                    child: Text(
+                      m.role.toUpperCase(),
+                      style: TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w700,
+                        color: m.role == 'owner'
+                            ? Colors.deepPurple
+                            : AppColors.primary,
+                      ),
+                    ),
                   ),
                 ],
               ),
               subtitle: m.bio != null && m.bio!.trim().isNotEmpty
                   ? Text(
                       m.bio!.trim(),
-                      style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: AppColors.textSecondary,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     )
@@ -885,17 +1161,37 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
                         if (val == 'remove') {
                           commProv.removeMember(widget.community.id, m.userId);
                         } else if (val == 'make_admin') {
-                          commProv.updateMemberRole(widget.community.id, m.userId, 'admin');
+                          commProv.updateMemberRole(
+                            widget.community.id,
+                            m.userId,
+                            'admin',
+                          );
                         } else if (val == 'make_member') {
-                          commProv.updateMemberRole(widget.community.id, m.userId, 'member');
+                          commProv.updateMemberRole(
+                            widget.community.id,
+                            m.userId,
+                            'member',
+                          );
                         }
                       },
                       itemBuilder: (ctx) => [
                         if (currentComm.isOwner && m.role == 'member')
-                          const PopupMenuItem(value: 'make_admin', child: Text('Promote to Admin')),
+                          const PopupMenuItem(
+                            value: 'make_admin',
+                            child: Text('Promote to Admin'),
+                          ),
                         if (currentComm.isOwner && m.role == 'admin')
-                          const PopupMenuItem(value: 'make_member', child: Text('Demote to Member')),
-                        const PopupMenuItem(value: 'remove', child: Text('Remove from Circle', style: TextStyle(color: AppColors.missing))),
+                          const PopupMenuItem(
+                            value: 'make_member',
+                            child: Text('Demote to Member'),
+                          ),
+                        const PopupMenuItem(
+                          value: 'remove',
+                          child: Text(
+                            'Remove from Circle',
+                            style: TextStyle(color: AppColors.missing),
+                          ),
+                        ),
                       ],
                     )
                   : null,
@@ -917,11 +1213,12 @@ class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
   double get maxExtent => _tabBar.preferredSize.height;
 
   @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
-    return Container(
-      color: AppColors.surface,
-      child: _tabBar,
-    );
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    return Container(color: AppColors.surface, child: _tabBar);
   }
 
   @override

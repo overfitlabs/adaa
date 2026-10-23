@@ -1,6 +1,8 @@
 import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
 import '../config/supabase_config.dart';
 
 class SupabaseAuthService {
@@ -24,6 +26,10 @@ class SupabaseAuthService {
     return client.auth.onAuthStateChange;
   }
 
+  Future<void> resetPasswordForEmail(String email) async {
+    await Supabase.instance.client.auth.resetPasswordForEmail(email);
+  }
+
   Future<AuthResponse> signUpWithEmail({
     required String email,
     required String password,
@@ -31,7 +37,9 @@ class SupabaseAuthService {
   }) async {
     final client = _client;
     if (client == null) {
-      throw Exception('Supabase is not configured. Please check project URL and publishable key.');
+      throw Exception(
+        'Supabase is not configured. Please check project URL and publishable key.',
+      );
     }
     return await client.auth.signUp(
       email: email.trim(),
@@ -49,7 +57,9 @@ class SupabaseAuthService {
   }) async {
     final client = _client;
     if (client == null) {
-      throw Exception('Supabase is not configured. Please check project URL and publishable key.');
+      throw Exception(
+        'Supabase is not configured. Please check project URL and publishable key.',
+      );
     }
     return await client.auth.signInWithPassword(
       email: email.trim(),
@@ -60,7 +70,9 @@ class SupabaseAuthService {
   Future<void> resendConfirmationEmail(String email) async {
     final client = _client;
     if (client == null) {
-      throw Exception('Supabase is not configured. Please check project URL and publishable key.');
+      throw Exception(
+        'Supabase is not configured. Please check project URL and publishable key.',
+      );
     }
     await client.auth.resend(
       type: OtpType.signup,
@@ -72,7 +84,9 @@ class SupabaseAuthService {
   Future<bool> signInWithGoogle() async {
     final client = _client;
     if (client == null) {
-      throw Exception('Supabase is not configured. Please check project URL and publishable key.');
+      throw Exception(
+        'Supabase is not configured. Please check project URL and publishable key.',
+      );
     }
     try {
       final success = await client.auth.signInWithOAuth(

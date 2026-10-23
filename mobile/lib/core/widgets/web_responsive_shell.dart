@@ -1,5 +1,8 @@
 import 'dart:async';
 import 'dart:math' as math;
+
+import 'package:flutter/foundation.dart';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -39,8 +42,7 @@ class _WebResponsiveShellState extends State<WebResponsiveShell> {
     {
       'title': 'Digital Wardrobe',
       'subtitle': 'Smart Closet Cataloging',
-      'description':
-          'Digitize your garments. adaa extracts categories, materials, and colors from photos for effortless cataloging.',
+      'description': 'Digitize your entire wardrobe. adaa extracts categories, materials, fits, patterns and colors from photos for effortless cataloging.',
       'icon': Icons.checkroom,
       'badge': 'AI CATALOG',
       'tint': Color(0xFFF6EBE5),
@@ -49,8 +51,7 @@ class _WebResponsiveShellState extends State<WebResponsiveShell> {
     {
       'title': 'AI Stylist',
       'subtitle': 'Personalized Lookbooks',
-      'description':
-          'Instant curated outfits tailored to your calendar, local weather, and personal aesthetic using pieces you already own.',
+      'description': 'Instant curated outfits tailored to your calendar, local weather, and personal aesthetic using pieces you already own.',
       'icon': Icons.auto_awesome,
       'badge': 'DAILY EDIT',
       'tint': Color(0xFFEBF2EC),
@@ -59,18 +60,16 @@ class _WebResponsiveShellState extends State<WebResponsiveShell> {
     {
       'title': 'Virtual Try-On',
       'subtitle': 'Silhouette Look Simulation',
-      'description':
-          'Simulate garment pairings and preview your styled outfit combinations on realistic digital silhouettes before dressing.',
+      'description': 'Simulate garment pairings and preview your styled outfit combinations on realistic digital silhouettes before dressing.',
       'icon': Icons.view_in_ar,
       'badge': 'TRY-ON AI',
       'tint': Color(0xFFEFEBF6),
       'accent': Color(0xFF4A396B),
     },
     {
-      'title': 'Campus Fashion Sharing',
+      'title': 'Curated Style Circles',
       'subtitle': 'Community Shared Closets',
-      'description':
-          'Lend and borrow verified designer and vintage items securely within trusted campus circles and verified communities.',
+      'description': 'Lend and borrow verified designer and vintage items securely within curated style circles and trusted fashion communities.',
       'icon': Icons.groups_outlined,
       'badge': 'COMMUNITY',
       'tint': Color(0xFFF6F2EB),
@@ -107,7 +106,9 @@ class _WebResponsiveShellState extends State<WebResponsiveShell> {
 
   String get _currentLocalTime {
     final now = DateTime.now();
-    final hour = now.hour == 0 ? 12 : (now.hour > 12 ? now.hour - 12 : now.hour);
+    final hour = now.hour == 0
+        ? 12
+        : (now.hour > 12 ? now.hour - 12 : now.hour);
     final minute = now.minute.toString().padLeft(2, '0');
     return '$hour:$minute';
   }
@@ -121,8 +122,7 @@ class _WebResponsiveShellState extends State<WebResponsiveShell> {
     if (!DemoConfig.isConfigured) {
       setState(() {
         _isDemoLoggingIn = false;
-        _demoError =
-            'Demo credentials were not provided at build time via --dart-define. You can sign in or register directly using the phone screen.';
+        _demoError = 'Demo credentials were not provided at build time via --dart-define. You can sign in or register directly using the phone screen.';
       });
       return;
     }
@@ -137,14 +137,14 @@ class _WebResponsiveShellState extends State<WebResponsiveShell> {
 
       if (!success) {
         setState(() {
-          _demoError = auth.errorMessage ??
-              'Unable to sign into the demo account. Please verify that the credentials match the active Supabase project.';
+          _demoError = auth.errorMessage ?? 'Unable to sign into the demo account. Please verify that the credentials match the active Supabase project.';
         });
       }
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _demoError = 'Demo sign-in error: ${e.toString().replaceFirst("Exception: ", "")}';
+        _demoError =
+            'Demo sign-in error: ${e.toString().replaceFirst("Exception: ", "")}';
       });
     } finally {
       if (mounted) {
@@ -153,14 +153,461 @@ class _WebResponsiveShellState extends State<WebResponsiveShell> {
     }
   }
 
+  Widget _buildMobileWelcomeScreen(BuildContext context) {
+    final auth = context.watch<AuthProvider>();
+    final screenWidth = MediaQuery.sizeOf(context).width;
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFFBF8F3),
+      body: SizedBox.expand(
+        child: Container(
+          color: const Color(0xFFFBF8F3),
+          child: SafeArea(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 20,
+                  ),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: constraints.maxHeight - 40,
+                    ),
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 440),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Main welcome content
+                            SingleChildScrollView(
+                              padding: const EdgeInsets.fromLTRB(
+                                24,
+                                24,
+                                24,
+                                28,
+                              ),
+                              child: Center(
+                                child: ConstrainedBox(
+                                  constraints: const BoxConstraints(
+                                    maxWidth: 440,
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      // Large responsive logo: 45% of screen width
+                                      Align(
+                                        alignment: Alignment.centerLeft,
+                                        child: Image.asset(
+                                          'assets/branding/brand_name_tagline_logo_web.png',
+                                          width: (screenWidth * 0.45).clamp(
+                                            150.0,
+                                            240.0,
+                                          ),
+                                          fit: BoxFit.contain,
+                                          alignment: Alignment.centerLeft,
+                                          errorBuilder:
+                                              (
+                                                context,
+                                                error,
+                                                stackTrace,
+                                              ) => const AdaaWordmark(
+                                                size: AdaaWordmarkSize.large,
+                                                showSubtitle: true,
+                                                subtitle: 'your style, smarter',
+                                              ),
+                                        ),
+                                      ),
+
+                                      const SizedBox(height: 38),
+
+                                      Text(
+                                        'YOUR PERSONAL STYLE COMPANION',
+                                        style: AppTypography.labelSmall
+                                            .copyWith(
+                                              color: AppColors.textSecondary,
+                                              fontWeight: FontWeight.w700,
+                                              letterSpacing: 1.5,
+                                            ),
+                                      ),
+
+                                      const SizedBox(height: 14),
+
+                                      Text(
+                                        'Your style, curated\nand connected.',
+                                        style: AppTypography.displayMedium
+                                            .copyWith(
+                                              color: AppColors.forest,
+                                              fontSize: 34,
+                                              fontWeight: FontWeight.w700,
+                                              height: 1.15,
+                                              letterSpacing: -0.7,
+                                            ),
+                                      ),
+
+                                      const SizedBox(height: 16),
+
+                                      Text(
+                                        'Your digital wardrobe, AI styling assistant, '
+                                        'and a more thoughtful way to discover your '
+                                        'personal style.',
+                                        style: AppTypography.bodyMedium
+                                            .copyWith(
+                                              color: AppColors.textSecondary,
+                                              fontSize: 14,
+                                              height: 1.7,
+                                            ),
+                                      ),
+
+                                      const SizedBox(height: 30),
+
+                                      // Feature carousel reuses the existing feature data
+                                      MouseRegion(
+                                        onEnter: (_) => setState(
+                                          () => _isAutoAdvancePaused = true,
+                                        ),
+                                        onExit: (_) => setState(
+                                          () => _isAutoAdvancePaused = false,
+                                        ),
+                                        child: AnimatedSwitcher(
+                                          duration: const Duration(
+                                            milliseconds: 320,
+                                          ),
+                                          transitionBuilder:
+                                              (child, animation) =>
+                                                  FadeTransition(
+                                                    opacity: animation,
+                                                    child: child,
+                                                  ),
+                                          child: Container(
+                                            key: ValueKey<int>(
+                                              _activeFeatureIndex,
+                                            ),
+                                            width: double.infinity,
+                                            padding: const EdgeInsets.all(22),
+                                            decoration: BoxDecoration(
+                                              color:
+                                                  _features[_activeFeatureIndex]['tint']
+                                                      as Color,
+                                              borderRadius:
+                                                  BorderRadius.circular(22),
+                                              border: Border.all(
+                                                color:
+                                                    (_features[_activeFeatureIndex]['accent']
+                                                            as Color)
+                                                        .withValues(
+                                                          alpha: 0.15,
+                                                        ),
+                                              ),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: Colors.black
+                                                      .withValues(alpha: 0.035),
+                                                  blurRadius: 20,
+                                                  offset: const Offset(0, 8),
+                                                ),
+                                              ],
+                                            ),
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Row(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment
+                                                          .spaceBetween,
+                                                  children: [
+                                                    Container(
+                                                      padding:
+                                                          const EdgeInsets.symmetric(
+                                                            horizontal: 10,
+                                                            vertical: 5,
+                                                          ),
+                                                      decoration: BoxDecoration(
+                                                        color:
+                                                            (_features[_activeFeatureIndex]['accent']
+                                                                    as Color)
+                                                                .withValues(
+                                                                  alpha: 0.12,
+                                                                ),
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              8,
+                                                            ),
+                                                      ),
+                                                      child: Text(
+                                                        _features[_activeFeatureIndex]['badge']
+                                                            as String,
+                                                        style: TextStyle(
+                                                          color:
+                                                              _features[_activeFeatureIndex]['accent']
+                                                                  as Color,
+                                                          fontSize: 10,
+                                                          fontWeight:
+                                                              FontWeight.w800,
+                                                          letterSpacing: 1.2,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                    Icon(
+                                                      _features[_activeFeatureIndex]['icon']
+                                                          as IconData,
+                                                      size: 26,
+                                                      color:
+                                                          _features[_activeFeatureIndex]['accent']
+                                                              as Color,
+                                                    ),
+                                                  ],
+                                                ),
+
+                                                const SizedBox(height: 22),
+
+                                                Text(
+                                                  _features[_activeFeatureIndex]['title']
+                                                      as String,
+                                                  style: TextStyle(
+                                                    color:
+                                                        _features[_activeFeatureIndex]['accent']
+                                                            as Color,
+                                                    fontSize: 20,
+                                                    fontWeight: FontWeight.w700,
+                                                  ),
+                                                ),
+
+                                                const SizedBox(height: 8),
+
+                                                Text(
+                                                  _features[_activeFeatureIndex]['description']
+                                                      as String,
+                                                  style: TextStyle(
+                                                    color:
+                                                        (_features[_activeFeatureIndex]['accent']
+                                                                as Color)
+                                                            .withValues(
+                                                              alpha: 0.9,
+                                                            ),
+                                                    fontSize: 13,
+                                                    height: 1.6,
+                                                  ),
+                                                ),
+
+                                                const SizedBox(height: 22),
+
+                                                Row(
+                                                  children: [
+                                                    ...List.generate(_features.length, (
+                                                      index,
+                                                    ) {
+                                                      final selected =
+                                                          index ==
+                                                          _activeFeatureIndex;
+
+                                                      return GestureDetector(
+                                                        onTap: () => setState(
+                                                          () =>
+                                                              _activeFeatureIndex =
+                                                                  index,
+                                                        ),
+                                                        child: AnimatedContainer(
+                                                          duration:
+                                                              const Duration(
+                                                                milliseconds:
+                                                                    250,
+                                                              ),
+                                                          margin:
+                                                              const EdgeInsets.only(
+                                                                right: 6,
+                                                              ),
+                                                          width: selected
+                                                              ? 24
+                                                              : 8,
+                                                          height: 8,
+                                                          decoration: BoxDecoration(
+                                                            color: selected
+                                                                ? AppColors
+                                                                      .forest
+                                                                : AppColors
+                                                                      .border,
+                                                            borderRadius:
+                                                                BorderRadius.circular(
+                                                                  5,
+                                                                ),
+                                                          ),
+                                                        ),
+                                                      );
+                                                    }),
+                                                    const Spacer(),
+                                                    Text(
+                                                      '${(_activeFeatureIndex + 1).toString().padLeft(2, '0')} / ${_features.length.toString().padLeft(2, '0')}',
+                                                      style: TextStyle(
+                                                        color:
+                                                            _features[_activeFeatureIndex]['accent']
+                                                                as Color,
+                                                        fontSize: 11,
+                                                        fontWeight:
+                                                            FontWeight.w700,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+
+                                      const SizedBox(height: 28),
+
+                                      // Demo login button
+                                      if (!auth.isAuthenticated) ...[
+                                        SizedBox(
+                                          width: double.infinity,
+                                          child: ElevatedButton(
+                                            onPressed: _isDemoLoggingIn
+                                                ? null
+                                                : () => _handleDemoLogin(auth),
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: AppColors.forest,
+                                              foregroundColor: AppColors.canvas,
+                                              elevation: 4,
+                                              shadowColor: AppColors.forest
+                                                  .withValues(alpha: 0.25),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 24,
+                                                    vertical: 18,
+                                                  ),
+                                              minimumSize: const Size(
+                                                double.infinity,
+                                                58,
+                                              ),
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(16),
+                                              ),
+                                            ),
+                                            child: _isDemoLoggingIn
+                                                ? const SizedBox(
+                                                    width: 22,
+                                                    height: 22,
+                                                    child:
+                                                        CircularProgressIndicator(
+                                                          strokeWidth: 2.5,
+                                                          color: Colors.white,
+                                                        ),
+                                                  )
+                                                : const Row(
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment
+                                                            .center,
+                                                    children: [
+                                                      Icon(
+                                                        Icons.auto_awesome,
+                                                        color: Color(
+                                                          0xFFC5A880,
+                                                        ),
+                                                        size: 19,
+                                                      ),
+                                                      SizedBox(width: 10),
+                                                      Text(
+                                                        'Explore the Live Demo',
+                                                        style: TextStyle(
+                                                          fontSize: 15,
+                                                          fontWeight:
+                                                              FontWeight.w700,
+                                                        ),
+                                                      ),
+                                                      SizedBox(width: 8),
+                                                      Icon(
+                                                        Icons.arrow_forward,
+                                                        size: 17,
+                                                      ),
+                                                    ],
+                                                  ),
+                                          ),
+                                        ),
+
+                                        if (_demoError != null) ...[
+                                          const SizedBox(height: 14),
+                                          Container(
+                                            width: double.infinity,
+                                            padding: const EdgeInsets.all(12),
+                                            decoration: BoxDecoration(
+                                              color: AppColors.missing
+                                                  .withValues(alpha: 0.08),
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                              border: Border.all(
+                                                color: AppColors.missing
+                                                    .withValues(alpha: 0.25),
+                                              ),
+                                            ),
+                                            child: Text(
+                                              _demoError!,
+                                              textAlign: TextAlign.center,
+                                              style: const TextStyle(
+                                                color: AppColors.missing,
+                                                fontSize: 12,
+                                                height: 1.5,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+
+                                        const SizedBox(height: 16),
+
+                                        Center(
+                                          child: Text(
+                                            'Explore your wardrobe. Discover your style.',
+                                            textAlign: TextAlign.center,
+                                            style: AppTypography.bodySmall
+                                                .copyWith(
+                                                  color: AppColors.textMuted,
+                                                  fontSize: 11,
+                                                ),
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.sizeOf(context);
     final isDesktop = screenSize.width >= 960;
 
+    if (!kIsWeb) {
+      return widget.child;
+    }
+
     // Mobile / Narrow viewports: Render the real app full-screen natively
     if (!isDesktop) {
-      return widget.child;
+      final auth = context.watch<AuthProvider>();
+
+      if (auth.isAuthenticated) {
+        return widget.child;
+      }
+
+      return _buildMobileWelcomeScreen(context);
     }
 
     // Wide Viewports: Two-Panel Responsive Desktop Presentation Shell
@@ -214,7 +661,10 @@ class _WebResponsiveShellState extends State<WebResponsiveShell> {
             right: 24,
             child: IgnorePointer(
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 7,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFFFBF8F3).withValues(alpha: 0.92),
                   borderRadius: BorderRadius.circular(24),
@@ -346,7 +796,7 @@ class _WebResponsiveShellState extends State<WebResponsiveShell> {
 
         // Brand Introduction
         Text(
-          'adaa is your personal digital wardrobe, AI styling assistant, and university fashion-sharing platform. Catalog your closet effortlessly, discover fresh pairings, and lend or borrow pieces within trusted communities.',
+          'adaa is your personal digital wardrobe, AI styling assistant, and curated style-sharing platform. Catalog your closet effortlessly, discover fresh pairings, and lend or borrow pieces within trusted communities.',
           style: AppTypography.bodyMedium.copyWith(
             color: AppColors.textSecondary,
             fontSize: 14,
@@ -361,7 +811,8 @@ class _WebResponsiveShellState extends State<WebResponsiveShell> {
           onExit: (_) => setState(() => _isAutoAdvancePaused = false),
           child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 320),
-            transitionBuilder: (child, anim) => FadeTransition(opacity: anim, child: child),
+            transitionBuilder: (child, anim) =>
+                FadeTransition(opacity: anim, child: child),
             child: Container(
               key: ValueKey<int>(_activeFeatureIndex),
               padding: const EdgeInsets.all(20),
@@ -369,7 +820,9 @@ class _WebResponsiveShellState extends State<WebResponsiveShell> {
                 color: activeFeature['tint'] as Color,
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: (activeFeature['accent'] as Color).withValues(alpha: 0.15),
+                  color: (activeFeature['accent'] as Color).withValues(
+                    alpha: 0.15,
+                  ),
                 ),
                 boxShadow: [
                   BoxShadow(
@@ -386,9 +839,14 @@ class _WebResponsiveShellState extends State<WebResponsiveShell> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
-                          color: (activeFeature['accent'] as Color).withValues(alpha: 0.12),
+                          color: (activeFeature['accent'] as Color).withValues(
+                            alpha: 0.12,
+                          ),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
@@ -423,7 +881,9 @@ class _WebResponsiveShellState extends State<WebResponsiveShell> {
                     style: TextStyle(
                       fontSize: 13,
                       height: 1.45,
-                      color: (activeFeature['accent'] as Color).withValues(alpha: 0.85),
+                      color: (activeFeature['accent'] as Color).withValues(
+                        alpha: 0.85,
+                      ),
                     ),
                   ),
                 ],
@@ -468,7 +928,11 @@ class _WebResponsiveShellState extends State<WebResponsiveShell> {
             ),
             child: Row(
               children: [
-                const Icon(Icons.check_circle, color: AppColors.forest, size: 20),
+                const Icon(
+                  Icons.check_circle,
+                  color: AppColors.forest,
+                  size: 20,
+                ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Column(
@@ -483,7 +947,10 @@ class _WebResponsiveShellState extends State<WebResponsiveShell> {
                       ),
                       Text(
                         'Signed in as ${auth.displayName}',
-                        style: const TextStyle(fontSize: 11, color: AppColors.forest),
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: AppColors.forest,
+                        ),
                       ),
                     ],
                   ),
@@ -492,9 +959,15 @@ class _WebResponsiveShellState extends State<WebResponsiveShell> {
                   onPressed: () => auth.signOut(),
                   style: TextButton.styleFrom(
                     foregroundColor: AppColors.forest,
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                   ),
-                  child: const Text('Sign Out', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12)),
+                  child: const Text(
+                    'Sign Out',
+                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
+                  ),
                 ),
               ],
             ),
@@ -509,19 +982,28 @@ class _WebResponsiveShellState extends State<WebResponsiveShell> {
               elevation: 4,
               shadowColor: AppColors.forest.withValues(alpha: 0.3),
               padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
               minimumSize: const Size(double.infinity, 54),
             ),
             child: _isDemoLoggingIn
                 ? const SizedBox(
                     width: 22,
                     height: 22,
-                    child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      color: Colors.white,
+                    ),
                   )
                 : const Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.auto_awesome, color: Color(0xFFC5A880), size: 18),
+                      Icon(
+                        Icons.auto_awesome,
+                        color: Color(0xFFC5A880),
+                        size: 18,
+                      ),
                       SizedBox(width: 8),
                       Text(
                         'Explore the Live Demo',
@@ -544,16 +1026,26 @@ class _WebResponsiveShellState extends State<WebResponsiveShell> {
               decoration: BoxDecoration(
                 color: AppColors.missing.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: AppColors.missing.withValues(alpha: 0.25)),
+                border: Border.all(
+                  color: AppColors.missing.withValues(alpha: 0.25),
+                ),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.info_outline, size: 16, color: AppColors.missing),
+                  const Icon(
+                    Icons.info_outline,
+                    size: 16,
+                    color: AppColors.missing,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       _demoError!,
-                      style: const TextStyle(fontSize: 11, color: AppColors.missing, height: 1.35),
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: AppColors.missing,
+                        height: 1.35,
+                      ),
                     ),
                   ),
                 ],
@@ -575,7 +1067,6 @@ class _WebResponsiveShellState extends State<WebResponsiveShell> {
         ],
 
         const SizedBox(height: 24),
-
       ],
     );
   }
@@ -592,10 +1083,7 @@ class _WebResponsiveShellState extends State<WebResponsiveShell> {
       decoration: BoxDecoration(
         color: const Color(0xFF181C19),
         borderRadius: BorderRadius.circular(46),
-        border: Border.all(
-          color: const Color(0xFF2E3530),
-          width: 8,
-        ),
+        border: Border.all(color: const Color(0xFF2E3530), width: 8),
         boxShadow: [
           BoxShadow(
             color: AppColors.forest.withValues(alpha: 0.20),
@@ -634,9 +1122,7 @@ class _WebResponsiveShellState extends State<WebResponsiveShell> {
                 left: 0,
                 right: 0,
                 height: 44,
-                child: IgnorePointer(
-                  child: _buildPhoneStatusBar(context),
-                ),
+                child: IgnorePointer(child: _buildPhoneStatusBar(context)),
               ),
             ],
           ),
@@ -732,11 +1218,7 @@ class _WebResponsiveShellState extends State<WebResponsiveShell> {
               children: [
                 _buildCellularSignal(),
                 const SizedBox(width: 5),
-                const Icon(
-                  Icons.wifi,
-                  size: 13,
-                  color: AppColors.forest,
-                ),
+                const Icon(Icons.wifi, size: 13, color: AppColors.forest),
                 const SizedBox(width: 5),
                 _buildBatteryIndicator(),
               ],
@@ -785,10 +1267,7 @@ class _WebResponsiveShellState extends State<WebResponsiveShell> {
           padding: const EdgeInsets.all(1.2),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(2.8),
-            border: Border.all(
-              color: AppColors.forest,
-              width: 1.1,
-            ),
+            border: Border.all(color: AppColors.forest, width: 1.1),
           ),
           child: Align(
             alignment: Alignment.centerLeft,

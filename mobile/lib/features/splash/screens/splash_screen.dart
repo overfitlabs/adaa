@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -10,7 +11,7 @@ import '../../../state/wardrobe_provider.dart';
 import '../../home/screens/home_screen.dart';
 import '../../auth/screens/auth_screen.dart';
 
-/// Stitch-designed adaa Splash Screen (`c8f74c6fe2cc4b08a3cd5a0ef5c9536b` & `2511290488316267073`).
+/// adaa Splash Screen (`c8f74c6fe2cc4b08a3cd5a0ef5c9536b` & `2511290488316267073`).
 /// Features warm ivory canvas, organic botanical shadows, radiant ambient aura,
 /// brand logo centerpiece, 4-point gold sparkle, and shimmering champagne progress bar.
 class SplashScreen extends StatefulWidget {
@@ -29,7 +30,8 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
+class _SplashScreenState extends State<SplashScreen>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _animController;
   late final Animation<double> _shimmerAnim;
   late final Animation<double> _fadeAnim;
@@ -61,25 +63,29 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     final auth = context.read<AuthProvider>();
     if (auth.isAuthenticated) {
       try {
-        context.read<ProfileProvider>().loadProfile(silent: true);
-        context.read<WardrobeProvider>().loadWardrobe(silent: true);
+        await Future.wait([
+          context.read<ProfileProvider>().loadProfile(silent: true),
+          context.read<WardrobeProvider>().loadWardrobe(silent: true),
+        ]).timeout(const Duration(milliseconds: 1200), onTimeout: () => []);
       } catch (_) {}
     }
-
-    if (!widget.autoNavigate) return;
 
     _navTimer = Timer(widget.displayDuration, () {
       if (!mounted) return;
       if (widget.onComplete != null) {
         widget.onComplete!();
-      } else {
-        final destination = auth.isAuthenticated ? const HomeScreen() : const AuthScreen();
+      } else if (widget.autoNavigate) {
+        final destination = auth.isAuthenticated
+            ? const HomeScreen()
+            : const AuthScreen();
         Navigator.of(context).pushReplacement(
           PageRouteBuilder(
-            pageBuilder: (context, animation, secondaryAnimation) => destination,
-            transitionsBuilder: (context, animation, secondaryAnimation, child) {
-              return FadeTransition(opacity: animation, child: child);
-            },
+            pageBuilder: (context, animation, secondaryAnimation) =>
+                destination,
+            transitionsBuilder:
+                (context, animation, secondaryAnimation, child) {
+                  return FadeTransition(opacity: animation, child: child);
+                },
             transitionDuration: const Duration(milliseconds: 350),
           ),
         );
@@ -107,7 +113,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
       backgroundColor: AppColors.canvas,
       body: Stack(
         children: [
-          // Botanical Ambient Shadows (mimicking sunlight through foliage per Stitch design)
+          // Botanical Ambient Shadows (mimicking sunlight through foliage)
           Positioned(
             left: -80,
             bottom: 40,
@@ -160,51 +166,48 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                   child: Center(
                     child: Stack(
                       alignment: Alignment.center,
-                    children: [
-                      // Ambient Breathing Aura
-                      Container(
-                        width: 260,
-                        height: 140,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: RadialGradient(
-                            colors: [
-                              AppColors.gold.withValues(alpha: 0.22),
-                              AppColors.canvas.withValues(alpha: 0.0),
-                            ],
+                      children: [
+                        // Ambient Breathing Aura
+                        Container(
+                          width: 260,
+                          height: 140,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: RadialGradient(
+                              colors: [
+                                AppColors.gold.withValues(alpha: 0.22),
+                                AppColors.canvas.withValues(alpha: 0.0),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                      // Brand Logo Asset
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 40),
-                        child: Image.asset(
-                          'assets/branding/brand_name_tagline_logo.png',
-                          width: 260,
-                          fit: BoxFit.contain,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Image.asset(
-                              'assets/branding/brand_name_logo.png',
-                              width: 220,
-                              fit: BoxFit.contain,
-                              errorBuilder: (context, error, stackTrace) {
-                                return const Text(
-                                  'adaa',
-                                  style: AppTypography.wordmarkLarge,
-                                );
-                              },
-                            );
-                          },
+                        // Brand Logo Asset
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 40),
+                          child: Image.asset(
+                            'assets/branding/brand_name_tagline_logo_web.png',
+                            width: 220,
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, error, stackTrace) {
+                              return const Text(
+                                'adaa',
+                                style: AppTypography.wordmarkLarge,
+                              );
+                            },
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
 
                 // Greeting & Champagne Shimmer Progress Indicator
                 Padding(
-                  padding: const EdgeInsets.only(bottom: 48, left: 24, right: 24),
+                  padding: const EdgeInsets.only(
+                    bottom: 48,
+                    left: 24,
+                    right: 24,
+                  ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -218,7 +221,9 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
                       // Personalized Salutation
                       Text(
-                        firstName != null ? 'Hey, $firstName' : 'Welcome to adaa',
+                        firstName != null
+                            ? 'Hey, $firstName'
+                            : 'Welcome to adaa',
                         style: AppTypography.displayMedium.copyWith(
                           color: AppColors.forest,
                           fontWeight: FontWeight.w600,
@@ -248,7 +253,9 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                         child: Container(
                           width: 88,
                           height: 2.5,
-                          color: AppColors.outlineVariant.withValues(alpha: 0.4),
+                          color: AppColors.outlineVariant.withValues(
+                            alpha: 0.4,
+                          ),
                           child: AnimatedBuilder(
                             animation: _shimmerAnim,
                             builder: (context, child) {

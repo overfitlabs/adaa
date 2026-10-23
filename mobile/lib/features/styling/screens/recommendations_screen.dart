@@ -8,6 +8,7 @@ import '../../../state/outfits_provider.dart';
 import '../../../state/stylist_provider.dart';
 import '../../outfits/screens/outfits_screen.dart';
 import '../../wardrobe/screens/wardrobe_detail_screen.dart';
+import '../../../core/widgets/adaa_wordmark.dart';
 
 class RecommendationsScreen extends StatefulWidget {
   final bool autoGenerate;
@@ -56,7 +57,8 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final stylist = context.read<StylistProvider>();
-      if (widget.initialOccasion != null && widget.initialOccasion!.isNotEmpty) {
+      if (widget.initialOccasion != null &&
+          widget.initialOccasion!.isNotEmpty) {
         stylist.setOccasion(widget.initialOccasion!);
       }
       _instructionsController.text = stylist.customInstructions;
@@ -111,7 +113,10 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 14,
+                  ),
                   child: Row(
                     children: [
                       Expanded(
@@ -129,7 +134,10 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
                             const SizedBox(height: 2),
                             Text(
                               '${outfit.items.length} items • ${outfit.occasion} • ${outfit.vibe}',
-                              style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: AppColors.textSecondary,
+                              ),
                             ),
                           ],
                         ),
@@ -147,7 +155,8 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
                     controller: scrollController,
                     padding: const EdgeInsets.all(20),
                     itemCount: outfit.items.length,
-                    separatorBuilder: (context, index) => const SizedBox(height: 16),
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(height: 16),
                     itemBuilder: (itemCtx, i) {
                       final item = outfit.items[i];
                       return Container(
@@ -169,7 +178,10 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
                                   fit: BoxFit.cover,
                                   errorWidget: Container(
                                     color: AppColors.accentSoft,
-                                    child: const Icon(Icons.checkroom, color: AppColors.primary),
+                                    child: const Icon(
+                                      Icons.checkroom,
+                                      color: AppColors.primary,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -196,26 +208,35 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
                                       color: AppColors.textSecondary,
                                     ),
                                   ),
-                                  if (item.brand != null && item.brand!.isNotEmpty)
+                                  if (item.brand != null &&
+                                      item.brand!.isNotEmpty)
                                     Padding(
                                       padding: const EdgeInsets.only(top: 2),
                                       child: Text(
                                         'Brand: ${item.brand}',
-                                        style: const TextStyle(fontSize: 11, color: AppColors.accent),
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          color: AppColors.accent,
+                                        ),
                                       ),
                                     ),
                                 ],
                               ),
                             ),
                             IconButton(
-                              icon: const Icon(Icons.open_in_new, size: 20, color: AppColors.primary),
+                              icon: const Icon(
+                                Icons.open_in_new,
+                                size: 20,
+                                color: AppColors.primary,
+                              ),
                               tooltip: 'View in Closet',
                               onPressed: () {
                                 Navigator.pop(sheetCtx);
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (_) => WardrobeDetailScreen(item: item),
+                                    builder: (_) =>
+                                        WardrobeDetailScreen(item: item),
                                   ),
                                 );
                               },
@@ -240,8 +261,36 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
     final outfitsProv = context.watch<OutfitsProvider>();
 
     return Scaffold(
+      backgroundColor: AppColors.canvas,
       appBar: AppBar(
-        title: const Text('adaa stylist'),
+        backgroundColor: AppColors.surface,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        toolbarHeight: 68,
+        automaticallyImplyLeading: false,
+        leadingWidth: 56,
+        leading: Padding(
+          padding: const EdgeInsets.all(10),
+          child: IconButton(
+            tooltip: 'Go back',
+            icon: const Icon(
+              Icons.arrow_back_ios_new,
+              size: 20,
+              color: AppColors.forest,
+            ),
+            onPressed: () => Navigator.of(context).maybePop(),
+          ),
+        ),
+        title: const AdaaWordmark(
+          size: AdaaWordmarkSize.medium,
+          color: AppColors.espresso,
+          withDotAccent: true,
+          showSubtitle: true,
+          subtitle: 'style intelligence & closet',
+        ),
+        centerTitle: true,
+        titleSpacing: 0,
         actions: [
           IconButton(
             icon: const Icon(Icons.tune_outlined, size: 22),
@@ -263,7 +312,7 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
       body: RefreshIndicator(
         onRefresh: () => stylist.generateOutfits(isRefinement: false),
         child: ListView(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
           children: [
             // Controls & Styling Filter Card
             _buildStylistControls(stylist),
@@ -275,16 +324,21 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
               _buildLoadingState()
             else if (stylist.error != null)
               _buildErrorState(stylist)
-            else if (stylist.generationResponse != null && stylist.generationResponse!.isEmptyWardrobe)
+            else if (stylist.generationResponse != null &&
+                stylist.generationResponse!.isEmptyWardrobe)
               _buildEmptyWardrobeState()
-            else if (stylist.generationResponse != null && stylist.generationResponse!.isInsufficientItems)
+            else if (stylist.generationResponse != null &&
+                stylist.generationResponse!.isInsufficientItems)
               _buildInsufficientItemsState(stylist.generationResponse!)
             else if (stylist.outfits.isEmpty)
               _buildNoOutfitsState(stylist)
             else ...[
               _buildResultsHeader(stylist),
               const SizedBox(height: 16),
-              ...stylist.outfits.map((outfit) => _buildOutfitCard(context, outfit, stylist, outfitsProv)),
+              ...stylist.outfits.map(
+                (outfit) =>
+                    _buildOutfitCard(context, outfit, stylist, outfitsProv),
+              ),
             ],
           ],
         ),
@@ -314,7 +368,11 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
                       color: AppColors.accentSoft,
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(Icons.auto_awesome, size: 18, color: AppColors.primary),
+                    child: const Icon(
+                      Icons.auto_awesome,
+                      size: 18,
+                      color: AppColors.primary,
+                    ),
                   ),
                   const SizedBox(width: 10),
                   const Text(
@@ -331,7 +389,10 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
                 onPressed: () => setState(() => _showFilters = !_showFilters),
                 child: Text(
                   _showFilters ? 'Hide Options' : 'Custom Vibe',
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ],
@@ -369,7 +430,9 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
                       color: isSelected ? Colors.white : AppColors.textPrimary,
                     ),
                     backgroundColor: AppColors.background,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                   ),
                 );
               }).toList(),
@@ -404,10 +467,14 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
                       labelStyle: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: stylist.selectedVibe == null ? Colors.white : AppColors.textPrimary,
+                        color: stylist.selectedVibe == null
+                            ? Colors.white
+                            : AppColors.textPrimary,
                       ),
                       backgroundColor: AppColors.background,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
                     ),
                   ),
                   ..._vibes.map((v) {
@@ -424,10 +491,14 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
                         labelStyle: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: isSelected ? Colors.white : AppColors.textPrimary,
+                          color: isSelected
+                              ? Colors.white
+                              : AppColors.textPrimary,
                         ),
                         backgroundColor: AppColors.background,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
                       ),
                     );
                   }),
@@ -440,8 +511,15 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
               controller: _instructionsController,
               decoration: InputDecoration(
                 hintText: 'e.g. emphasize navy, warm layers, sneakers...',
-                hintStyle: const TextStyle(fontSize: 12, color: AppColors.textMuted),
-                prefixIcon: const Icon(Icons.edit_note, size: 20, color: AppColors.textSecondary),
+                hintStyle: const TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textMuted,
+                ),
+                prefixIcon: const Icon(
+                  Icons.edit_note,
+                  size: 20,
+                  color: AppColors.textSecondary,
+                ),
                 suffixIcon: _instructionsController.text.isNotEmpty
                     ? IconButton(
                         icon: const Icon(Icons.clear, size: 16),
@@ -453,7 +531,10 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
                     : null,
                 filled: true,
                 fillColor: AppColors.background,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: const BorderSide(color: AppColors.border),
@@ -476,26 +557,43 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
             children: [
               Expanded(
                 child: ElevatedButton.icon(
-                  onPressed: stylist.isLoading ? null : () => _onGenerate(stylist),
+                  onPressed: stylist.isLoading
+                      ? null
+                      : () => _onGenerate(stylist),
                   icon: const Icon(Icons.auto_awesome, size: 18),
-                  label: const Text('Generate Looks', style: TextStyle(fontWeight: FontWeight.bold)),
+                  label: const Text(
+                    'Generate Looks',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 ),
               ),
               if (stylist.outfits.isNotEmpty) ...[
                 const SizedBox(width: 10),
                 OutlinedButton.icon(
-                  onPressed: stylist.isLoading ? null : () => _onRefine(stylist),
+                  onPressed: stylist.isLoading
+                      ? null
+                      : () => _onRefine(stylist),
                   icon: const Icon(Icons.sync, size: 16),
-                  label: const Text('Alternatives', style: TextStyle(fontWeight: FontWeight.w600)),
+                  label: const Text(
+                    'Alternatives',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
                   style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 12,
+                      horizontal: 14,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                     side: const BorderSide(color: AppColors.border),
                   ),
                 ),
@@ -529,7 +627,10 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
                 padding: const EdgeInsets.only(top: 2),
                 child: Text(
                   resp.appliedProfilePreferences.join(' • '),
-                  style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
               ),
           ],
@@ -542,7 +643,11 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
           ),
           child: Text(
             '${stylist.outfits.length} combinations',
-            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primary),
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: AppColors.primary,
+            ),
           ),
         ),
       ],
@@ -594,7 +699,10 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
                       Row(
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
                               color: AppColors.accentSoft,
                               borderRadius: BorderRadius.circular(6),
@@ -611,7 +719,10 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
                           ),
                           const SizedBox(width: 6),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
                               color: AppColors.background,
                               borderRadius: BorderRadius.circular(6),
@@ -632,14 +743,21 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.exactMatch.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.verified, size: 14, color: AppColors.exactMatch),
+                      const Icon(
+                        Icons.verified,
+                        size: 14,
+                        color: AppColors.exactMatch,
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         '${outfit.matchPercentage}%',
@@ -681,7 +799,9 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
                       children: [
                         Expanded(
                           child: ClipRRect(
-                            borderRadius: const BorderRadius.vertical(top: Radius.circular(13)),
+                            borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(13),
+                            ),
                             child: SizedBox(
                               width: double.infinity,
                               child: PrivateImageView(
@@ -689,7 +809,11 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
                                 fit: BoxFit.cover,
                                 errorWidget: Container(
                                   color: AppColors.accentSoft,
-                                  child: const Icon(Icons.checkroom, size: 24, color: AppColors.primary),
+                                  child: const Icon(
+                                    Icons.checkroom,
+                                    size: 24,
+                                    color: AppColors.primary,
+                                  ),
                                 ),
                               ),
                             ),
@@ -704,12 +828,18 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
                                 item.name,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                               Text(
                                 item.category,
                                 maxLines: 1,
-                                style: const TextStyle(fontSize: 9, color: AppColors.textSecondary),
+                                style: const TextStyle(
+                                  fontSize: 9,
+                                  color: AppColors.textSecondary,
+                                ),
                               ),
                             ],
                           ),
@@ -737,7 +867,11 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
                 children: [
                   const Row(
                     children: [
-                      Icon(Icons.lightbulb_outline, size: 14, color: AppColors.accent),
+                      Icon(
+                        Icons.lightbulb_outline,
+                        size: 14,
+                        color: AppColors.accent,
+                      ),
                       SizedBox(width: 6),
                       Text(
                         'WHY THIS LOOK WORKS',
@@ -753,7 +887,11 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
                   const SizedBox(height: 6),
                   Text(
                     outfit.explanation,
-                    style: const TextStyle(fontSize: 12, color: AppColors.textPrimary, height: 1.4),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textPrimary,
+                      height: 1.4,
+                    ),
                   ),
                 ],
               ),
@@ -772,11 +910,20 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('• ', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
+                        const Text(
+                          '• ',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primary,
+                          ),
+                        ),
                         Expanded(
                           child: Text(
                             tip,
-                            style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textSecondary,
+                            ),
                           ),
                         ),
                       ],
@@ -797,15 +944,25 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
                 TextButton.icon(
                   onPressed: () => _showInspectOutfitSheet(context, outfit),
                   icon: const Icon(Icons.visibility_outlined, size: 18),
-                  label: const Text('Inspect Pieces', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  label: const Text(
+                    'Inspect Pieces',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                  ),
                 ),
                 ElevatedButton.icon(
                   onPressed: () async {
-                    final success = await stylist.toggleSaveOutfit(outfit, outfitsProv);
+                    final success = await stylist.toggleSaveOutfit(
+                      outfit,
+                      outfitsProv,
+                    );
                     if (context.mounted && success) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text(outfit.isSaved ? 'Look saved to your collection!' : 'Look removed from saved.'),
+                          content: Text(
+                            outfit.isSaved
+                                ? 'Look saved to your collection!'
+                                : 'Look removed from saved.',
+                          ),
                           duration: const Duration(seconds: 2),
                           behavior: SnackBarBehavior.floating,
                         ),
@@ -818,13 +975,23 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
                   ),
                   label: Text(
                     outfit.isSaved ? 'Saved' : 'Save Look',
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: outfit.isSaved ? AppColors.terracotta : AppColors.primary,
+                    backgroundColor: outfit.isSaved
+                        ? AppColors.terracotta
+                        : AppColors.primary,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 8,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                 ),
               ],
@@ -845,7 +1012,11 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
             const SizedBox(height: 20),
             const Text(
               'Curating your wardrobe combinations...',
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
+              ),
             ),
             const SizedBox(height: 6),
             const Text(
@@ -901,7 +1072,11 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
               color: AppColors.accentSoft,
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.checkroom_outlined, size: 48, color: AppColors.primary),
+            child: const Icon(
+              Icons.checkroom_outlined,
+              size: 48,
+              color: AppColors.primary,
+            ),
           ),
           const SizedBox(height: 20),
           const Text(
@@ -912,7 +1087,11 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
           const Text(
             'Start by uploading foundational garments like a clean tee, trousers, and sneakers to unlock AI styled looks.',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.4),
+            style: TextStyle(
+              fontSize: 13,
+              color: AppColors.textSecondary,
+              height: 1.4,
+            ),
           ),
         ],
       ),
@@ -936,7 +1115,11 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
               color: AppColors.accentSoft,
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.layers_clear_outlined, size: 40, color: AppColors.accent),
+            child: const Icon(
+              Icons.layers_clear_outlined,
+              size: 40,
+              color: AppColors.accent,
+            ),
           ),
           const SizedBox(height: 18),
           const Text(
@@ -947,7 +1130,11 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
           Text(
             'Add at least one top and one bottom to unlock complete styled combinations. Missing: ${missing.isNotEmpty ? missing : "compatible pairs"}.',
             textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.4),
+            style: const TextStyle(
+              fontSize: 13,
+              color: AppColors.textSecondary,
+              height: 1.4,
+            ),
           ),
         ],
       ),
@@ -960,7 +1147,11 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
         padding: const EdgeInsets.symmetric(vertical: 40),
         child: Column(
           children: [
-            const Icon(Icons.style_outlined, size: 48, color: AppColors.textMuted),
+            const Icon(
+              Icons.style_outlined,
+              size: 48,
+              color: AppColors.textMuted,
+            ),
             const SizedBox(height: 14),
             const Text(
               'Ready to style your look',

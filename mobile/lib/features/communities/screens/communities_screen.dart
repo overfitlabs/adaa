@@ -5,7 +5,6 @@ import '../../../core/models/community_model.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../state/community_provider.dart';
 import 'community_detail_screen.dart';
-import 'shared_closet_screen.dart';
 
 class CommunitiesScreen extends StatefulWidget {
   const CommunitiesScreen({super.key});
@@ -22,7 +21,7 @@ class _CommunitiesScreenState extends State<CommunitiesScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 2, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadData();
     });
@@ -53,8 +52,13 @@ class _CommunitiesScreenState extends State<CommunitiesScreen>
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text('Create Fashion Circle', style: TextStyle(fontWeight: FontWeight.w700)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Text(
+            'Create Fashion Circle',
+            style: TextStyle(fontWeight: FontWeight.w700),
+          ),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -64,7 +68,7 @@ class _CommunitiesScreenState extends State<CommunitiesScreen>
                   controller: nameCtrl,
                   decoration: const InputDecoration(
                     labelText: 'Community Name *',
-                    hintText: 'e.g. Campus Thrift Collective',
+                    hintText: 'e.g. Minimalist Capsule Guild',
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -79,8 +83,14 @@ class _CommunitiesScreenState extends State<CommunitiesScreen>
                 const SizedBox(height: 14),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('Private Community', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                  subtitle: const Text('Require administrator approval for new members.', style: TextStyle(fontSize: 11)),
+                  title: const Text(
+                    'Private Community',
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                  ),
+                  subtitle: const Text(
+                    'Require administrator approval for new members.',
+                    style: TextStyle(fontSize: 11),
+                  ),
                   value: isPrivate,
                   activeThumbColor: AppColors.primary,
                   onChanged: (val) => setDialogState(() => isPrivate = val),
@@ -91,32 +101,49 @@ class _CommunitiesScreenState extends State<CommunitiesScreen>
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: AppColors.textSecondary),
+              ),
             ),
             ElevatedButton(
               onPressed: () async {
                 final name = nameCtrl.text.trim();
                 if (name.isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Please enter a community name.'), backgroundColor: AppColors.missing),
+                    const SnackBar(
+                      content: Text('Please enter a community name.'),
+                      backgroundColor: AppColors.missing,
+                    ),
                   );
                   return;
                 }
                 final prov = context.read<CommunityProvider>();
                 final success = await prov.createCommunity(
                   name: name,
-                  description: descCtrl.text.trim().isEmpty ? null : descCtrl.text.trim(),
+                  description: descCtrl.text.trim().isEmpty
+                      ? null
+                      : descCtrl.text.trim(),
                   isPrivate: isPrivate,
                 );
                 if (ctx.mounted) Navigator.pop(ctx);
                 if (success && context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Community "$name" created! You are the owner.'), backgroundColor: AppColors.exactMatch),
+                    SnackBar(
+                      content: Text(
+                        'Community "$name" created! You are the owner.',
+                      ),
+                      backgroundColor: AppColors.exactMatch,
+                    ),
                   );
                   if (prov.selectedCommunity != null) {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => CommunityDetailScreen(community: prov.selectedCommunity!)),
+                      MaterialPageRoute(
+                        builder: (_) => CommunityDetailScreen(
+                          community: prov.selectedCommunity!,
+                        ),
+                      ),
                     );
                   }
                 }
@@ -134,50 +161,66 @@ class _CommunitiesScreenState extends State<CommunitiesScreen>
     final commProv = context.watch<CommunityProvider>();
 
     return Scaffold(
-      appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Communities & Circles', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
-            Text(
-              '${commProv.myCommunities.length} joined • ${commProv.communities.length} discoverable',
-              style: const TextStyle(fontSize: 11, color: AppColors.textSecondary, fontWeight: FontWeight.w500),
+      backgroundColor: AppColors.canvas,
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                const Text(
+                  'Communities & Circles',
+                  style: TextStyle(
+                    fontFamily: 'Playfair Display',
+                    fontSize: 28,
+                    height: 1.25,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.forest,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${commProv.myCommunities.length} joined • ${commProv.communities.length} discoverable',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    height: 1.45,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add_circle_outline),
-            tooltip: 'Create Community',
-            onPressed: () => _showCreateCommunityDialog(context),
+          ),
+
+          TabBar(
+            controller: _tabController,
+            labelColor: AppColors.forest,
+            unselectedLabelColor: AppColors.textSecondary,
+            indicatorColor: AppColors.primary,
+            tabs: const [
+              Tab(text: 'Explore'),
+              Tab(text: 'My Circles'),
+            ],
+          ),
+
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                _buildExploreTab(commProv),
+                _buildMyCommunitiesTab(commProv),
+              ],
+            ),
           ),
         ],
-        bottom: TabBar(
-          controller: _tabController,
-          labelColor: AppColors.espresso,
-          unselectedLabelColor: AppColors.textMuted,
-          indicatorColor: AppColors.terracotta,
-          indicatorWeight: 2.5,
-          tabs: [
-            Tab(text: 'Explore (${commProv.communities.length})'),
-            Tab(text: 'My Circles (${commProv.myCommunities.length})'),
-            const Tab(text: 'Shared Closet'),
-          ],
-        ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildExploreTab(commProv),
-          _buildMyCommunitiesTab(commProv),
-          const SharedClosetScreen(),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: AppColors.terracotta,
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: AppColors.forest,
         foregroundColor: Colors.white,
-        icon: const Icon(Icons.group_add),
-        label: const Text('New Circle', style: TextStyle(fontWeight: FontWeight.w600)),
+        child: const Icon(Icons.group_add),
         onPressed: () => _showCreateCommunityDialog(context),
       ),
     );
@@ -197,7 +240,10 @@ class _CommunitiesScreenState extends State<CommunitiesScreen>
               decoration: InputDecoration(
                 hintText: 'Search communities by name or vibe...',
                 prefixIcon: const Icon(Icons.search, size: 20),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
+                ),
                 suffixIcon: _searchController.text.isNotEmpty
                     ? IconButton(
                         icon: const Icon(Icons.clear, size: 16),
@@ -208,66 +254,101 @@ class _CommunitiesScreenState extends State<CommunitiesScreen>
                       )
                     : null,
               ),
-              onChanged: (val) => commProv.loadDiscoveredCommunities(query: val),
+              onChanged: (val) =>
+                  commProv.loadDiscoveredCommunities(query: val),
             ),
           ),
           Expanded(
             child: commProv.isLoading && communities.isEmpty
                 ? const Center(child: CircularProgressIndicator())
                 : commProv.error != null && communities.isEmpty
-                    ? Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(24),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.cloud_off_outlined, size: 48, color: AppColors.missing),
-                              const SizedBox(height: 12),
-                              const Text('Unable to Load Communities', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
-                              const SizedBox(height: 6),
-                              Text(commProv.error!, textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                              const SizedBox(height: 16),
-                              ElevatedButton.icon(
-                                onPressed: _loadData,
-                                icon: const Icon(Icons.refresh),
-                                label: const Text('Try Again'),
-                              ),
-                            ],
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.cloud_off_outlined,
+                            size: 48,
+                            color: AppColors.missing,
                           ),
-                        ),
-                      )
-                    : communities.isEmpty
-                        ? Center(
-                            child: Padding(
-                              padding: const EdgeInsets.all(32),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(Icons.search_off_outlined, size: 48, color: AppColors.textMuted),
-                                  const SizedBox(height: 12),
-                                  const Text('No Communities Found', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
-                                  const SizedBox(height: 6),
-                                  const Text('Start your own fashion circle or try searching for another term.',
-                                      textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                                  const SizedBox(height: 18),
-                                  ElevatedButton.icon(
-                                    onPressed: () => _showCreateCommunityDialog(context),
-                                    icon: const Icon(Icons.add),
-                                    label: const Text('Create First Circle'),
-                                  ),
-                                ],
-                              ),
+                          const SizedBox(height: 12),
+                          const Text(
+                            'Unable to Load Communities',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 16,
                             ),
-                          )
-                        : ListView.separated(
-                            padding: const EdgeInsets.all(16),
-                            itemCount: communities.length,
-                            separatorBuilder: (_, _) => const SizedBox(height: 12),
-                            itemBuilder: (ctx, idx) {
-                              final comm = communities[idx];
-                              return _buildCommunityCard(comm);
-                            },
                           ),
+                          const SizedBox(height: 6),
+                          Text(
+                            commProv.error!,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          ElevatedButton.icon(
+                            onPressed: _loadData,
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('Try Again'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                : communities.isEmpty
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(32),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.search_off_outlined,
+                            size: 48,
+                            color: AppColors.textMuted,
+                          ),
+                          const SizedBox(height: 12),
+                          const Text(
+                            'No Communities Found',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 16,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          const Text(
+                            'Start your own fashion circle or try searching for another term.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                          const SizedBox(height: 18),
+                          ElevatedButton.icon(
+                            onPressed: () =>
+                                _showCreateCommunityDialog(context),
+                            icon: const Icon(Icons.add),
+                            label: const Text('Create First Circle'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                : ListView.separated(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: communities.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 12),
+                    itemBuilder: (ctx, idx) {
+                      final comm = communities[idx];
+                      return _buildCommunityCard(comm);
+                    },
+                  ),
           ),
         ],
       ),
@@ -288,16 +369,33 @@ class _CommunitiesScreenState extends State<CommunitiesScreen>
                   children: [
                     Container(
                       padding: const EdgeInsets.all(20),
-                      decoration: const BoxDecoration(color: AppColors.accentSoft, shape: BoxShape.circle),
-                      child: const Icon(Icons.groups_outlined, size: 48, color: AppColors.primary),
+                      decoration: const BoxDecoration(
+                        color: AppColors.accentSoft,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.groups_outlined,
+                        size: 48,
+                        color: AppColors.primary,
+                      ),
                     ),
                     const SizedBox(height: 18),
-                    const Text('No Joined Communities Yet', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+                    const Text(
+                      'No Joined Communities Yet',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
                     const SizedBox(height: 8),
                     const Text(
-                      'Join existing campus circles in the Explore tab or create your own sharing collective!',
+                      'Join existing style circles in the Explore tab or create your own sharing collective!',
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.4),
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: AppColors.textSecondary,
+                        height: 1.4,
+                      ),
                     ),
                     const SizedBox(height: 20),
                     ElevatedButton.icon(
@@ -333,7 +431,9 @@ class _CommunitiesScreenState extends State<CommunitiesScreen>
         onTap: () {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => CommunityDetailScreen(community: comm)),
+            MaterialPageRoute(
+              builder: (_) => CommunityDetailScreen(community: comm),
+            ),
           );
         },
         child: Padding(
@@ -351,7 +451,11 @@ class _CommunitiesScreenState extends State<CommunitiesScreen>
                       color: AppColors.accentSoft,
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(Icons.groups_outlined, color: AppColors.primary, size: 24),
+                    child: const Icon(
+                      Icons.groups_outlined,
+                      color: AppColors.primary,
+                      size: 24,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -360,14 +464,20 @@ class _CommunitiesScreenState extends State<CommunitiesScreen>
                       children: [
                         Text(
                           comm.name,
-                          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 16,
+                          ),
                         ),
                         const SizedBox(height: 4),
                         Row(
                           children: [
                             Text(
                               '${comm.membersCount} members • ${comm.listingsCount} garments',
-                              style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: AppColors.textSecondary,
+                              ),
                             ),
                           ],
                         ),
@@ -383,7 +493,11 @@ class _CommunitiesScreenState extends State<CommunitiesScreen>
                   comm.description!,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 12, height: 1.3, color: AppColors.textSecondary),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    height: 1.3,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
               ],
             ],
@@ -401,7 +515,9 @@ class _CommunitiesScreenState extends State<CommunitiesScreen>
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
-            color: mem.role == 'owner' ? Colors.deepPurple.shade50 : AppColors.accentSoft,
+            color: mem.role == 'owner'
+                ? Colors.deepPurple.shade50
+                : AppColors.accentSoft,
             borderRadius: BorderRadius.circular(8),
           ),
           child: Text(
@@ -409,7 +525,9 @@ class _CommunitiesScreenState extends State<CommunitiesScreen>
             style: TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.w700,
-              color: mem.role == 'owner' ? Colors.deepPurple : AppColors.primary,
+              color: mem.role == 'owner'
+                  ? Colors.deepPurple
+                  : AppColors.primary,
             ),
           ),
         );
@@ -422,7 +540,11 @@ class _CommunitiesScreenState extends State<CommunitiesScreen>
           ),
           child: Text(
             'PENDING',
-            style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.orange.shade800),
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: Colors.orange.shade800,
+            ),
           ),
         );
       }
@@ -439,11 +561,20 @@ class _CommunitiesScreenState extends State<CommunitiesScreen>
         final ok = await prov.joinCommunity(comm.id);
         if (mounted && ok) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Join request submitted!'), backgroundColor: AppColors.exactMatch),
+            const SnackBar(
+              content: Text('Join request submitted!'),
+              backgroundColor: AppColors.exactMatch,
+            ),
           );
         }
       },
-      child: const Text('Join', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+      child: Padding(
+        padding: EdgeInsetsGeometry.fromLTRB(5, 5, 5, 5),
+        child: const Text(
+          'Join',
+          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+        ),
+      ),
     );
   }
 }

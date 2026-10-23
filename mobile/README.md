@@ -12,7 +12,7 @@ The `adaa` client is a cross-platform Flutter application targeting **Android** 
 - **Virtual Try-On**: Realistic silhouette lookbook previews powered by YouCam AI Clothes API.
 - **Campus Shared Closets**: Browse, list, and request to borrow garments within verified student and creator communities.
 - **Responsive Desktop Web Presentation**: On wide desktop screens, visitors experience an editorial two-panel shell with an auto-advancing feature carousel, one-click demo login, and a centered realistic smartphone frame hosting the real, interactive Flutter app.
-- **Native Android Launch Experience**: Configured native launch drawables (`launch_background.xml`), adaptive launcher icons, and Stitch Flutter launch splash screen.
+- **Native Android Launch Experience**: Configured native launch drawables (`launch_background.xml`), adaptive launcher icons, and Flutter launch splash screen.
 
 ---
 

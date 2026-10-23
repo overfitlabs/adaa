@@ -5,6 +5,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/private_image_view.dart';
 import '../../../state/outfits_provider.dart';
 import '../../../state/wardrobe_provider.dart';
+import '../../../core/widgets/adaa_wordmark.dart';
 
 class CreateOutfitScreen extends StatefulWidget {
   const CreateOutfitScreen({super.key});
@@ -32,7 +33,10 @@ class _CreateOutfitScreenState extends State<CreateOutfitScreen> {
     final name = _nameController.text.trim();
     if (name.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please name this outfit look.'), backgroundColor: AppColors.missing),
+        const SnackBar(
+          content: Text('Please name this outfit look.'),
+          backgroundColor: AppColors.missing,
+        ),
       );
       return;
     }
@@ -40,7 +44,9 @@ class _CreateOutfitScreenState extends State<CreateOutfitScreen> {
     if (_selectedItemIds.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please select at least one garment from your wardrobe.'),
+          content: Text(
+            'Please select at least one garment from your wardrobe.',
+          ),
           backgroundColor: AppColors.missing,
         ),
       );
@@ -80,26 +86,72 @@ class _CreateOutfitScreenState extends State<CreateOutfitScreen> {
     final wardrobe = context.watch<WardrobeProvider>();
 
     return Scaffold(
+      backgroundColor: AppColors.canvas,
       appBar: AppBar(
-        title: const Text('Assemble Look'),
-        actions: [
-          TextButton(
-            onPressed: _isSaving ? null : _submitOutfit,
-            child: _isSaving
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
-                  )
-                : const Text('Save Look', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+        backgroundColor: AppColors.surface,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        toolbarHeight: 68,
+        automaticallyImplyLeading: false,
+        leadingWidth: 56,
+        leading: Padding(
+          padding: const EdgeInsets.all(10),
+          child: IconButton(
+            tooltip: 'Go back',
+            icon: const Icon(
+              Icons.arrow_back_ios_new,
+              size: 20,
+              color: AppColors.forest,
+            ),
+            onPressed: () => Navigator.of(context).maybePop(),
           ),
-        ],
+        ),
+        title: const AdaaWordmark(
+          size: AdaaWordmarkSize.medium,
+          color: AppColors.espresso,
+          withDotAccent: true,
+          showSubtitle: true,
+          subtitle: 'style intelligence & closet',
+        ),
+        centerTitle: true,
+        titleSpacing: 0,
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: AppColors.forest,
+        foregroundColor: Colors.white,
+        onPressed: _isSaving ? null : _submitOutfit,
+        icon: Icon(Icons.bookmark_outline),
+        label: _isSaving
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: AppColors.primary,
+                ),
+              )
+            : const Text(
+                'Save',
+                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+              ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const Text(
+              'Assemble Look',
+              style: TextStyle(
+                fontFamily: 'Playfair Display',
+                fontSize: 28,
+                height: 1.2,
+                fontWeight: FontWeight.w600,
+                color: AppColors.forest,
+              ),
+            ),
+            const SizedBox(height: 18),
             TextField(
               controller: _nameController,
               decoration: const InputDecoration(
@@ -140,7 +192,11 @@ class _CreateOutfitScreenState extends State<CreateOutfitScreen> {
                 ),
                 Text(
                   '${_selectedItemIds.length} selected',
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.primary,
+                  ),
                 ),
               ],
             ),
@@ -155,7 +211,10 @@ class _CreateOutfitScreenState extends State<CreateOutfitScreen> {
                 ),
                 child: const Text(
                   'No clothes in wardrobe. Add pieces to your wardrobe first to assemble looks.',
-                  style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
               )
             else
@@ -188,7 +247,9 @@ class _CreateOutfitScreenState extends State<CreateOutfitScreen> {
                         color: AppColors.surface,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: isSelected ? AppColors.primary : AppColors.border,
+                          color: isSelected
+                              ? AppColors.primary
+                              : AppColors.border,
                           width: isSelected ? 2.5 : 1,
                         ),
                       ),
@@ -217,7 +278,11 @@ class _CreateOutfitScreenState extends State<CreateOutfitScreen> {
                                   color: AppColors.primary,
                                   shape: BoxShape.circle,
                                 ),
-                                child: const Icon(Icons.check, size: 14, color: Colors.white),
+                                child: const Icon(
+                                  Icons.check,
+                                  size: 14,
+                                  color: Colors.white,
+                                ),
                               ),
                             ),
                         ],

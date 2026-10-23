@@ -1,15 +1,9 @@
-import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_colors.dart';
-import '../../../core/widgets/private_image_view.dart';
-import '../../../state/tryon_provider.dart';
-import '../../../state/wardrobe_provider.dart';
+import '../../../core/widgets/adaa_wordmark.dart';
 
-class TryOnScreen extends StatefulWidget {
+class TryOnScreen extends StatelessWidget {
   final String? prefilledInspirationUrl;
   final String? prefilledWardrobeItemId;
 
@@ -19,501 +13,377 @@ class TryOnScreen extends StatefulWidget {
     this.prefilledWardrobeItemId,
   });
 
-  @override
-  State<TryOnScreen> createState() => _TryOnScreenState();
-}
-
-class _TryOnScreenState extends State<TryOnScreen> {
-  final ImagePicker _picker = ImagePicker();
-  XFile? _userImage;
-  XFile? _garmentImage;
-  String? _selectedWardrobeItemId;
-  String _selectedGarmentCategory = 'upper body';
-
-  final List<String> _garmentCategories = [
-    'upper body',
-    'lower body',
-    'full body',
-    'dress',
-    'outer',
-  ];
-
-  @override
-  void initState() {
-    super.initState();
-    _selectedWardrobeItemId = widget.prefilledWardrobeItemId;
-  }
-
-  Future<void> _pickUserImage(ImageSource source) async {
-    final picked = await _picker.pickImage(
-      source: source,
-      maxWidth: 1600,
-      maxHeight: 1600,
-      imageQuality: 85,
-    );
-    if (picked != null) {
-      setState(() => _userImage = picked);
-    }
-  }
-
-  Future<void> _pickGarmentImage(ImageSource source) async {
-    final picked = await _picker.pickImage(
-      source: source,
-      maxWidth: 1600,
-      maxHeight: 1600,
-      imageQuality: 85,
-    );
-    if (picked != null) {
-      setState(() {
-        _garmentImage = picked;
-        _selectedWardrobeItemId = null; // Prioritize newly picked photo
-      });
-    }
-  }
-
-  Future<void> _startTryOn() async {
-    if (_userImage == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please upload a photo of yourself first.'),
-          backgroundColor: AppColors.missing,
-        ),
-      );
-      return;
-    }
-
-    if (_garmentImage == null && _selectedWardrobeItemId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select or upload a garment to try on.'),
-          backgroundColor: AppColors.missing,
-        ),
-      );
-      return;
-    }
-
-    final prov = context.read<TryOnProvider>();
-    final success = await prov.startTryOn(
-      userImage: _userImage!,
-      garmentImage: _garmentImage,
-      wardrobeItemId: _selectedWardrobeItemId,
-      garmentCategory: _selectedGarmentCategory,
-    );
-
-    if (!success && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(prov.error ?? 'Failed to initiate try-on task.'),
-          backgroundColor: AppColors.missing,
-        ),
-      );
-    }
-  }
+  static const Color _background = Color(0xFFFCF9F4);
+  static const Color _primary = Color(0xFF082217);
+  static const Color _secondary = Color(0xFF456651);
+  static const Color _muted = Color(0xFF424844);
+  static const Color _surfaceLow = Color(0xFFF6F3EE);
+  static const Color _gold = Color(0xFFC89142);
 
   @override
   Widget build(BuildContext context) {
-    final tryonProv = context.watch<TryOnProvider>();
-    final wardrobeProv = context.watch<WardrobeProvider>();
-    final task = tryonProv.activeTask;
-
     return Scaffold(
+      backgroundColor: _background,
       appBar: AppBar(
-        title: const Text('YouCam Virtual Try-On'),
+        backgroundColor: _background.withValues(alpha: 0.96),
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        automaticallyImplyLeading: false,
+        toolbarHeight: 64,
+        title: const AdaaWordmark(
+          size: AdaaWordmarkSize.medium,
+          color: AppColors.espresso,
+          withDotAccent: true,
+          showSubtitle: true,
+          subtitle: 'style intelligence & closet',
+        ),
+        centerTitle: true,
+        titleSpacing: 0,
+        leadingWidth: 64,
+        leading: IconButton(
+          tooltip: 'Back',
+          onPressed: () {
+            if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+            }
+          },
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: _primary,
+            size: 20,
+          ),
+        ),
         actions: [
-          if (task != null)
-            TextButton(
-              onPressed: () => tryonProv.reset(),
-              child: const Text('New Try-On', style: TextStyle(fontWeight: FontWeight.w600)),
+          IconButton(
+            tooltip: 'Notifications',
+            onPressed: () {
+              // Connect your existing notifications screen here.
+            },
+            icon: const Icon(
+              Icons.notifications_none_rounded,
+              color: _primary,
+              size: 24,
             ),
+          ),
+          const SizedBox(width: 8),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Status or Result Banner if Task Active
-            if (task != null) ...[
-              _buildTaskStatusCard(task),
-              const SizedBox(height: 24),
-            ],
-
-            // Step 1: User Photo
-            const Text(
-              'STEP 1: YOUR PHOTO',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.2,
-                color: AppColors.textSecondary,
-              ),
-            ),
-            const SizedBox(height: 8),
-            _buildUserPhotoCard(),
-
-            const SizedBox(height: 24),
-
-            // Step 2: Target Garment
-            const Text(
-              'STEP 2: TARGET GARMENT OR INSPIRATION LOOK',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.2,
-                color: AppColors.textSecondary,
-              ),
-            ),
-            const SizedBox(height: 8),
-            _buildGarmentSelectionSection(wardrobeProv),
-
-            const SizedBox(height: 24),
-
-            // Step 3: Garment Category
-            const Text(
-              'STEP 3: GARMENT CATEGORY',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.2,
-                color: AppColors.textSecondary,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              children: _garmentCategories.map((cat) {
-                final isSelected = _selectedGarmentCategory == cat;
-                return ChoiceChip(
-                  label: Text(
-                    cat.toUpperCase(),
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                      color: isSelected ? Colors.white : AppColors.textPrimary,
-                    ),
-                  ),
-                  selected: isSelected,
-                  selectedColor: AppColors.primary,
-                  backgroundColor: AppColors.surface,
-                  side: BorderSide(color: isSelected ? AppColors.primary : AppColors.border),
-                  onSelected: (_) => setState(() => _selectedGarmentCategory = cat),
-                );
-              }).toList(),
-            ),
-
-            const SizedBox(height: 32),
-
-            // Submit Button
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: tryonProv.isSubmitting || (task != null && task.isProcessing)
-                    ? null
-                    : _startTryOn,
-                icon: const Icon(Icons.auto_awesome),
-                label: Text(
-                  tryonProv.isSubmitting
-                      ? 'Submitting to YouCam...'
-                      : task != null && task.isProcessing
-                          ? 'Generating Look with YouCam AI...'
-                          : 'Generate Virtual Try-On',
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 36),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildUserPhotoCard() {
-    return GestureDetector(
-      onTap: () => _pickUserImage(ImageSource.gallery),
-      child: Container(
-        height: 180,
-        width: double.infinity,
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.border),
-        ),
-        child: _userImage != null
-            ? Stack(
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
-                    child: kIsWeb
-                        ? Image.network(
-                            _userImage!.path,
-                            width: double.infinity,
-                            height: double.infinity,
-                            fit: BoxFit.cover,
-                          )
-                        : Image.file(
-                            File(_userImage!.path),
-                            width: double.infinity,
-                            height: double.infinity,
-                            fit: BoxFit.cover,
-                          ),
-                  ),
-                  Positioned(
-                    bottom: 8,
-                    right: 8,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.8),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: const Text(
-                        'Change Photo',
-                        style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                  ),
-                ],
-              )
-            : Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.person_outline, size: 38, color: AppColors.primary),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Upload Full or Half-Body Photo',
-                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'Ensure clear lighting and standard posture for best rendering',
-                    style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
-                  ),
-                  const SizedBox(height: 12),
-                  OutlinedButton.icon(
-                    onPressed: () => _pickUserImage(ImageSource.gallery),
-                    icon: const Icon(Icons.photo_library_outlined, size: 16),
-                    label: const Text('Select from Gallery'),
-                  ),
-                ],
-              ),
-      ),
-    );
-  }
-
-  Widget _buildGarmentSelectionSection(WardrobeProvider wardrobe) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+      body: SafeArea(
+        top: false,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () => _pickGarmentImage(ImageSource.gallery),
-                  icon: const Icon(Icons.upload_file, size: 16),
-                  label: const Text('Upload Garment Photo'),
+              // Coming Soon badge
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 7,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEBE8E3),
+                  borderRadius: BorderRadius.circular(30),
+                  boxShadow: [
+                    BoxShadow(
+                      color: _primary.withValues(alpha: 0.04),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('✦', style: TextStyle(color: _gold, fontSize: 13)),
+                    SizedBox(width: 7),
+                    Text(
+                      'COMING SOON',
+                      style: TextStyle(
+                        fontSize: 10,
+                        letterSpacing: 1.5,
+                        fontWeight: FontWeight.w700,
+                        color: _muted,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
-          ),
-          if (_garmentImage != null) ...[
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: kIsWeb
-                      ? Image.network(_garmentImage!.path, width: 44, height: 44, fit: BoxFit.cover)
-                      : Image.file(File(_garmentImage!.path), width: 44, height: 44, fit: BoxFit.cover),
-                ),
-                const SizedBox(width: 12),
-                const Expanded(
-                  child: Text(
-                    'Selected uploaded garment photo',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close, size: 18),
-                  onPressed: () => setState(() => _garmentImage = null),
-                ),
-              ],
-            ),
-          ],
-          if (wardrobe.items.isNotEmpty) ...[
-            const SizedBox(height: 14),
-            const Text(
-              'Or pick an item from your digital closet:',
-              style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
-            ),
-            const SizedBox(height: 8),
-            SizedBox(
-              height: 90,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                itemCount: wardrobe.items.length,
-                itemBuilder: (ctx, idx) {
-                  final wItem = wardrobe.items[idx];
-                  final isChosen = _selectedWardrobeItemId == wItem.id;
 
-                  return GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        _selectedWardrobeItemId = wItem.id;
-                        _garmentImage = null; // Clear manual upload
-                      });
-                    },
-                    child: Container(
-                      width: 72,
-                      margin: const EdgeInsets.only(right: 8),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: isChosen ? AppColors.primary : AppColors.border,
-                          width: isChosen ? 2.5 : 1,
+              const SizedBox(height: 16),
+
+              // Hero fashion image
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final heroHeight = (constraints.maxWidth * 1.25).clamp(
+                    260.0,
+                    380.0,
+                  );
+
+                  return Container(
+                    width: double.infinity,
+                    height: heroHeight,
+                    clipBehavior: Clip.antiAlias,
+                    decoration: BoxDecoration(
+                      color: _surfaceLow,
+                      borderRadius: BorderRadius.circular(26),
+                      boxShadow: [
+                        BoxShadow(
+                          color: _primary.withValues(alpha: 0.09),
+                          blurRadius: 18,
+                          offset: const Offset(0, 6),
                         ),
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: PrivateImageView(
-                          imageUrl: wItem.imageUrl,
+                      ],
+                    ),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        Image.network(
+                          'https://lh3.googleusercontent.com/aida-public/AB6AXuCJRJ-F0Ho8aMwcYpndU2_zWmkW4oAZZ50Bu70z88enql9YqPNlGJwavwDrA2_y8-U9Ek0DK7tKSVFvzPsCZfPzT_ofhQ8801zrMgOBLwRLOR6KU0cnSVyDyqkxk6_a4rjg-QlkJrBJCsRHyvVC28e5kOyPAROf6dIaXIGIGAT6e0LuQLaslxrpPvjUJ7JYcOjK8kIp8FatcIq7mN6D4-vHCDDAovI8RSChkC89a5D_qYVN1AB5Rg9o4w',
                           fit: BoxFit.cover,
-                          errorWidget: Container(
-                            color: AppColors.accentSoft,
-                            child: const Icon(Icons.checkroom, size: 20),
+                          alignment: Alignment.center,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              color: const Color(0xFFE5D9C8),
+                              child: const Center(
+                                child: Icon(
+                                  Icons.checkroom_rounded,
+                                  size: 72,
+                                  color: _secondary,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+
+                        // Subtle bottom scrim
+                        const DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Colors.transparent,
+                                Color(0x00082217),
+                                Color(0x4D082217),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
+
+                        // Preview badge
+                        Positioned(
+                          top: 14,
+                          right: 14,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 7,
+                            ),
+                            decoration: BoxDecoration(
+                              color: _background.withValues(alpha: 0.92),
+                              borderRadius: BorderRadius.circular(24),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.auto_awesome,
+                                  size: 13,
+                                  color: _gold,
+                                ),
+                                SizedBox(width: 5),
+                                Text(
+                                  'PREVIEW ONLY',
+                                  style: TextStyle(
+                                    fontSize: 9,
+                                    letterSpacing: 0.8,
+                                    fontWeight: FontWeight.w700,
+                                    color: _primary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   );
                 },
               ),
-            ),
-          ],
-        ],
+
+              const SizedBox(height: 25),
+
+              // Editorial typography
+              const Text(
+                'Virtual Try-On',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontFamily: 'Playfair Display',
+                  fontSize: 30,
+                  height: 1.2,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: -0.7,
+                  color: _primary,
+                ),
+              ),
+
+              const SizedBox(height: 7),
+
+              const Text(
+                '“Your outfits, reimagined.”',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontFamily: 'Playfair Display',
+                  fontSize: 19,
+                  height: 1.4,
+                  fontStyle: FontStyle.italic,
+                  color: _secondary,
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              const Text(
+                'Your personal virtual fitting room is on its way. '
+                'For now, explore your wardrobe and discover outfit '
+                'combinations with adaa.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 13, height: 1.8, color: _muted),
+              ),
+
+              const SizedBox(height: 22),
+
+              // Feature highlights
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: _surfaceLow,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Column(
+                  children: [
+                    _FeatureRow(
+                      text: 'Photorealistic fitting on your silhouette',
+                    ),
+                    SizedBox(height: 15),
+                    _FeatureRow(
+                      text: 'Grounded in your actual registered wardrobe',
+                    ),
+                    SizedBox(height: 15),
+                    _FeatureRow(text: 'Studio lighting & drape calibration'),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              // Primary CTA
+              SizedBox(
+                width: double.infinity,
+                height: 54,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF1E382B),
+                    foregroundColor: Colors.white,
+                    elevation: 1,
+                    shadowColor: _primary.withValues(alpha: 0.12),
+                    shape: const StadiumBorder(),
+                  ),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        'Explore My Wardrobe',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      SizedBox(width: 9),
+                      Icon(Icons.checkroom_rounded, size: 19),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 10),
+
+              // Secondary CTA
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                style: TextButton.styleFrom(
+                  foregroundColor: _primary,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 12,
+                  ),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Discover Outfits',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                    SizedBox(width: 6),
+                    Icon(Icons.arrow_forward_rounded, size: 17),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
+}
 
-  Widget _buildTaskStatusCard(dynamic task) {
-    if (task.isProcessing) {
-      return Container(
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          color: AppColors.accentSoft,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.accent.withValues(alpha: 0.4)),
+class _FeatureRow extends StatelessWidget {
+  final String text;
+
+  const _FeatureRow({required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Container(
+          width: 22,
+          height: 22,
+          decoration: const BoxDecoration(
+            color: Color(0xFFC4E9CE),
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(
+            Icons.check_rounded,
+            size: 15,
+            color: Color(0xFF456651),
+          ),
         ),
-        child: const Row(
-          children: [
-            SizedBox(
-              width: 24,
-              height: 24,
-              child: CircularProgressIndicator(strokeWidth: 2.5, color: AppColors.primary),
+        const SizedBox(width: 11),
+        Expanded(
+          child: Text(
+            text,
+            style: const TextStyle(
+              fontSize: 12,
+              height: 1.5,
+              color: Color(0xFF1C1C19),
             ),
-            SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Generating Try-On Preview...',
-                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-                  ),
-                  SizedBox(height: 2),
-                  Text(
-                    'YouCam AI is adjusting drape, proportions, and lighting onto your photo.',
-                    style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
-                  ),
-                ],
-              ),
-            ),
-          ],
+          ),
         ),
-      );
-    } else if (task.isSuccess) {
-      return Container(
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.exactMatch, width: 1.5),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.check_circle, color: AppColors.exactMatch, size: 22),
-                const SizedBox(width: 10),
-                const Text(
-                  'Virtual Try-On Render Ready',
-                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
-                ),
-                const Spacer(),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: AppColors.exactMatch.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    task.provider.toUpperCase(),
-                    style: const TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.exactMatch,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: PrivateImageView(
-                imageUrl: task.resultImageUrl ?? '',
-                width: double.infinity,
-                height: 320,
-                fit: BoxFit.cover,
-                errorWidget: Container(
-                  height: 200,
-                  color: AppColors.accentSoft,
-                  child: const Center(child: Text('Image preview not available')),
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-    } else {
-      return Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppColors.missing.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.missing.withValues(alpha: 0.3)),
-        ),
-        child: Row(
-          children: [
-            const Icon(Icons.error_outline, color: AppColors.missing),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                task.errorMessage ?? 'Try-on rendering encountered an error. Please retry.',
-                style: const TextStyle(fontSize: 13, color: AppColors.missing),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
+      ],
+    );
   }
 }

@@ -1,14 +1,14 @@
+// ignore_for_file: unused_field
+
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
-import '../../../core/auth/session_manager.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_endpoints.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/widgets/adaa_brand_badge.dart';
-import '../../../core/widgets/adaa_brand_sheet.dart';
 import '../../../core/widgets/adaa_wordmark.dart';
 import '../../../core/widgets/private_image_view.dart';
 import '../../../state/analysis_provider.dart';
@@ -26,12 +26,10 @@ import '../../styling/screens/recommendations_screen.dart';
 import '../../tryon/screens/tryon_screen.dart';
 import '../../communities/screens/shared_item_detail_screen.dart';
 import '../../communities/widgets/public_profile_sheet.dart';
-import '../../requests/screens/requests_screen.dart';
 import '../../notifications/screens/notifications_screen.dart';
 import '../../wardrobe/screens/wardrobe_detail_screen.dart';
 import '../../wardrobe/screens/wardrobe_screen.dart';
 import '../../../state/notification_provider.dart';
-
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -75,7 +73,10 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> _pickAndAnalyzeImage(ImageSource source, {ItemReviewIntent? intent}) async {
+  Future<void> _pickAndAnalyzeImage(
+    ImageSource source, {
+    ItemReviewIntent? intent,
+  }) async {
     try {
       final picked = await _picker.pickImage(
         source: source,
@@ -146,7 +147,10 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  void _showAnalysisErrorDialog(String errorMessage, {ItemReviewIntent? intent}) {
+  void _showAnalysisErrorDialog(
+    String errorMessage, {
+    ItemReviewIntent? intent,
+  }) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -155,7 +159,10 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             Icon(Icons.error_outline, color: AppColors.missing, size: 24),
             SizedBox(width: 8),
-            Text('Analysis Failed', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18)),
+            Text(
+              'Analysis Failed',
+              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
+            ),
           ],
         ),
         content: Column(
@@ -164,7 +171,11 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             Text(
               errorMessage,
-              style: const TextStyle(fontSize: 13, height: 1.4, color: AppColors.textPrimary),
+              style: const TextStyle(
+                fontSize: 13,
+                height: 1.4,
+                color: AppColors.textPrimary,
+              ),
             ),
             const SizedBox(height: 14),
             Container(
@@ -175,12 +186,20 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.dns_outlined, size: 16, color: AppColors.textSecondary),
+                  const Icon(
+                    Icons.dns_outlined,
+                    size: 16,
+                    color: AppColors.textSecondary,
+                  ),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
                       'Server: ${ApiEndpoints.baseUrl}',
-                      style: const TextStyle(fontSize: 11, fontFamily: 'monospace', color: AppColors.textSecondary),
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontFamily: 'monospace',
+                        color: AppColors.textSecondary,
+                      ),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
@@ -199,14 +218,19 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Dismiss', style: TextStyle(color: AppColors.textSecondary)),
+            child: const Text(
+              'Dismiss',
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
           ),
           ElevatedButton.icon(
             icon: const Icon(Icons.refresh, size: 16),
             label: const Text('Retry'),
             onPressed: () {
               Navigator.pop(ctx);
-              final lastFile = context.read<AnalysisProvider>().lastAnalyzedFile;
+              final lastFile = context
+                  .read<AnalysisProvider>()
+                  .lastAnalyzedFile;
               if (lastFile != null) {
                 _runAnalysis(lastFile, intent: intent);
               }
@@ -228,8 +252,13 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (ctx) => StatefulBuilder(
         builder: (context, setDialogState) {
           return AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            title: const Text('Server Connection', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            title: const Text(
+              'Server Connection',
+              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
+            ),
             content: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -237,7 +266,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   const Text(
                     'Specify the backend server URL for adaa.',
-                    style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textSecondary,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   TextField(
@@ -248,23 +280,45 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  const Text('Quick Presets:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
+                  const Text(
+                    'Quick Presets:',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
                   const SizedBox(height: 6),
                   Wrap(
                     spacing: 6,
                     runSpacing: 4,
                     children: [
                       ActionChip(
-                        label: const Text('USB ADB (127.0.0.1)', style: TextStyle(fontSize: 11)),
-                        onPressed: () => setDialogState(() => controller.text = 'http://127.0.0.1:8000'),
+                        label: const Text(
+                          'USB ADB (127.0.0.1)',
+                          style: TextStyle(fontSize: 11),
+                        ),
+                        onPressed: () => setDialogState(
+                          () => controller.text = 'http://127.0.0.1:8000',
+                        ),
                       ),
                       ActionChip(
-                        label: const Text('Emulator (10.0.2.2)', style: TextStyle(fontSize: 11)),
-                        onPressed: () => setDialogState(() => controller.text = 'http://10.0.2.2:8000'),
+                        label: const Text(
+                          'Emulator (10.0.2.2)',
+                          style: TextStyle(fontSize: 11),
+                        ),
+                        onPressed: () => setDialogState(
+                          () => controller.text = 'http://10.0.2.2:8000',
+                        ),
                       ),
                       ActionChip(
-                        label: const Text('Wi-Fi (192.168.1.11)', style: TextStyle(fontSize: 11)),
-                        onPressed: () => setDialogState(() => controller.text = 'http://192.168.1.11:8000'),
+                        label: const Text(
+                          'Wi-Fi (192.168.1.11)',
+                          style: TextStyle(fontSize: 11),
+                        ),
+                        onPressed: () => setDialogState(
+                          () => controller.text = 'http://192.168.1.11:8000',
+                        ),
                       ),
                     ],
                   ),
@@ -272,20 +326,40 @@ class _HomeScreenState extends State<HomeScreen> {
                   if (testing)
                     const Row(
                       children: [
-                        SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)),
+                        SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
                         SizedBox(width: 8),
-                        Text('Testing connection...', style: TextStyle(fontSize: 12)),
+                        Text(
+                          'Testing connection...',
+                          style: TextStyle(fontSize: 12),
+                        ),
                       ],
                     )
                   else if (testResult != null)
                     Row(
                       children: [
-                        Icon(testSuccess == true ? Icons.check_circle : Icons.error, color: testSuccess == true ? AppColors.exactMatch : AppColors.missing, size: 16),
+                        Icon(
+                          testSuccess == true
+                              ? Icons.check_circle
+                              : Icons.error,
+                          color: testSuccess == true
+                              ? AppColors.exactMatch
+                              : AppColors.missing,
+                          size: 16,
+                        ),
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
                             testResult!,
-                            style: TextStyle(fontSize: 12, color: testSuccess == true ? AppColors.exactMatch : AppColors.missing),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: testSuccess == true
+                                  ? AppColors.exactMatch
+                                  : AppColors.missing,
+                            ),
                           ),
                         ),
                       ],
@@ -302,11 +376,15 @@ class _HomeScreenState extends State<HomeScreen> {
                           testing = true;
                           testResult = null;
                         });
-                        final ok = await ApiClient.checkHealth(controller.text.trim());
+                        final ok = await ApiClient.checkHealth(
+                          controller.text.trim(),
+                        );
                         setDialogState(() {
                           testing = false;
                           testSuccess = ok;
-                          testResult = ok ? 'Connected successfully! (HTTP 200)' : 'Could not reach server at this URL.';
+                          testResult = ok
+                              ? 'Connected successfully! (HTTP 200)'
+                              : 'Could not reach server at this URL.';
                         });
                       },
                 child: const Text('Test Connection'),
@@ -344,8 +422,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 intent == ItemReviewIntent.addToCloset
                     ? 'Add to My Closet'
                     : intent == ItemReviewIntent.findPiece
-                        ? 'Find a Matching Piece'
-                        : 'Upload Outfit Photo',
+                    ? 'Find a Matching Piece'
+                    : 'Upload Outfit Photo',
                 style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
@@ -357,17 +435,26 @@ class _HomeScreenState extends State<HomeScreen> {
                 intent == ItemReviewIntent.addToCloset
                     ? 'Snap or select garments to isolate each piece and catalog them in your personal closet.'
                     : intent == ItemReviewIntent.findPiece
-                        ? 'Select an inspiration photo to isolate a garment and search across your collection.'
-                        : 'Select a photo featuring an outfit, flat-lay garments, or street style.',
-                style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                    ? 'Select an inspiration photo to isolate a garment and search across your collection.'
+                    : 'Select a photo featuring an outfit, flat-lay garments, or street style.',
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: AppColors.textSecondary,
+                ),
               ),
               const SizedBox(height: 20),
               ListTile(
                 leading: const CircleAvatar(
                   backgroundColor: AppColors.accentSoft,
-                  child: Icon(Icons.photo_library_outlined, color: AppColors.primary),
+                  child: Icon(
+                    Icons.photo_library_outlined,
+                    color: AppColors.primary,
+                  ),
                 ),
-                title: const Text('Choose from Gallery', style: TextStyle(fontWeight: FontWeight.w600)),
+                title: const Text(
+                  'Choose from Gallery',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
                 onTap: () {
                   Navigator.pop(ctx);
                   _pickAndAnalyzeImage(ImageSource.gallery, intent: intent);
@@ -376,9 +463,15 @@ class _HomeScreenState extends State<HomeScreen> {
               ListTile(
                 leading: const CircleAvatar(
                   backgroundColor: AppColors.accentSoft,
-                  child: Icon(Icons.camera_alt_outlined, color: AppColors.primary),
+                  child: Icon(
+                    Icons.camera_alt_outlined,
+                    color: AppColors.primary,
+                  ),
                 ),
-                title: const Text('Take a Photo', style: TextStyle(fontWeight: FontWeight.w600)),
+                title: const Text(
+                  'Take a Photo',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
                 onTap: () {
                   Navigator.pop(ctx);
                   _pickAndAnalyzeImage(ImageSource.camera, intent: intent);
@@ -393,82 +486,41 @@ class _HomeScreenState extends State<HomeScreen> {
 
   PreferredSizeWidget _buildHomeAppBar() {
     return AppBar(
-      title: GestureDetector(
-        onTap: () => AdaaBrandSheet.show(context),
-        behavior: HitTestBehavior.opaque,
-        child: const AdaaWordmark(
-          size: AdaaWordmarkSize.medium,
-          color: AppColors.espresso,
-          withDotAccent: true,
-          showSubtitle: true,
-          subtitle: 'style intelligence & closet',
+      backgroundColor: AppColors.surface,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      toolbarHeight: 68,
+      automaticallyImplyLeading: false,
+
+      // Left: App icon
+      leadingWidth: 56,
+      leading: Padding(
+        padding: const EdgeInsets.all(10),
+        child: Image.asset(
+          'assets/branding/app_icon_no_bg.png',
+          fit: BoxFit.contain,
+          errorBuilder: (context, error, stackTrace) => const Icon(
+            Icons.checkroom_rounded,
+            color: AppColors.espresso,
+            size: 27,
+          ),
         ),
       ),
+
+      // Center: Brand wordmark
+      title: const AdaaWordmark(
+        size: AdaaWordmarkSize.medium,
+        color: AppColors.espresso,
+        withDotAccent: true,
+        showSubtitle: true,
+        subtitle: 'style intelligence & closet',
+      ),
+      centerTitle: true,
+      titleSpacing: 0,
+
+      // Right: Notifications
       actions: [
-        // User / Auth button
-        Consumer<AuthProvider>(
-          builder: (ctx, auth, _) {
-            if (auth.isAuthenticated) {
-              return Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: PopupMenuButton<String>(
-                  tooltip: 'Account Menu',
-                  offset: const Offset(0, 40),
-                  child: CircleAvatar(
-                    radius: 14,
-                    backgroundColor: AppColors.primary,
-                    child: Text(
-                      auth.displayName.isNotEmpty ? auth.displayName[0].toUpperCase() : 'U',
-                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
-                    ),
-                  ),
-                  itemBuilder: (ctx) => [
-                    PopupMenuItem(
-                      enabled: false,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(auth.displayName, style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-                          Text(auth.email ?? '', style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                        ],
-                      ),
-                    ),
-                    const PopupMenuDivider(),
-                    const PopupMenuItem(
-                      value: 'profile',
-                      child: Row(
-                        children: [
-                          Icon(Icons.person_outline, size: 18),
-                          SizedBox(width: 8),
-                          Text('My Profile'),
-                        ],
-                      ),
-                    ),
-                    const PopupMenuItem(
-                      value: 'logout',
-                      child: Row(
-                        children: [
-                          Icon(Icons.logout, size: 18, color: Colors.red),
-                          SizedBox(width: 8),
-                          Text('Sign Out', style: TextStyle(color: Colors.red)),
-                        ],
-                      ),
-                    ),
-                  ],
-                  onSelected: (val) {
-                    if (val == 'logout') {
-                      SessionManager.performLogout(context);
-                    } else if (val == 'profile') {
-                      setState(() => _currentTabIndex = 3);
-                    }
-                  },
-                ),
-              );
-            }
-            return const SizedBox.shrink();
-          },
-        ),
-        // Activity & Notifications Button with Unread Badge
         Builder(
           builder: (ctx) {
             NotificationProvider? notifProv;
@@ -477,13 +529,19 @@ class _HomeScreenState extends State<HomeScreen> {
             } catch (_) {
               notifProv = null;
             }
+
             final unread = notifProv?.unreadCount ?? 0;
+
             return IconButton(
               tooltip: 'Activity & Notifications',
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 56, minHeight: 48),
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+                  MaterialPageRoute(
+                    builder: (_) => const NotificationsScreen(),
+                  ),
                 );
               },
               icon: Badge(
@@ -491,61 +549,20 @@ class _HomeScreenState extends State<HomeScreen> {
                 backgroundColor: AppColors.terracotta,
                 label: Text(
                   unread > 99 ? '99+' : '$unread',
-                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
+                  style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
                 ),
-                child: const Icon(Icons.notifications_outlined, size: 22, color: AppColors.espresso),
+                child: const Icon(
+                  Icons.notifications_none_rounded,
+                  size: 25,
+                  color: AppColors.espresso,
+                ),
               ),
             );
           },
-        ),
-        // Requests Button
-        IconButton(
-          icon: const Icon(Icons.handshake_outlined, size: 22, color: AppColors.espresso),
-          tooltip: 'Borrowing Requests',
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const RequestsScreen()),
-            );
-          },
-        ),
-        // Connection pill
-        Padding(
-          padding: const EdgeInsets.only(right: 16),
-
-          child: InkWell(
-            onTap: _showServerConfigDialog,
-            borderRadius: BorderRadius.circular(16),
-            child: Tooltip(
-              message: 'Tap to configure server connection',
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: _isBackendConnected ? AppColors.exactMatch : AppColors.missing,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      _isCheckingHealth
-                          ? 'Connecting...'
-                          : _isBackendConnected
-                              ? 'Online'
-                              : 'Offline',
-                      style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
-                    ),
-                    const SizedBox(width: 4),
-                    const Icon(Icons.settings, size: 12, color: AppColors.textSecondary),
-                  ],
-                ),
-              ),
-            ),
-          ),
         ),
       ],
     );
@@ -559,7 +576,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final communityProv = context.watch<CommunityProvider>();
 
     return Scaffold(
-      appBar: _currentTabIndex == 0 ? _buildHomeAppBar() : null,
+      appBar: _buildHomeAppBar(),
       body: IndexedStack(
         index: _currentTabIndex,
         children: [
@@ -590,8 +607,14 @@ class _HomeScreenState extends State<HomeScreen> {
           backgroundColor: AppColors.surface,
           selectedItemColor: AppColors.espresso,
           unselectedItemColor: AppColors.textSecondary,
-          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 11),
-          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 11),
+          selectedLabelStyle: const TextStyle(
+            fontWeight: FontWeight.w700,
+            fontSize: 11,
+          ),
+          unselectedLabelStyle: const TextStyle(
+            fontWeight: FontWeight.w500,
+            fontSize: 11,
+          ),
           items: const [
             BottomNavigationBarItem(
               icon: Icon(Icons.home_outlined),
@@ -633,24 +656,24 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Stitch Personalized Greeting Header
-            _buildStitchGreetingHeader(),
+            // Personalized Greeting Header
+            _buildGreetingHeader(),
             const SizedBox(height: 16),
 
             // Wardrobe Capsule Summary Card
-            _buildStitchCapsuleCard(wardrobe),
+            _buildCapsuleCard(wardrobe),
             const SizedBox(height: 18),
 
-            // 4 Stitch Quick Action Tiles (2x2 Grid)
-            _buildStitchQuickTilesGrid(outfits),
+            // Quick Action Tiles (2x2 Grid)
+            _buildQuickTilesGrid(outfits),
             const SizedBox(height: 24),
 
             // Look of the Day / Stylist Pick
-            _buildStitchLookOfTheDay(),
+            _buildLookOfTheDay(),
             const SizedBox(height: 24),
 
             // Curated for Occasion Carousel
-            _buildStitchOccasionCarousel(),
+            _buildOccasionCarousel(),
             const SizedBox(height: 24),
 
             // Hero AI Outfit Intelligence Scanner
@@ -702,7 +725,9 @@ class _HomeScreenState extends State<HomeScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             ClipRRect(
-                              borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+                              borderRadius: const BorderRadius.vertical(
+                                top: Radius.circular(14),
+                              ),
                               child: PrivateImageView(
                                 imageUrl: item.imageUrl,
                                 height: 100,
@@ -711,7 +736,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                 errorWidget: Container(
                                   height: 100,
                                   color: AppColors.accentSoft,
-                                  child: const Icon(Icons.image_outlined, color: AppColors.textMuted),
+                                  child: const Icon(
+                                    Icons.image_outlined,
+                                    color: AppColors.textMuted,
+                                  ),
                                 ),
                               ),
                             ),
@@ -721,7 +749,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    item.vibeOrStyle.isNotEmpty ? item.vibeOrStyle : 'Outfit Look',
+                                    item.vibeOrStyle.isNotEmpty
+                                        ? item.vibeOrStyle
+                                        : 'Outfit Look',
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(
@@ -732,7 +762,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                   const SizedBox(height: 2),
                                   Text(
                                     '${item.detectedGarmentCount} pieces',
-                                    style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      color: AppColors.textSecondary,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -753,7 +786,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildStitchGreetingHeader() {
+  Widget _buildGreetingHeader() {
     final auth = context.watch<AuthProvider>();
     final rawName = auth.displayName.trim();
     final firstName = rawName.isNotEmpty && rawName != 'Guest'
@@ -764,8 +797,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final timeGreeting = hour < 12
         ? 'Good morning'
         : hour < 17
-            ? 'Good afternoon'
-            : 'Good evening';
+        ? 'Good afternoon'
+        : 'Good evening';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -805,7 +838,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildStitchCapsuleCard(WardrobeProvider wardrobe) {
+  Widget _buildCapsuleCard(WardrobeProvider wardrobe) {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surface,
@@ -823,7 +856,11 @@ class _HomeScreenState extends State<HomeScreen> {
               color: AppColors.sageContainer,
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.checkroom, color: AppColors.forest, size: 22),
+            child: const Icon(
+              Icons.checkroom,
+              color: AppColors.forest,
+              size: 22,
+            ),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -839,16 +876,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         fontWeight: FontWeight.w700,
                       ),
                     ),
-                    const SizedBox(width: 6),
-                    Container(width: 4, height: 4, decoration: const BoxDecoration(color: AppColors.sage, shape: BoxShape.circle)),
-                    const SizedBox(width: 6),
-                    Text(
-                      wardrobe.items.isNotEmpty ? '${wardrobe.items.length} Pieces' : 'Ready',
-                      style: AppTypography.labelSmall.copyWith(
-                        color: AppColors.sage,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
                   ],
                 ),
                 const SizedBox(height: 2),
@@ -856,7 +883,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   wardrobe.items.isNotEmpty
                       ? '${wardrobe.items.length} digitized pieces ready to mix'
                       : 'Snap pieces to deconstruct & catalog your collection',
-                  style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary),
+                  style: AppTypography.bodySmall.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
                 ),
               ],
             ),
@@ -878,7 +907,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                const Icon(Icons.chevron_right, size: 16, color: AppColors.forest),
+                const Icon(
+                  Icons.chevron_right,
+                  size: 16,
+                  color: AppColors.forest,
+                ),
               ],
             ),
           ),
@@ -887,7 +920,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildStitchQuickTilesGrid(OutfitsProvider outfits) {
+  Widget _buildQuickTilesGrid(OutfitsProvider outfits) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -937,7 +970,9 @@ class _HomeScreenState extends State<HomeScreen> {
               subtitle: 'Fresh Pairings',
               onTap: () => Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const RecommendationsScreen()),
+                MaterialPageRoute(
+                  builder: (_) => const RecommendationsScreen(),
+                ),
               ),
             ),
             // Tile 3: Virtual Try-On (Lavender tint)
@@ -1004,10 +1039,7 @@ class _HomeScreenState extends State<HomeScreen> {
             Container(
               width: 34,
               height: 34,
-              decoration: BoxDecoration(
-                color: iconBg,
-                shape: BoxShape.circle,
-              ),
+              decoration: BoxDecoration(color: iconBg, shape: BoxShape.circle),
               child: Icon(icon, color: iconColor, size: 18),
             ),
             Column(
@@ -1038,7 +1070,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildStitchLookOfTheDay() {
+  Widget _buildLookOfTheDay() {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surface,
@@ -1067,7 +1099,14 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    Container(width: 5, height: 5, decoration: const BoxDecoration(color: AppColors.gold, shape: BoxShape.circle)),
+                    Container(
+                      width: 5,
+                      height: 5,
+                      decoration: const BoxDecoration(
+                        color: AppColors.gold,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
                   ],
                 ),
                 Text(
@@ -1104,7 +1143,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.white.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(4),
@@ -1141,7 +1183,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 top: 12,
                 left: 12,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.9),
                     borderRadius: BorderRadius.circular(9999),
@@ -1149,7 +1194,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.auto_awesome, size: 12, color: AppColors.gold),
+                      const Icon(
+                        Icons.auto_awesome,
+                        size: 12,
+                        color: AppColors.gold,
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         'DAILY EDIT',
@@ -1177,12 +1226,18 @@ class _HomeScreenState extends State<HomeScreen> {
                       context,
                       MaterialPageRoute(builder: (_) => const TryOnScreen()),
                     ),
-                    icon: const Icon(Icons.auto_awesome, size: 16, color: AppColors.gold),
+                    icon: const Icon(
+                      Icons.auto_awesome,
+                      size: 16,
+                      color: AppColors.gold,
+                    ),
                     label: const Text('Virtual Try-On'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.forest,
                       foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9999)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(9999),
+                      ),
                       padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
                   ),
@@ -1191,7 +1246,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 IconButton(
                   onPressed: () => Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => const RecommendationsScreen()),
+                    MaterialPageRoute(
+                      builder: (_) => const RecommendationsScreen(),
+                    ),
                   ),
                   style: IconButton.styleFrom(
                     backgroundColor: AppColors.sageContainer,
@@ -1208,12 +1265,32 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildStitchOccasionCarousel() {
+  Widget _buildOccasionCarousel() {
     final occasions = [
-      {'title': 'Weekend Brunch', 'sub': 'Relaxed & chic', 'icon': Icons.local_cafe_outlined, 'pcs': '4 pcs'},
-      {'title': 'Boardroom Polish', 'sub': 'Sharp tailoring', 'icon': Icons.business_center_outlined, 'pcs': '3 pcs'},
-      {'title': 'Cocktail Hour', 'sub': 'Evening glamour', 'icon': Icons.nightlife_outlined, 'pcs': '4 pcs'},
-      {'title': 'Airport Layering', 'sub': 'Cozy elegant', 'icon': Icons.flight_takeoff_outlined, 'pcs': '5 pcs'},
+      {
+        'title': 'Weekend Brunch',
+        'sub': 'Relaxed & chic',
+        'icon': Icons.local_cafe_outlined,
+        'pcs': '4 pcs',
+      },
+      {
+        'title': 'Boardroom Polish',
+        'sub': 'Sharp tailoring',
+        'icon': Icons.business_center_outlined,
+        'pcs': '3 pcs',
+      },
+      {
+        'title': 'Cocktail Hour',
+        'sub': 'Evening glamour',
+        'icon': Icons.nightlife_outlined,
+        'pcs': '4 pcs',
+      },
+      {
+        'title': 'Airport Layering',
+        'sub': 'Cozy elegant',
+        'icon': Icons.flight_takeoff_outlined,
+        'pcs': '5 pcs',
+      },
     ];
 
     return Column(
@@ -1233,11 +1310,16 @@ class _HomeScreenState extends State<HomeScreen> {
             TextButton(
               onPressed: () => Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const RecommendationsScreen()),
+                MaterialPageRoute(
+                  builder: (_) => const RecommendationsScreen(),
+                ),
               ),
               child: Text(
                 'Explore all',
-                style: AppTypography.labelSmall.copyWith(color: AppColors.sage, fontWeight: FontWeight.w700),
+                style: AppTypography.labelSmall.copyWith(
+                  color: AppColors.sage,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
           ],
@@ -1254,7 +1336,11 @@ class _HomeScreenState extends State<HomeScreen> {
               return InkWell(
                 onTap: () => Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => RecommendationsScreen(initialOccasion: occ['title'] as String)),
+                  MaterialPageRoute(
+                    builder: (_) => RecommendationsScreen(
+                      initialOccasion: occ['title'] as String,
+                    ),
+                  ),
                 ),
                 borderRadius: BorderRadius.circular(14),
                 child: Container(
@@ -1273,16 +1359,27 @@ class _HomeScreenState extends State<HomeScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Icon(occ['icon'] as IconData, size: 20, color: AppColors.forest),
+                          Icon(
+                            occ['icon'] as IconData,
+                            size: 20,
+                            color: AppColors.forest,
+                          ),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
                               color: AppColors.sageContainer,
                               borderRadius: BorderRadius.circular(9999),
                             ),
                             child: Text(
                               occ['pcs'] as String,
-                              style: AppTypography.labelSmall.copyWith(fontSize: 9.5, fontWeight: FontWeight.w700, color: AppColors.forest),
+                              style: AppTypography.labelSmall.copyWith(
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.forest,
+                              ),
                             ),
                           ),
                         ],
@@ -1292,13 +1389,20 @@ class _HomeScreenState extends State<HomeScreen> {
                         children: [
                           Text(
                             occ['title'] as String,
-                            style: AppTypography.titleSmall.copyWith(color: AppColors.forest, fontWeight: FontWeight.w700, fontSize: 13),
+                            style: AppTypography.titleSmall.copyWith(
+                              color: AppColors.forest,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13,
+                            ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                           Text(
                             occ['sub'] as String,
-                            style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary, fontSize: 10.5),
+                            style: AppTypography.bodySmall.copyWith(
+                              color: AppColors.textSecondary,
+                              fontSize: 10.5,
+                            ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -1375,8 +1479,13 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               Expanded(
                 child: ElevatedButton.icon(
-                  onPressed: () => _showImageSourceModal(intent: ItemReviewIntent.addToCloset),
-                  icon: const Icon(Icons.add_photo_alternate_outlined, size: 16),
+                  onPressed: () => _showImageSourceModal(
+                    intent: ItemReviewIntent.addToCloset,
+                  ),
+                  icon: const Icon(
+                    Icons.add_photo_alternate_outlined,
+                    size: 16,
+                  ),
                   label: const Text(
                     'Add to my closet',
                     style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
@@ -1384,24 +1493,39 @@ class _HomeScreenState extends State<HomeScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.warmIvory,
                     foregroundColor: AppColors.espresso,
-                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 12,
+                      horizontal: 8,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                 ),
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: () => _showImageSourceModal(intent: ItemReviewIntent.findPiece),
+                  onPressed: () =>
+                      _showImageSourceModal(intent: ItemReviewIntent.findPiece),
                   icon: const Icon(Icons.search, size: 16, color: Colors.white),
                   label: const Text(
                     'Find a piece',
-                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: Colors.white),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 12,
+                      color: Colors.white,
+                    ),
                   ),
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: Colors.white70, width: 1.2),
-                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 12,
+                      horizontal: 8,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                 ),
               ),
@@ -1414,10 +1538,18 @@ class _HomeScreenState extends State<HomeScreen> {
           Center(
             child: TextButton.icon(
               onPressed: () => _showImageSourceModal(intent: null),
-              icon: const Icon(Icons.arrow_upward_rounded, size: 14, color: AppColors.sandSoft),
+              icon: const Icon(
+                Icons.arrow_upward_rounded,
+                size: 14,
+                color: AppColors.sandSoft,
+              ),
               label: const Text(
                 'Upload Outfit Photo',
-                style: TextStyle(color: AppColors.sandSoft, fontSize: 11, fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  color: AppColors.sandSoft,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ),
@@ -1452,8 +1584,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 Text(
                   approvedCommunities.isNotEmpty
                       ? 'Pieces shared across your ${approvedCommunities.length} approved circles'
-                      : 'Shared wardrobes from campus circles',
-                  style: const TextStyle(fontSize: 11, color: AppColors.textMuted),
+                      : 'Shared wardrobes from style circles',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: AppColors.textMuted,
+                  ),
                 ),
               ],
             ),
@@ -1465,7 +1600,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 child: const Text(
                   'View All',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.primary),
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primary,
+                  ),
                 ),
               ),
           ],
@@ -1483,9 +1622,18 @@ class _HomeScreenState extends State<HomeScreen> {
             alignment: Alignment.center,
             child: const Column(
               children: [
-                CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
+                CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: AppColors.primary,
+                ),
                 SizedBox(height: 12),
-                Text('Loading community pieces...', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                Text(
+                  'Loading community pieces...',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
               ],
             ),
           )
@@ -1503,18 +1651,30 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 const Row(
                   children: [
-                    Icon(Icons.groups_outlined, color: AppColors.terracotta, size: 24),
+                    Icon(
+                      Icons.groups_outlined,
+                      color: AppColors.terracotta,
+                      size: 24,
+                    ),
                     SizedBox(width: 8),
                     Text(
-                      'Join Campus Circles',
-                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.espresso),
+                      'Join Style Circles',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.espresso,
+                      ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 6),
                 const Text(
-                  'Connect with student fashion communities to borrow pieces, browse shared closets, and exchange styling inspiration.',
-                  style: TextStyle(fontSize: 12, color: AppColors.textSecondary, height: 1.4),
+                  'Connect with curated fashion communities to borrow pieces, browse shared closets, and exchange styling inspiration.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textSecondary,
+                    height: 1.4,
+                  ),
                 ),
                 const SizedBox(height: 14),
                 ElevatedButton.icon(
@@ -1524,8 +1684,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.espresso,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
                 ),
               ],
@@ -1545,18 +1710,30 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 const Row(
                   children: [
-                    Icon(Icons.checkroom_outlined, color: AppColors.accent, size: 24),
+                    Icon(
+                      Icons.checkroom_outlined,
+                      color: AppColors.accent,
+                      size: 24,
+                    ),
                     SizedBox(width: 8),
                     Text(
                       'Shared Closets are Empty',
-                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                      ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 6),
                 const Text(
                   'No pieces have been shared yet in your circles. Be the first to share a piece from your wardrobe!',
-                  style: TextStyle(fontSize: 12, color: AppColors.textSecondary, height: 1.4),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textSecondary,
+                    height: 1.4,
+                  ),
                 ),
                 const SizedBox(height: 14),
                 OutlinedButton.icon(
@@ -1566,8 +1743,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.primary,
                     side: const BorderSide(color: AppColors.primary),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
                 ),
               ],
@@ -1585,7 +1767,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 final shared = sharedItems[idx];
                 final garment = shared.item;
                 final currentUserId = context.read<AuthProvider>().user?.id;
-                final isOwner = currentUserId != null && currentUserId == shared.ownerId;
+                final isOwner =
+                    currentUserId != null && currentUserId == shared.ownerId;
 
                 return GestureDetector(
                   onTap: () {
@@ -1600,7 +1783,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => SharedItemDetailScreen(sharedItem: shared),
+                          builder: (_) =>
+                              SharedItemDetailScreen(sharedItem: shared),
                         ),
                       );
                     }
@@ -1617,7 +1801,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         ClipRRect(
-                          borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+                          borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(14),
+                          ),
                           child: Stack(
                             children: [
                               PrivateImageView(
@@ -1630,9 +1816,14 @@ class _HomeScreenState extends State<HomeScreen> {
                                 top: 6,
                                 left: 6,
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
                                   decoration: BoxDecoration(
-                                    color: AppColors.espresso.withValues(alpha: 0.8),
+                                    color: AppColors.espresso.withValues(
+                                      alpha: 0.8,
+                                    ),
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                   child: Text(
@@ -1681,7 +1872,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                       backgroundColor: AppColors.accentSoft,
                                       child: Text(
                                         shared.ownerInitials,
-                                        style: const TextStyle(fontSize: 8, fontWeight: FontWeight.w800, color: AppColors.primary),
+                                        style: const TextStyle(
+                                          fontSize: 8,
+                                          fontWeight: FontWeight.w800,
+                                          color: AppColors.primary,
+                                        ),
                                       ),
                                     ),
                                     const SizedBox(width: 4),
@@ -1690,7 +1885,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                         shared.resolvedOwnerName,
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(fontSize: 10, color: AppColors.textSecondary, fontWeight: FontWeight.w500),
+                                        style: const TextStyle(
+                                          fontSize: 10,
+                                          color: AppColors.textSecondary,
+                                          fontWeight: FontWeight.w500,
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -1700,11 +1899,16 @@ class _HomeScreenState extends State<HomeScreen> {
                               Wrap(
                                 spacing: 4,
                                 children: [
-                                  AdaaBrandBadge(text: garment.category.toUpperCase()),
+                                  AdaaBrandBadge(
+                                    text: garment.category.toUpperCase(),
+                                  ),
                                   if (garment.primaryColor.isNotEmpty)
                                     Text(
                                       garment.primaryColor,
-                                      style: const TextStyle(fontSize: 10, color: AppColors.textSecondary),
+                                      style: const TextStyle(
+                                        fontSize: 10,
+                                        color: AppColors.textSecondary,
+                                      ),
                                     ),
                                 ],
                               ),
@@ -1735,7 +1939,10 @@ class _AnalyzingDialog extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            CircularProgressIndicator(color: AppColors.terracotta, strokeWidth: 3),
+            CircularProgressIndicator(
+              color: AppColors.terracotta,
+              strokeWidth: 3,
+            ),
             SizedBox(height: 20),
             Text(
               'Analyzing Outfit...',

@@ -1,6 +1,10 @@
+// ignore_for_file: curly_braces_in_flow_control_structures
+
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
 import '../core/auth/supabase_auth_service.dart';
 import '../core/network/api_client.dart';
 
@@ -36,7 +40,7 @@ class AuthProvider extends ChangeNotifier {
   String? _infoMessage;
 
   AuthProvider({SupabaseAuthService? authService})
-      : _authService = authService ?? SupabaseAuthService() {
+    : _authService = authService ?? SupabaseAuthService() {
     _init();
   }
 
@@ -79,7 +83,8 @@ class AuthProvider extends ChangeNotifier {
     final provider = _user!.appMetadata['provider'];
     if (provider != null && provider != 'email') return true;
     final identities = _user!.identities;
-    if (identities != null && identities.any((i) => i.provider != 'email')) return true;
+    if (identities != null && identities.any((i) => i.provider != 'email'))
+      return true;
     return false;
   }
 
@@ -93,7 +98,9 @@ class AuthProvider extends ChangeNotifier {
   String get displayName {
     if (_user == null) return 'Guest';
     final metadata = _user!.userMetadata;
-    if (metadata != null && metadata['full_name'] != null && (metadata['full_name'] as String).trim().isNotEmpty) {
+    if (metadata != null &&
+        metadata['full_name'] != null &&
+        (metadata['full_name'] as String).trim().isNotEmpty) {
       return metadata['full_name'] as String;
     }
     return _user!.email?.split('@').first ?? 'User';
@@ -176,7 +183,9 @@ class AuthProvider extends ChangeNotifier {
       }
 
       // Case 2: Duplicate email / existing user (Supabase returns empty identities list)
-      if (res.user != null && res.user!.identities != null && res.user!.identities!.isEmpty) {
+      if (res.user != null &&
+          res.user!.identities != null &&
+          res.user!.identities!.isEmpty) {
         _user = null;
         _session = null;
         ApiClient.authToken = null;
@@ -232,7 +241,8 @@ class AuthProvider extends ChangeNotifier {
 
     try {
       await _authService.resendConfirmationEmail(email);
-      _infoMessage = 'Confirmation email resent to $email. Please check your inbox.';
+      _infoMessage =
+          'Confirmation email resent to $email. Please check your inbox.';
       _isLoading = false;
       notifyListeners();
       return true;
@@ -295,6 +305,64 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  Future<bool> resetPassword(String email) async {
+    _isLoading = true;
+    _errorMessage = null;
+    _infoMessage = null;
+    notifyListeners();
+
+    try {
+      final normalizedEmail = email.trim().toLowerCase();
+
+      if (normalizedEmail.isEmpty ||
+          !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(normalizedEmail)) {
+        throw const AuthException('Please enter a valid email address.');
+      }
+
+      await _authService.resetPasswordForEmail(normalizedEmail);
+
+      _infoMessage =
+          'If an account exists for this email, check your inbox '
+          'for next steps. You may also want to check your spam folder.';
+
+      return true;
+    } on AuthException catch (e) {
+      _errorMessage = _formatAuthError(e);
+      return false;
+    } catch (_) {
+      _errorMessage =
+          'Unable to send the reset email right now. Please try again.';
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> resetPasswordForEmail(String email) async {
+    _isLoading = true;
+    _errorMessage = null;
+    _infoMessage = null;
+    notifyListeners();
+
+    try {
+      await _authService.resetPasswordForEmail(email.trim());
+
+      _infoMessage = 'If an account exists for this email, check your inbox for password reset instructions.';
+
+      return true;
+    } on AuthException catch (e) {
+      _errorMessage = _formatAuthError(e);
+      return false;
+    } catch (e) {
+      _errorMessage = 'Unable to send reset email. Please try again.';
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
   String _formatAuthError(AuthException e) {
     final msg = e.message.toLowerCase();
     final code = e.code?.toLowerCase() ?? '';
@@ -303,10 +371,12 @@ class AuthProvider extends ChangeNotifier {
     if (msg.contains('email not confirmed') || code == 'email_not_confirmed') {
       return 'Email not verified. Please check your inbox for the confirmation link or resend it below.';
     }
-    if (msg.contains('invalid login credentials') || code == 'invalid_credentials') {
+    if (msg.contains('invalid login credentials') ||
+        code == 'invalid_credentials') {
       return 'Invalid email or password. Please check your credentials and try again.';
     }
-    if (msg.contains('user already registered') || code == 'user_already_exists') {
+    if (msg.contains('user already registered') ||
+        code == 'user_already_exists') {
       return 'An account with this email already exists. Please sign in instead.';
     }
     if (status == '429' ||
@@ -316,10 +386,12 @@ class AuthProvider extends ChangeNotifier {
         code == 'over_email_send_rate_limit') {
       return 'Too many email requests. For security, please wait a minute before requesting another confirmation email.';
     }
-    if ((msg.contains('invalid') && msg.contains('email')) || code == 'email_address_invalid') {
+    if ((msg.contains('invalid') && msg.contains('email')) ||
+        code == 'email_address_invalid') {
       return 'Please enter a valid email address.';
     }
-    if (msg.contains('provider is not enabled') || msg.contains('unsupported provider')) {
+    if (msg.contains('provider is not enabled') ||
+        msg.contains('unsupported provider')) {
       return 'Google Sign-In is not yet enabled in the Supabase project dashboard. Please configure the Google OAuth provider.';
     }
     return e.message;

@@ -9,6 +9,7 @@ import '../../../state/notification_provider.dart';
 import '../../communities/screens/communities_screen.dart';
 import '../../communities/screens/community_detail_screen.dart';
 import '../../requests/screens/requests_screen.dart';
+import '../../../core/widgets/adaa_wordmark.dart';
 
 /// Notifications & Activity Center for `adaa`.
 /// Displays borrowing lifecycle events, community decisions, and unread badges.
@@ -42,7 +43,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
     // Deep-linking based on notification context
     if (notification.isBorrowRequest) {
-      final initialIndex = notification.eventType == 'borrow_request_created' ? 0 : 1;
+      final initialIndex = notification.eventType == 'borrow_request_created'
+          ? 0
+          : 1;
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -50,10 +53,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         ),
       );
     } else if (notification.isCommunity) {
-      if (notification.communityId != null && notification.communityId!.isNotEmpty) {
+      if (notification.communityId != null &&
+          notification.communityId!.isNotEmpty) {
         final commProv = context.read<CommunityProvider>();
         final allComms = [...commProv.myCommunities, ...commProv.communities];
-        final match = allComms.where((c) => c.id == notification.communityId).firstOrNull;
+        final match = allComms
+            .where((c) => c.id == notification.communityId)
+            .firstOrNull;
 
         if (match != null) {
           Navigator.push(
@@ -67,9 +73,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       }
       Navigator.push(
         context,
-        MaterialPageRoute(
-          builder: (_) => const CommunitiesScreen(),
-        ),
+        MaterialPageRoute(builder: (_) => const CommunitiesScreen()),
       );
     }
   }
@@ -84,102 +88,168 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final unreadCount = notifProv.unreadCount;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.canvas,
       appBar: AppBar(
-        title: const Text(
-          'activity',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: AppColors.espresso,
-            letterSpacing: -0.5,
+        backgroundColor: AppColors.surface,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        toolbarHeight: 68,
+        automaticallyImplyLeading: false,
+        leadingWidth: 56,
+        leading: Padding(
+          padding: const EdgeInsets.all(10),
+          child: IconButton(
+            tooltip: 'Go back',
+            icon: const Icon(
+              Icons.arrow_back_ios_new,
+              size: 20,
+              color: AppColors.forest,
+            ),
+            onPressed: () => Navigator.of(context).maybePop(),
           ),
         ),
-        actions: [
-          if (unreadCount > 0)
-            TextButton.icon(
-              onPressed: () => notifProv.markAllAsRead(),
-              icon: const Icon(Icons.done_all_outlined, size: 16, color: AppColors.terracotta),
-              label: const Text(
-                'Mark all read',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.terracotta,
-                ),
-              ),
-            ),
-          const SizedBox(width: 8),
-        ],
+        title: const AdaaWordmark(
+          size: AdaaWordmarkSize.medium,
+          color: AppColors.espresso,
+          withDotAccent: true,
+          showSubtitle: true,
+          subtitle: 'style intelligence & closet',
+        ),
+        centerTitle: true,
+        titleSpacing: 0,
       ),
+
+      // AppBar(
+      //         title: const Text(
+      //           'activity',
+      //           style: TextStyle(
+      //             fontWeight: FontWeight.bold,
+      //             color: AppColors.espresso,
+      //             letterSpacing: -0.5,
+      //           ),
+      //   ),
+      //   actions: [
+
+      //     const SizedBox(width: 8),
+      //   ],
+      // ),
       body: RefreshIndicator(
         color: AppColors.terracotta,
         onRefresh: () => notifProv.loadNotifications(),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Filter Selector Header
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              color: AppColors.surface,
-              child: Row(
-                children: [
-                  ChoiceChip(
-                    label: Text('All (${allNotifications.length})'),
-                    selected: !_showOnlyUnread,
-                    selectedColor: AppColors.terracottaSoft,
-                    labelStyle: TextStyle(
-                      fontSize: 12,
-                      fontWeight: !_showOnlyUnread ? FontWeight.bold : FontWeight.normal,
-                      color: !_showOnlyUnread ? AppColors.terracottaDark : AppColors.textSecondary,
-                    ),
-                    onSelected: (val) {
-                      if (val) setState(() => _showOnlyUnread = false);
-                    },
-                  ),
-                  const SizedBox(width: 8),
-                  ChoiceChip(
-                    label: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text('Unread ($unreadCount)'),
-                        if (unreadCount > 0) ...[
-                          const SizedBox(width: 6),
-                          Container(
-                            width: 6,
-                            height: 6,
-                            decoration: const BoxDecoration(
-                              color: AppColors.terracotta,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                    selected: _showOnlyUnread,
-                    selectedColor: AppColors.terracottaSoft,
-                    labelStyle: TextStyle(
-                      fontSize: 12,
-                      fontWeight: _showOnlyUnread ? FontWeight.bold : FontWeight.normal,
-                      color: _showOnlyUnread ? AppColors.terracottaDark : AppColors.textSecondary,
-                    ),
-                    onSelected: (val) {
-                      if (val) setState(() => _showOnlyUnread = true);
-                    },
-                  ),
-                ],
+            Padding(
+              padding: EdgeInsetsGeometry.fromLTRB(20, 0, 20, 0),
+              child: const Text(
+                'Notifications',
+                style: TextStyle(
+                  fontFamily: 'Playfair Display',
+                  fontSize: 32,
+                  height: 1.2,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.forest,
+                ),
               ),
             ),
-
-            // Content Area
-            Expanded(
-              child: _buildBody(notifProv, displayedNotifications),
+            SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
+                  color: AppColors.surface,
+                  child: Row(
+                    children: [
+                      ChoiceChip(
+                        label: Text('All (${allNotifications.length})'),
+                        selected: !_showOnlyUnread,
+                        selectedColor: AppColors.terracottaSoft,
+                        labelStyle: TextStyle(
+                          fontSize: 12,
+                          fontWeight: !_showOnlyUnread
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                          color: !_showOnlyUnread
+                              ? AppColors.terracottaDark
+                              : AppColors.textSecondary,
+                        ),
+                        onSelected: (val) {
+                          if (val) setState(() => _showOnlyUnread = false);
+                        },
+                      ),
+                      const SizedBox(width: 8),
+                      ChoiceChip(
+                        label: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text('Unread ($unreadCount)'),
+                            if (unreadCount > 0) ...[
+                              const SizedBox(width: 6),
+                              Container(
+                                width: 6,
+                                height: 6,
+                                decoration: const BoxDecoration(
+                                  color: AppColors.terracotta,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                        selected: _showOnlyUnread,
+                        selectedColor: AppColors.terracottaSoft,
+                        labelStyle: TextStyle(
+                          fontSize: 12,
+                          fontWeight: _showOnlyUnread
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                          color: _showOnlyUnread
+                              ? AppColors.terracottaDark
+                              : AppColors.textSecondary,
+                        ),
+                        onSelected: (val) {
+                          if (val) setState(() => _showOnlyUnread = true);
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                if (unreadCount > 0)
+                  TextButton.icon(
+                    onPressed: () => notifProv.markAllAsRead(),
+                    icon: const Icon(
+                      Icons.done_all_outlined,
+                      size: 16,
+                      color: AppColors.terracotta,
+                    ),
+                    label: const Text(
+                      'Read',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.terracotta,
+                      ),
+                    ),
+                  ),
+              ],
             ),
+            // Content Area
+            Expanded(child: _buildBody(notifProv, displayedNotifications)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildBody(NotificationProvider notifProv, List<NotificationModel> notifications) {
+  Widget _buildBody(
+    NotificationProvider notifProv,
+    List<NotificationModel> notifications,
+  ) {
     if (notifProv.isLoading && notifications.isEmpty) {
       return const Center(
         child: CircularProgressIndicator(color: AppColors.terracotta),
@@ -193,17 +263,28 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.cloud_off_outlined, size: 48, color: AppColors.textMuted),
+              const Icon(
+                Icons.cloud_off_outlined,
+                size: 48,
+                color: AppColors.textMuted,
+              ),
               const SizedBox(height: 12),
               const Text(
                 'Could not load notifications',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.espresso),
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  color: AppColors.espresso,
+                ),
               ),
               const SizedBox(height: 6),
               Text(
                 notifProv.error!,
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textSecondary,
+                ),
               ),
               const SizedBox(height: 16),
               ElevatedButton.icon(
@@ -211,7 +292,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 icon: const Icon(Icons.refresh, size: 16),
                 label: const Text('Try Again'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.terracotta,
+                  backgroundColor: AppColors.forest,
                   foregroundColor: Colors.white,
                 ),
               ),
@@ -256,7 +337,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     ? "You are completely caught up! Tap 'All' to review your past activity history."
                     : 'Activity updates for item borrowing requests and community memberships will appear here.',
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.4),
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: AppColors.textSecondary,
+                  height: 1.4,
+                ),
               ),
             ],
           ),
@@ -284,7 +369,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           color: notif.isRead ? AppColors.borderLight : AppColors.sand,
           width: notif.isRead ? 1 : 1.2,
         ),
-        boxShadow: notif.isRead ? [AppColors.subtleShadow] : [AppColors.cardShadow],
+        boxShadow: notif.isRead
+            ? [AppColors.subtleShadow]
+            : [AppColors.cardShadow],
       ),
       child: Material(
         color: Colors.transparent,
@@ -304,11 +391,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     color: notif.iconBackgroundColor,
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(
-                    notif.iconData,
-                    size: 20,
-                    color: notif.iconColor,
-                  ),
+                  child: Icon(notif.iconData, size: 20, color: notif.iconColor),
                 ),
                 const SizedBox(width: 12),
 
@@ -325,7 +408,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                               notif.title,
                               style: TextStyle(
                                 fontSize: 13,
-                                fontWeight: notif.isRead ? FontWeight.w600 : FontWeight.bold,
+                                fontWeight: notif.isRead
+                                    ? FontWeight.w600
+                                    : FontWeight.bold,
                                 color: AppColors.espresso,
                               ),
                             ),
@@ -344,7 +429,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         notif.message,
                         style: TextStyle(
                           fontSize: 12,
-                          color: notif.isRead ? AppColors.textSecondary : AppColors.espresso,
+                          color: notif.isRead
+                              ? AppColors.textSecondary
+                              : AppColors.espresso,
                           height: 1.3,
                         ),
                       ),
@@ -362,21 +449,21 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                             const AdaaBrandBadge(
                               text: 'community',
                               backgroundColor: AppColors.terracottaSoft,
-                              textColor: AppColors.terracottaDark,
+                              textColor: AppColors.espresso,
                             ),
                           const Spacer(),
                           const Text(
                             'Tap to view details',
                             style: TextStyle(
                               fontSize: 10,
-                              color: AppColors.terracotta,
+                              color: AppColors.forest,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
                           const Icon(
                             Icons.chevron_right,
                             size: 14,
-                            color: AppColors.terracotta,
+                            color: AppColors.forest,
                           ),
                         ],
                       ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../theme/app_colors.dart';
 
 class NotificationModel {
@@ -46,7 +47,8 @@ class NotificationModel {
       communityId: json['community_id'] as String?,
       isRead: json['is_read'] as bool? ?? false,
       createdAt: json['created_at'] != null
-          ? DateTime.tryParse(json['created_at'].toString())?.toLocal() ?? DateTime.now()
+          ? DateTime.tryParse(json['created_at'].toString())?.toLocal() ??
+                DateTime.now()
           : DateTime.now(),
       updatedAt: json['updated_at'] != null
           ? DateTime.tryParse(json['updated_at'].toString())?.toLocal()
@@ -105,7 +107,8 @@ class NotificationModel {
   }
 
   bool get isBorrowRequest =>
-      referenceType == 'borrow_request' || eventType.startsWith('borrow_request_');
+      referenceType == 'borrow_request' ||
+      eventType.startsWith('borrow_request_');
 
   bool get isCommunity =>
       referenceType == 'community' || eventType.startsWith('membership_');

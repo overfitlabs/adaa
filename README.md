@@ -37,7 +37,7 @@ app/
 │   │   │   ├── widgets/            # Wordmark, responsive desktop shell, image loaders
 │   │   │   └── models/             # Dart data models
 │   │   ├── features/
-│   │   │   ├── splash/             # Native & Flutter Stitch launch splash
+│   │   │   ├── splash/             # Native & Flutter launch splash
 │   │   │   ├── auth/               # Strict Supabase authentication & session isolation
 │   │   │   ├── home/               # Editorial greeting, wardrobe capsule, studio quick tiles
 │   │   │   ├── wardrobe/           # Digital closet, category chips, 4/5 garment cards

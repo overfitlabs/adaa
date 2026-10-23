@@ -9,7 +9,7 @@ import 'auth_screen.dart';
 
 /// Root Authentication Gate for `adaa`.
 /// Enforces the strict rule that NO guest or anonymous user experience exists:
-/// - When a valid authenticated session exists: greets the user via the Stitch `SplashScreen`
+/// - When a valid authenticated session exists: greets the user via the `SplashScreen`
 ///   before seamlessly transitioning into `HomeScreen`.
 /// - When no valid session exists: renders `AuthScreen`.
 /// - Never permits unauthenticated access to protected wardrobe or community data.
@@ -35,11 +35,11 @@ class _AuthGateState extends State<AuthGate> {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
 
-    // When an authenticated session is active on app launch, greet with the Stitch splash screen
-    if (widget.showSplash && !_isTestEnvironment && !_splashCompleted && auth.isAuthenticated) {
+    // Show initial splash screen for both authenticated and unauthenticated users on app launch
+    if (widget.showSplash && !_isTestEnvironment && !_splashCompleted) {
       return SplashScreen(
         autoNavigate: false,
-        displayDuration: const Duration(milliseconds: 1000),
+        displayDuration: const Duration(milliseconds: 1500),
         onComplete: () {
           if (mounted) {
             setState(() => _splashCompleted = true);
@@ -55,4 +55,3 @@ class _AuthGateState extends State<AuthGate> {
     return const AuthScreen();
   }
 }
-

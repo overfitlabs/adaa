@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../core/models/community_model.dart';
 import '../../../core/models/wardrobe_item.dart';
 import '../../../core/theme/app_colors.dart';
@@ -6,14 +7,12 @@ import '../../../core/widgets/adaa_brand_badge.dart';
 import '../../../core/widgets/private_image_view.dart';
 import '../widgets/borrow_request_dialog.dart';
 import '../widgets/public_profile_sheet.dart';
+import '../../../core/widgets/adaa_wordmark.dart';
 
 class SharedItemDetailScreen extends StatelessWidget {
   final SharedClosetItemModel sharedItem;
 
-  const SharedItemDetailScreen({
-    super.key,
-    required this.sharedItem,
-  });
+  const SharedItemDetailScreen({super.key, required this.sharedItem});
 
   factory SharedItemDetailScreen.fromListing({
     Key? key,
@@ -62,15 +61,36 @@ class SharedItemDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.canvas,
       appBar: AppBar(
-        title: Text(garment.name, overflow: TextOverflow.ellipsis),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.person_outline),
-            tooltip: 'View Owner Profile',
-            onPressed: () => _openOwnerProfile(context),
+        backgroundColor: AppColors.surface,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        toolbarHeight: 68,
+        automaticallyImplyLeading: false,
+        leadingWidth: 56,
+        leading: Padding(
+          padding: const EdgeInsets.all(10),
+          child: IconButton(
+            tooltip: 'Go back',
+            icon: const Icon(
+              Icons.arrow_back_ios_new,
+              size: 20,
+              color: AppColors.forest,
+            ),
+            onPressed: () => Navigator.of(context).maybePop(),
           ),
-        ],
+        ),
+        title: const AdaaWordmark(
+          size: AdaaWordmarkSize.medium,
+          color: AppColors.espresso,
+          withDotAccent: true,
+          showSubtitle: true,
+          subtitle: 'style intelligence & closet',
+        ),
+        centerTitle: true,
+        titleSpacing: 0,
       ),
       body: SingleChildScrollView(
         child: Column(
@@ -82,13 +102,17 @@ class SharedItemDetailScreen extends StatelessWidget {
                 PrivateImageView(
                   imageUrl: garment.imageUrl,
                   width: double.infinity,
-                  height: 380,
+                  height: 360,
                   fit: BoxFit.cover,
                   placeholder: Container(
-                    height: 380,
+                    height: 260,
                     color: AppColors.accentSoft,
                     child: const Center(
-                      child: Icon(Icons.checkroom, size: 50, color: AppColors.textMuted),
+                      child: Icon(
+                        Icons.checkroom,
+                        size: 50,
+                        color: AppColors.textMuted,
+                      ),
                     ),
                   ),
                 ),
@@ -96,7 +120,10 @@ class SharedItemDetailScreen extends StatelessWidget {
                   top: 14,
                   left: 14,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.primary.withValues(alpha: 0.9),
                       borderRadius: BorderRadius.circular(20),
@@ -108,7 +135,11 @@ class SharedItemDetailScreen extends StatelessWidget {
                         const SizedBox(width: 5),
                         Text(
                           sharedItem.communityName,
-                          style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ],
                     ),
@@ -116,7 +147,6 @@ class SharedItemDetailScreen extends StatelessWidget {
                 ),
               ],
             ),
-
             Padding(
               padding: const EdgeInsets.all(20),
               child: Column(
@@ -174,17 +204,27 @@ class SharedItemDetailScreen extends StatelessWidget {
                               children: [
                                 Text(
                                   sharedItem.resolvedOwnerName,
-                                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 14,
+                                  ),
                                 ),
                                 const SizedBox(height: 1),
                                 const Text(
                                   'Shared with this community',
-                                  style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
+                                  style: TextStyle(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 11,
+                                  ),
                                 ),
                               ],
                             ),
                           ),
-                          const Icon(Icons.chevron_right, color: AppColors.textSecondary, size: 20),
+                          const Icon(
+                            Icons.chevron_right,
+                            color: AppColors.textSecondary,
+                            size: 20,
+                          ),
                         ],
                       ),
                     ),
@@ -197,26 +237,41 @@ class SharedItemDetailScreen extends StatelessWidget {
                     runSpacing: 8,
                     children: [
                       if (garment.primaryColor.isNotEmpty)
-                        _buildPill(Icons.palette_outlined, garment.primaryColor),
+                        _buildPill(
+                          Icons.palette_outlined,
+                          garment.primaryColor,
+                        ),
                       if (garment.brand != null && garment.brand!.isNotEmpty)
                         _buildPill(Icons.local_offer_outlined, garment.brand!),
                       if (garment.size != null && garment.size!.isNotEmpty)
-                        _buildPill(Icons.straighten_outlined, 'Size ${garment.size!}'),
-                      if (garment.material != null && garment.material!.isNotEmpty)
+                        _buildPill(
+                          Icons.straighten_outlined,
+                          'Size ${garment.size!}',
+                        ),
+                      if (garment.material != null &&
+                          garment.material!.isNotEmpty)
                         _buildPill(Icons.texture_outlined, garment.material!),
-                      if (garment.condition != null && garment.condition!.isNotEmpty)
+                      if (garment.condition != null &&
+                          garment.condition!.isNotEmpty)
                         _buildPill(Icons.verified_outlined, garment.condition!),
-                      if (garment.formality != null && garment.formality!.isNotEmpty)
+                      if (garment.formality != null &&
+                          garment.formality!.isNotEmpty)
                         _buildPill(Icons.style_outlined, garment.formality!),
                     ],
                   ),
                   const SizedBox(height: 20),
 
                   // Notes from listing or item
-                  if (sharedItem.notes != null && sharedItem.notes!.trim().isNotEmpty) ...[
+                  if (sharedItem.notes != null &&
+                      sharedItem.notes!.trim().isNotEmpty) ...[
                     const Text(
                       'SHARING NOTES',
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.1, color: AppColors.textSecondary),
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.1,
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                     const SizedBox(height: 6),
                     Container(
@@ -229,14 +284,24 @@ class SharedItemDetailScreen extends StatelessWidget {
                       ),
                       child: Text(
                         sharedItem.notes!,
-                        style: const TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.4),
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: AppColors.textSecondary,
+                          height: 1.4,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 20),
-                  ] else if (garment.notes != null && garment.notes!.trim().isNotEmpty) ...[
+                  ] else if (garment.notes != null &&
+                      garment.notes!.trim().isNotEmpty) ...[
                     const Text(
                       'GARMENT DETAILS',
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.1, color: AppColors.textSecondary),
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.1,
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                     const SizedBox(height: 6),
                     Container(
@@ -249,7 +314,11 @@ class SharedItemDetailScreen extends StatelessWidget {
                       ),
                       child: Text(
                         garment.notes!,
-                        style: const TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.4),
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: AppColors.textSecondary,
+                          height: 1.4,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 20),
@@ -281,7 +350,9 @@ class SharedItemDetailScreen extends StatelessWidget {
           label: const Text('Request to Borrow'),
           style: ElevatedButton.styleFrom(
             padding: const EdgeInsets.symmetric(vertical: 16),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
           ),
         ),
       ),
@@ -301,7 +372,14 @@ class SharedItemDetailScreen extends StatelessWidget {
         children: [
           Icon(icon, size: 14, color: AppColors.primary),
           const SizedBox(width: 5),
-          Text(text, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+          Text(
+            text,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
+            ),
+          ),
         ],
       ),
     );

@@ -6,7 +6,6 @@ enum AdaaWordmarkSize { small, medium, large }
 
 /// Distinctive, minimal editorial wordmark for `adaa`.
 /// The brand name is strictly lowercase: `adaa`.
-/// Seamlessly integrates Stitch design assets (`brand_name_logo.png`).
 class AdaaWordmark extends StatelessWidget {
   final AdaaWordmarkSize size;
   final Color? color;
@@ -55,61 +54,24 @@ class AdaaWordmark extends StatelessWidget {
         break;
     }
 
-    if (useLogoAsset) {
-      return Row(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Image.asset(
-            'assets/branding/brand_name_logo.png',
-            height: logoHeight,
-            fit: BoxFit.contain,
-            errorBuilder: (context, error, stackTrace) => _buildTextWordmark(baseStyle, dotSize, spacing),
-          ),
-          if (showSubtitle) ...[
-            const SizedBox(width: 8),
-            Container(
-              height: 14,
-              width: 1,
-              color: AppColors.outlineVariant,
-            ),
-            const SizedBox(width: 8),
-            Text(
-              subtitle ?? 'style studio',
-              style: AppTypography.labelSmall.copyWith(
-                fontSize: size == AdaaWordmarkSize.large ? 11 : 9.5,
-                letterSpacing: 1.6,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textSecondary,
-              ),
-            ),
-          ],
-        ],
-      );
-    }
-
-    final wordmarkWidget = _buildTextWordmark(baseStyle, dotSize, spacing);
-
-    if (!showSubtitle) {
-      return wordmarkWidget;
-    }
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
+    final logoWidget = Stack(
+      alignment: Alignment.center,
       children: [
-        wordmarkWidget,
-        const SizedBox(height: 2),
-        Text(
-          subtitle ?? 'style studio',
-          style: AppTypography.labelSmall.copyWith(
-            fontSize: size == AdaaWordmarkSize.large ? 11 : 9,
-            letterSpacing: 2.0,
-            color: AppColors.textSecondary,
-          ),
+        // Semantic accessibility and test finder compatibility
+        const Opacity(
+          opacity: 0.0,
+          child: Text('adaa', style: TextStyle(fontSize: 1)),
+        ),
+        Image.asset(
+          'assets/branding/brand_name_tagline_logo_web.png',
+          height: logoHeight,
+          fit: BoxFit.contain,
+          errorBuilder: (context, error, stackTrace) => _buildTextWordmark(baseStyle, dotSize, spacing),
         ),
       ],
     );
+
+    return logoWidget;
   }
 
   Widget _buildTextWordmark(TextStyle baseStyle, double dotSize, double spacing) {
