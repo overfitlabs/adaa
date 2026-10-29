@@ -11,6 +11,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/private_image_view.dart';
 import '../../../state/wardrobe_provider.dart';
 import '../../../core/widgets/adaa_wordmark.dart';
+import '../../analysis/screens/item_review_screen.dart';
 
 class AddWardrobeItemScreen extends StatefulWidget {
   const AddWardrobeItemScreen({super.key});
@@ -43,6 +44,7 @@ class _AddWardrobeItemScreenState extends State<AddWardrobeItemScreen> {
   bool _isDetecting = false;
   bool _isSaving = false;
   DetectedFashionItem? _detectedItem;
+  List<DetectedFashionItem> _detectedItems = [];
   bool _showExtractedCrop = true;
 
   final List<String> _categoryOptions = [
@@ -118,9 +120,14 @@ class _AddWardrobeItemScreenState extends State<AddWardrobeItemScreen> {
     try {
       final data = await ApiClient.detectWardrobeItemFromPhoto(_selectedImage!);
       setState(() {
+        final rawList = data['detected_items'] as List<dynamic>? ?? [];
+        _detectedItems = rawList
+            .map((e) => DetectedFashionItem.fromJson(e as Map<String, dynamic>))
+            .toList();
+
         _detectedItem = data['detected_item'] != null
             ? DetectedFashionItem.fromJson(data['detected_item'])
-            : null;
+            : (_detectedItems.isNotEmpty ? _detectedItems.first : null);
         _showExtractedCrop = true;
         final detected = _detectedItem;
 
@@ -347,6 +354,11 @@ class _AddWardrobeItemScreenState extends State<AddWardrobeItemScreen> {
               const SizedBox(height: 22),
               // Image Picker Area
               _buildImagePickerBox(),
+
+              if (_detectedItems.length > 1) ...[
+                const SizedBox(height: 14),
+                _buildMultiItemBanner(),
+              ],
 
               if (_selectedImage != null) ...[
                 const SizedBox(height: 10),
@@ -637,6 +649,71 @@ class _AddWardrobeItemScreenState extends State<AddWardrobeItemScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildMultiItemBanner() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColors.accentSoft,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.auto_awesome, color: AppColors.primary, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${_detectedItems.length} garments detected in this photo!',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primary,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                const Text(
+                  'Review and add all pieces to your closet at once.',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+            ),
+            onPressed: () async {
+              final res = await Navigator.push<bool>(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ItemReviewScreen(
+                    customItems: _detectedItems,
+                    sourceImageUrl: _selectedImage?.path,
+                    initialIntent: ItemReviewIntent.addToCloset,
+                  ),
+                ),
+              );
+              if (res == true && mounted) {
+                Navigator.pop(context, true);
+              }
+            },
+            child: const Text('Add All'),
+          ),
+        ],
       ),
     );
   }

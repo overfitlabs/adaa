@@ -138,8 +138,8 @@ async def test_gemini_vision_provider_markdown_fences_and_parsing(tmp_path):
         assert vibe == "Minimalist Sartorial"
         assert len(items) == 1
         assert items[0].name == "Navy Wool Blazer"
-        assert items[0].category == "jackets"
-        assert items[0].primary_color == "Navy"
+        assert items[0].category in ("jackets", "outerwear")
+        assert items[0].primary_color in ("Navy", "navy")
         assert items[0].attributes.material == "wool"
 
 
@@ -1327,3 +1327,213 @@ def test_bulk_add_wardrobe_items_saves_extracted_crop_references(client):
     assert data["saved_count"] == 2
     assert data["results"][0]["item"]["image_path"] == "extracted/crop_shirt_sq.jpg"
     assert data["results"][1]["item"]["image_path"] == "extracted/crop_trousers_sq.jpg"
+
+
+def test_metadata_normalization_canonical_rules():
+    """
+    Verifies that the metadata normalization service standardizes categories, colors,
+    materials, patterns, fits, and seasons according to canonical rules, preserving
+    distinctions (e.g. cotton blend vs cotton) and rejecting verbose sentences.
+    """
+    from app.services.metadata_normalizer import (
+        normalize_category,
+        normalize_color,
+        normalize_pattern,
+        normalize_material,
+        normalize_fit,
+        normalize_season,
+        normalize_garment_metadata,
+    )
+
+    # Categories
+    assert normalize_category("t-shirt") == "tops"
+    assert normalize_category("JEANS") == "bottoms"
+    assert normalize_category("blazer") == "outerwear"
+    assert normalize_category("sneakers") == "shoes"
+    assert normalize_category("tote bag") == "bags"
+    assert normalize_category("gold necklace") == "accessories"
+    assert normalize_category("unknown random widget") == "other"
+
+    # Colors
+    assert normalize_color("Lime Green") == "lime green"
+    assert normalize_color("dark-blue") == "dark blue"
+    assert normalize_color("off white") == "off-white"
+    assert normalize_color("gray") == "grey"
+
+    # Materials
+    assert normalize_material("100% Cotton") == "cotton"
+    assert normalize_material("cotton blend") == "cotton blend"
+    assert normalize_material("cotton blend") != normalize_material("cotton")
+    assert normalize_material("pure wool") == "wool"
+    assert normalize_material("vegan leather") == "faux leather"
+    assert normalize_material("uncertain impossible to tell from image") is None
+
+    # Patterns
+    assert normalize_pattern("stripes") == "striped"
+    assert normalize_pattern("polka dots") == "polka dot"
+    assert normalize_pattern("plain") == "solid"
+    assert normalize_pattern("graphic") == "graphic print"
+
+    # Fits
+    assert normalize_fit("slim fit") == "slim"
+    assert normalize_fit("oversize") == "oversized"
+    assert normalize_fit("wide-leg") == "wide leg"
+    assert normalize_fit("This is a very loose and breezy silhouette that sits nicely") == "loose"
+    assert normalize_fit("unclear") is None
+
+    # Seasons
+    assert normalize_season("autumn") == "fall"
+    assert normalize_season("all seasons") == "all-season"
+    assert normalize_season("year-round") == "all-season"
+    assert normalize_season("unknown") is None
+
+    # Batch normalization
+    res = normalize_garment_metadata(
+        category="t-shirt",
+        primary_color="Lime Green",
+        secondary_color="lime green",  # should be cleared because identical to primary
+        material="Cotton Blend",
+        fit="slim-fit",
+        season="autumn",
+        pattern="stripes",
+        name="  Striped Summer Tee  ",
+    )
+    assert res["category"] == "tops"
+    assert res["primary_color"] == "lime green"
+    assert res["secondary_color"] is None
+    assert res["material"] == "cotton blend"
+    assert res["fit"] == "slim"
+    assert res["season"] == "fall"
+    assert res["pattern"] == "striped"
+    assert res["name"] == "Striped Summer Tee"
+
+
+def test_wardrobe_detect_item_never_creates_outfit_analysis_record(client, sample_image_bytes, db_session):
+    """
+    CRITICAL: Verifies that uploading an image to /api/wardrobe/detect-item for closet
+    cataloging extracts garments without creating an OutfitAnalysisRecord in the database,
+    keeping personal wardrobe uploads separate from outfit inspiration analysis history.
+    """
+    from app.models import OutfitAnalysisRecord
+    from app.schemas import DetectedFashionItem, StyleAttributes
+
+    initial_analysis_count = db_session.query(OutfitAnalysisRecord).count()
+
+    item_top = DetectedFashionItem(
+        id="det-top",
+        category="tops",
+        name="White Oxford Shirt",
+        primary_color="White",
+        attributes=StyleAttributes(material="cotton", fit="regular"),
+    )
+    item_pants = DetectedFashionItem(
+        id="det-pants",
+        category="bottoms",
+        name="Navy Chinos",
+        primary_color="Navy",
+        attributes=StyleAttributes(material="cotton", fit="straight"),
+    )
+
+    files = {"file": ("my_outfit.jpg", io.BytesIO(sample_image_bytes), "image/jpeg")}
+
+    with patch("app.api.routes_wardrobe.get_vision_provider") as mock_vision:
+        mock_provider = MagicMock()
+        mock_provider.analyze_outfit_image = AsyncMock(
+            return_value=("My daily work outfit", "Smart Casual", [item_top, item_pants])
+        )
+        mock_vision.return_value = mock_provider
+
+        res = client.post("/api/wardrobe/detect-item", files=files)
+        assert res.status_code == 200
+        data = res.json()
+        assert len(data["detected_items"]) == 2
+        assert data["detected_items"][0]["name"] == "White Oxford Shirt"
+        assert data["detected_items"][1]["name"] == "Navy Chinos"
+
+        # Verify ZERO outfit analysis records were created
+        final_analysis_count = db_session.query(OutfitAnalysisRecord).count()
+        assert final_analysis_count == initial_analysis_count, "Wardrobe detection must not create outfit analysis records"
+
+
+def test_explicit_outfit_analysis_creates_and_lists_analysis_record(client, sample_image_bytes, db_session):
+    """
+    Verifies that explicit outfit analysis (/api/analysis) properly creates an OutfitAnalysisRecord
+    and appears in list_recent_analyses, while wardrobe detection does not.
+    """
+    from app.models import OutfitAnalysisRecord
+    from app.config import settings
+
+    with patch.object(settings, "USE_MEDIAFLOWS", False):
+        with patch("app.api.routes_analysis.get_vision_provider") as mock_vision:
+            mock_provider = MagicMock()
+            mock_provider.analyze_outfit_image = AsyncMock(
+                return_value=("Editorial streetwear look", "Streetwear", [])
+            )
+            mock_vision.return_value = mock_provider
+
+            files = {"file": ("streetwear.jpg", io.BytesIO(sample_image_bytes), "image/jpeg")}
+            res = client.post("/api/analysis/analyze-image", files=files)
+            assert res.status_code == 200
+            analysis_id = res.json()["analysis_id"]
+
+            # Record must exist in DB
+            rec = db_session.query(OutfitAnalysisRecord).filter(OutfitAnalysisRecord.id == analysis_id).first()
+            assert rec is not None
+            assert rec.vibe == "Streetwear"
+
+            # Must appear in list_recent_analyses
+            list_res = client.get("/api/analysis")
+            assert list_res.status_code == 200
+            analyses = list_res.json()
+            assert any(a["analysis_id"] == analysis_id for a in analyses)
+
+
+def test_bulk_wardrobe_items_enforces_user_ownership_and_normalizes(client, db_session):
+    """
+    Verifies that bulk wardrobe creation persists user_id ownership, normalizes attributes,
+    and does not create any outfit analysis records.
+    """
+    from app.models import WardrobeItem, OutfitAnalysisRecord
+    from app.auth.supabase_auth import AuthenticatedUser, get_optional_current_user
+    from app.main import app
+
+    test_user = AuthenticatedUser(
+        id="usr-owner-42",
+        email="owner@adaa.fashion",
+        role="authenticated",
+    )
+
+    app.dependency_overrides[get_optional_current_user] = lambda: test_user
+    try:
+        payload = {
+            "items": [
+                {
+                    "client_id": "c-100",
+                    "name": "T-Shirt With Logo",
+                    "category": "t-shirt",  # should normalize to 'tops'
+                    "primary_color": "Lime Green",  # should normalize to 'lime green'
+                    "material": "100% Cotton",  # should normalize to 'cotton'
+                    "fit": "slim fit",  # should normalize to 'slim'
+                    "season": "autumn",  # should normalize to 'fall'
+                    "pattern": "stripes",  # should normalize to 'striped'
+                    "image_path": "wardrobe/test_item_1.jpg",
+                }
+            ]
+        }
+        res = client.post("/api/wardrobe/items/bulk", json=payload)
+        assert res.status_code == 201
+        data = res.json()
+        assert data["saved_count"] == 1
+        item_id = data["results"][0]["item"]["id"]
+
+        saved_item = db_session.query(WardrobeItem).filter(WardrobeItem.id == item_id).first()
+        assert saved_item is not None
+        assert saved_item.user_id == "usr-owner-42", "Wardrobe item must be owned by authenticated user"
+        assert saved_item.category == "tops"
+        assert saved_item.primary_color == "lime green"
+        assert saved_item.material == "cotton"
+        assert saved_item.fit == "slim"
+        assert saved_item.season == "fall"
+        assert saved_item.pattern == "striped"
+    finally:
+        app.dependency_overrides.pop(get_optional_current_user, None)

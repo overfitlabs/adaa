@@ -251,5 +251,54 @@ void main() {
         expect(view.fit, equals(BoxFit.contain));
       }
     });
+
+    testWidgets('Wardrobe detection flow renders customItems without requiring an analysis record', (tester) async {
+      final fakeWardrobe = FakeWardrobeForReview();
+      final customItem1 = DetectedFashionItem(
+        id: 'c-1',
+        category: 'tops',
+        name: 'Cotton Oxford Shirt',
+        primaryColor: 'White',
+        confidence: 0.95,
+        attributes: StyleAttributes(material: 'cotton', pattern: 'solid'),
+        extractedImageUrl: 'https://example.com/c1.jpg',
+      );
+      final customItem2 = DetectedFashionItem(
+        id: 'c-2',
+        category: 'bottoms',
+        name: 'Denim Jeans',
+        primaryColor: 'Blue',
+        confidence: 0.92,
+        attributes: StyleAttributes(material: 'denim', pattern: 'solid'),
+        extractedImageUrl: 'https://example.com/c2.jpg',
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MultiProvider(
+            providers: [
+              ChangeNotifierProvider<WardrobeProvider>.value(value: fakeWardrobe),
+              ChangeNotifierProvider<AnalysisProvider>(create: (_) => AnalysisProvider()),
+            ],
+            child: ItemReviewScreen(
+              customItems: [customItem1, customItem2],
+              sourceImageUrl: 'https://example.com/full.jpg',
+              initialIntent: ItemReviewIntent.addToCloset,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.text('Cotton Oxford Shirt'), findsOneWidget);
+      expect(find.text('Denim Jeans'), findsOneWidget);
+      expect(find.text('Save 2 of 2 to My Closet'), findsOneWidget);
+
+      await tester.tap(find.text('Save 2 of 2 to My Closet'));
+      await tester.pump();
+
+      expect(fakeWardrobe.bulkAddCalled, isTrue);
+      expect(fakeWardrobe.lastSavedDetectedItems.length, equals(2));
+    });
   });
 }

@@ -19,6 +19,16 @@ from app.schemas import (
 )
 from app.services.image_storage import image_storage_service
 from app.services.vision_provider import get_vision_provider
+from app.services.metadata_normalizer import (
+    normalize_garment_metadata,
+    normalize_category,
+    normalize_color,
+    normalize_pattern,
+    normalize_material,
+    normalize_fit,
+    normalize_season,
+    normalize_formality,
+)
 from app.auth.supabase_auth import get_optional_current_user, get_current_user, AuthenticatedUser
 
 logger = logging.getLogger("wardrobelens.routes_wardrobe")
@@ -78,60 +88,12 @@ async def detect_wardrobe_item_from_photo(
 ):
     """
     Analyzes a photo of a wardrobe garment or full outfit to pre-fill metadata
-    (category, colors, material, pattern, fit) before saving.
-    Extracts individual garments as standardized square crops.
-    When USE_MEDIAFLOWS is enabled, routes through the MediaFlows pipeline with Gemini fallback.
+    (category, colors, material, pattern, fit) before saving to personal closet.
+    Extracts individual garments as standardized square crops (600x600).
+    CRITICAL: Does NOT create an OutfitAnalysisRecord in outfit_analyses, ensuring
+    wardrobe cataloging is strictly separated from outfit inspiration analysis.
     Cleans up any temporary staging files immediately to prevent orphaned disk assets.
     """
-    if settings.USE_MEDIAFLOWS:
-        from app.api.routes_analysis import analyze_outfit_image, _execute_direct_gemini_fallback
-        from app.models import OutfitAnalysisRecord
-        import asyncio
-        import time
-
-        analysis_res = await analyze_outfit_image(file=file, db=db, current_user=current_user)
-        if getattr(analysis_res, "status", "completed") in ("pending", "processing"):
-            scan_id = analysis_res.analysis_id
-            start_wait = time.time()
-            while time.time() - start_wait < settings.MEDIAFLOWS_TIMEOUT_SECONDS:
-                await asyncio.sleep(1.0)
-                db.expire_all()
-                rec = db.query(OutfitAnalysisRecord).filter(OutfitAnalysisRecord.id == scan_id).first()
-                if rec and rec.status == "completed":
-                    items_list = json.loads(rec.items_json) if rec.items_json else []
-                    primary_item = items_list[0] if items_list else None
-                    return {
-                        "detected_item": primary_item,
-                        "detected_items": items_list,
-                        "detected_vibe": rec.vibe,
-                        "summary": rec.summary,
-                    }
-                elif rec and rec.status == "failed":
-                    break
-
-            # Fallback if webhook timed out or failed
-            rec = db.query(OutfitAnalysisRecord).filter(OutfitAnalysisRecord.id == scan_id).first()
-            if rec and rec.status != "completed":
-                try:
-                    await _execute_direct_gemini_fallback(rec, db)
-                    items_list = json.loads(rec.items_json) if rec.items_json else []
-                    return {
-                        "detected_item": items_list[0] if items_list else None,
-                        "detected_items": items_list,
-                        "detected_vibe": rec.vibe,
-                        "summary": rec.summary,
-                    }
-                except Exception as fb_err:
-                    logger.warning("MediaFlows fallback failed in detect-item: %s", str(fb_err))
-
-        primary_item = analysis_res.items[0] if analysis_res.items else None
-        return {
-            "detected_item": primary_item.model_dump() if hasattr(primary_item, "model_dump") else primary_item,
-            "detected_items": [i.model_dump() if hasattr(i, "model_dump") else i for i in analysis_res.items],
-            "detected_vibe": analysis_res.vibe_or_style,
-            "summary": analysis_res.summary,
-        }
-
     raw_bytes = await file.read()
     clean_bytes, ext, width, height = image_storage_service.validate_and_sanitize_image(file, raw_bytes)
 
@@ -147,7 +109,7 @@ async def detect_wardrobe_item_from_photo(
         vision = get_vision_provider()
         summary, vibe, items = await vision.analyze_outfit_image(temp_path)
 
-        # Upload original photo under inspirations/wardrobe
+        # Upload original photo under wardrobe subfolder
         uploaded_meta = await image_storage_service.upload(
             user_id=current_user.id if current_user else None,
             subfolder="wardrobe",
@@ -267,18 +229,31 @@ async def create_wardrobe_item(
         final_format = final_image_path.split(".")[-1] if "." in final_image_path else "jpg"
         final_version = None
 
+    clean_meta = normalize_garment_metadata(
+        category=category,
+        primary_color=primary_color,
+        secondary_color=secondary_color,
+        pattern=pattern,
+        material=material,
+        fit=fit,
+        season=season,
+        formality=formality,
+        name=name,
+        sub_category=sub_category,
+    )
+
     item = WardrobeItem(
         user_id=user_id,
-        name=name.strip(),
-        category=category.strip().lower(),
-        sub_category=sub_category.strip() if sub_category else None,
-        primary_color=primary_color.strip(),
-        secondary_color=secondary_color.strip() if secondary_color else None,
-        pattern=pattern.strip() if pattern else None,
-        material=material.strip() if material else None,
-        fit=fit.strip() if fit else None,
-        season=season.strip() if season else None,
-        formality=formality.strip() if formality else None,
+        name=clean_meta["name"],
+        category=clean_meta["category"],
+        sub_category=clean_meta["sub_category"],
+        primary_color=clean_meta["primary_color"],
+        secondary_color=clean_meta["secondary_color"],
+        pattern=clean_meta["pattern"],
+        material=clean_meta["material"],
+        fit=clean_meta["fit"],
+        season=clean_meta["season"],
+        formality=clean_meta["formality"],
         brand=brand.strip() if brand else None,
         size=size.strip() if size else None,
         condition=condition.strip() if condition else None,
@@ -334,6 +309,19 @@ def bulk_create_wardrobe_items(
     for item_data in payload.items:
         client_id = item_data.client_id
         try:
+            clean_meta = normalize_garment_metadata(
+                category=item_data.category,
+                primary_color=item_data.primary_color,
+                secondary_color=item_data.secondary_color,
+                pattern=item_data.pattern,
+                material=item_data.material,
+                fit=item_data.fit,
+                season=item_data.season,
+                formality=item_data.formality,
+                name=item_data.name,
+                sub_category=item_data.sub_category,
+            )
+
             # Clean image path (strip any leading slashes or /storage/ prefix)
             raw_img = (item_data.image_path or "").strip().lstrip("/")
             if raw_img.startswith("storage/"):
@@ -343,8 +331,8 @@ def bulk_create_wardrobe_items(
             existing = None
             if raw_img and raw_img != "wardrobe/placeholder.jpg":
                 q = db.query(WardrobeItem).filter(
-                    WardrobeItem.name == item_data.name.strip(),
-                    WardrobeItem.category == item_data.category.strip().lower(),
+                    WardrobeItem.name == clean_meta["name"],
+                    WardrobeItem.category == clean_meta["category"],
                     (WardrobeItem.image_path == raw_img)
                     | (WardrobeItem.image_path == f"/{raw_img}")
                     | (WardrobeItem.image_path == f"storage/{raw_img}"),
@@ -379,16 +367,16 @@ def bulk_create_wardrobe_items(
 
             new_item = WardrobeItem(
                 user_id=user_id,
-                name=item_data.name.strip(),
-                category=item_data.category.strip().lower(),
-                sub_category=item_data.sub_category.strip() if item_data.sub_category else None,
-                primary_color=item_data.primary_color.strip(),
-                secondary_color=item_data.secondary_color.strip() if item_data.secondary_color else None,
-                pattern=item_data.pattern.strip() if item_data.pattern else None,
-                material=item_data.material.strip() if item_data.material else None,
-                fit=item_data.fit.strip() if item_data.fit else None,
-                season=item_data.season.strip() if item_data.season else None,
-                formality=item_data.formality.strip() if item_data.formality else None,
+                name=clean_meta["name"],
+                category=clean_meta["category"],
+                sub_category=clean_meta["sub_category"],
+                primary_color=clean_meta["primary_color"],
+                secondary_color=clean_meta["secondary_color"],
+                pattern=clean_meta["pattern"],
+                material=clean_meta["material"],
+                fit=clean_meta["fit"],
+                season=clean_meta["season"],
+                formality=clean_meta["formality"],
                 brand=item_data.brand.strip() if item_data.brand else None,
                 size=item_data.size.strip() if item_data.size else None,
                 condition=item_data.condition.strip() if item_data.condition else None,
@@ -519,6 +507,23 @@ def update_wardrobe_item(
     data = update_data.model_dump(exclude_unset=True)
     if "tags" in data and data["tags"] is not None:
         item.tags = json.dumps(data.pop("tags"))
+
+    if "category" in data and data["category"] is not None:
+        data["category"] = normalize_category(data["category"])
+    if "primary_color" in data and data["primary_color"] is not None:
+        data["primary_color"] = normalize_color(data["primary_color"], default_neutral=True)
+    if "secondary_color" in data:
+        data["secondary_color"] = normalize_color(data["secondary_color"], default_neutral=False)
+    if "pattern" in data:
+        data["pattern"] = normalize_pattern(data["pattern"])
+    if "material" in data:
+        data["material"] = normalize_material(data["material"])
+    if "fit" in data:
+        data["fit"] = normalize_fit(data["fit"])
+    if "season" in data:
+        data["season"] = normalize_season(data["season"])
+    if "formality" in data:
+        data["formality"] = normalize_formality(data["formality"])
 
     for key, value in data.items():
         if hasattr(item, key):

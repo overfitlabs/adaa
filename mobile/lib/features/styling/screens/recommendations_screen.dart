@@ -777,7 +777,7 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
 
           // Horizontal Garment Thumbnails
           SizedBox(
-            height: 148,
+            height: 154,
             child: ListView.separated(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               scrollDirection: Axis.horizontal,
@@ -789,12 +789,13 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
                   onTap: () => _showInspectOutfitSheet(context, outfit),
                   borderRadius: BorderRadius.circular(14),
                   child: Container(
-                    width: 90,
+                    width: 96,
                     decoration: BoxDecoration(
                       color: AppColors.background,
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(color: AppColors.borderLight),
                     ),
+                    clipBehavior: Clip.antiAlias,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -827,7 +828,7 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
                           child: Padding(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 6,
-                              vertical: 4,
+                              vertical: 3,
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,

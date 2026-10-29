@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/models/garment_item.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_endpoints.dart';
 import '../../../core/theme/app_colors.dart';
@@ -88,10 +89,81 @@ class _HomeScreenState extends State<HomeScreen> {
       if (picked == null) return;
       if (!mounted) return;
 
-      await _runAnalysis(picked, intent: intent);
+      if (intent == ItemReviewIntent.addToCloset) {
+        await _runWardrobeDetection(picked);
+      } else {
+        await _runAnalysis(picked, intent: intent);
+      }
     } catch (e) {
       if (mounted) {
         _showAnalysisErrorDialog('Failed to pick image: $e', intent: intent);
+      }
+    }
+  }
+
+  Future<void> _runWardrobeDetection(XFile file) async {
+    bool dialogPopped = false;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => const _AnalyzingDialog(
+        title: 'Detecting Garments...',
+        subtitle: 'Isolating pieces and extracting metadata for your closet...',
+      ),
+    );
+
+    try {
+      final data = await ApiClient.detectWardrobeItemFromPhoto(file);
+      if (mounted && !dialogPopped) {
+        dialogPopped = true;
+        Navigator.of(context, rootNavigator: true).pop();
+      }
+
+      final rawItems = data['detected_items'] as List<dynamic>? ?? [];
+      final items = rawItems
+          .map((e) => DetectedFashionItem.fromJson(e as Map<String, dynamic>))
+          .toList();
+      final sourceUrl = data['detected_item']?['extracted_image_url'] as String? ??
+          (items.isNotEmpty ? items.first.extractedImageUrl : null);
+
+      if (items.isEmpty && mounted) {
+        _showAnalysisErrorDialog(
+          'No clear garments could be detected in the uploaded photo. Please try a clearer angle.',
+          intent: ItemReviewIntent.addToCloset,
+        );
+        return;
+      }
+
+      if (mounted) {
+        final res = await Navigator.of(context).push<bool>(
+          MaterialPageRoute(
+            builder: (_) => ItemReviewScreen(
+              customItems: items,
+              sourceImageUrl: sourceUrl,
+              initialIntent: ItemReviewIntent.addToCloset,
+            ),
+          ),
+        );
+
+        if (res == true && mounted) {
+          // Immediately refresh personal wardrobe and seamlessly navigate to My Closet tab
+          await context.read<WardrobeProvider>().loadWardrobe(silent: false);
+          setState(() => _currentTabIndex = 2);
+        }
+      }
+    } catch (e) {
+      if (mounted && !dialogPopped) {
+        dialogPopped = true;
+        Navigator.of(context, rootNavigator: true).pop();
+      }
+      if (mounted) {
+        _showAnalysisErrorDialog('Detection error: $e', intent: ItemReviewIntent.addToCloset);
+      }
+    } finally {
+      if (mounted && !dialogPopped) {
+        dialogPopped = true;
+        Navigator.of(context, rootNavigator: true).pop();
       }
     }
   }
@@ -2059,31 +2131,37 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 class _AnalyzingDialog extends StatelessWidget {
-  const _AnalyzingDialog();
+  final String title;
+  final String subtitle;
+
+  const _AnalyzingDialog({
+    this.title = 'Analyzing Outfit...',
+    this.subtitle = 'Identifying garments, silhouettes, colors, and extracting candidate pieces...',
+  });
 
   @override
   Widget build(BuildContext context) {
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: const Padding(
-        padding: EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            CircularProgressIndicator(
+            const CircularProgressIndicator(
               color: AppColors.terracotta,
               strokeWidth: 3,
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             Text(
-              'Analyzing Outfit...',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+              title,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
             ),
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
             Text(
-              'Identifying garments, silhouettes, colors, and extracting candidate pieces...',
+              subtitle,
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+              style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
             ),
           ],
         ),

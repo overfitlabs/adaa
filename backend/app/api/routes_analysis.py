@@ -23,6 +23,7 @@ from app.schemas import (
 )
 from app.services.image_storage import image_storage_service
 from app.services.vision_provider import get_vision_provider
+from app.services.metadata_normalizer import normalize_garment_metadata
 from app.auth.supabase_auth import get_optional_current_user, AuthenticatedUser
 
 logger = logging.getLogger("wardrobelens.routes_analysis")
@@ -264,19 +265,27 @@ def _parse_and_validate_mediaflows_gemini(raw_output: Any) -> Tuple[str, str, Li
         if not isinstance(attr_dict, dict):
             attr_dict = {}
 
-        attributes = StyleAttributes(
-            pattern=str(attr_dict.get("pattern"))[:50] if attr_dict.get("pattern") else None,
-            material=str(attr_dict.get("material"))[:50] if attr_dict.get("material") else None,
-            fit=str(attr_dict.get("fit"))[:50] if attr_dict.get("fit") else None,
-            formality=str(attr_dict.get("formality"))[:50] if attr_dict.get("formality") else None,
-            season=str(attr_dict.get("season"))[:50] if attr_dict.get("season") else None,
-            neckline_or_collar=str(attr_dict.get("neckline_or_collar"))[:50] if attr_dict.get("neckline_or_collar") else None,
+        clean_meta = normalize_garment_metadata(
+            category=item_data.get("category"),
+            primary_color=item_data.get("primary_color"),
+            secondary_color=item_data.get("secondary_color"),
+            pattern=attr_dict.get("pattern"),
+            material=attr_dict.get("material"),
+            fit=attr_dict.get("fit"),
+            season=attr_dict.get("season"),
+            formality=attr_dict.get("formality"),
+            name=item_data.get("name"),
+            sub_category=item_data.get("sub_category"),
         )
 
-        category = str(item_data.get("category") or "other").strip().lower()[:50]
-        name = str(item_data.get("name") or "Fashion Item").strip()[:100]
-        primary_color = str(item_data.get("primary_color") or "Neutral").strip()[:50]
-        secondary_color = str(item_data.get("secondary_color")).strip()[:50] if item_data.get("secondary_color") else None
+        attributes = StyleAttributes(
+            pattern=clean_meta["pattern"],
+            material=clean_meta["material"],
+            fit=clean_meta["fit"],
+            formality=clean_meta["formality"],
+            season=clean_meta["season"],
+            neckline_or_collar=str(attr_dict.get("neckline_or_collar"))[:50] if attr_dict.get("neckline_or_collar") else None,
+        )
 
         try:
             confidence = float(item_data.get("confidence", 0.9))
@@ -286,11 +295,11 @@ def _parse_and_validate_mediaflows_gemini(raw_output: Any) -> Tuple[str, str, Li
 
         item = DetectedFashionItem(
             id=str(uuid.uuid4()),
-            category=category,
-            sub_category=str(item_data.get("sub_category"))[:80] if item_data.get("sub_category") else None,
-            name=name,
-            primary_color=primary_color,
-            secondary_color=secondary_color,
+            category=clean_meta["category"],
+            sub_category=clean_meta["sub_category"],
+            name=clean_meta["name"],
+            primary_color=clean_meta["primary_color"],
+            secondary_color=clean_meta["secondary_color"],
             attributes=attributes,
             confidence=confidence,
             bounding_box_description=str(item_data.get("bounding_box_description"))[:150] if item_data.get("bounding_box_description") else None,

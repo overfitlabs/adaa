@@ -16,12 +16,16 @@ enum ItemReviewIntent {
 }
 
 class ItemReviewScreen extends StatefulWidget {
-  final OutfitAnalysisResponse analysis;
+  final OutfitAnalysisResponse? analysis;
+  final List<DetectedFashionItem>? customItems;
+  final String? sourceImageUrl;
   final ItemReviewIntent? initialIntent;
 
   const ItemReviewScreen({
     super.key,
-    required this.analysis,
+    this.analysis,
+    this.customItems,
+    this.sourceImageUrl,
     this.initialIntent,
   });
 
@@ -40,7 +44,7 @@ class _ItemReviewScreenState extends State<ItemReviewScreen> {
   void initState() {
     super.initState();
     _intent = widget.initialIntent ?? ItemReviewIntent.addToCloset;
-    _items = List.from(widget.analysis.items);
+    _items = List.from(widget.customItems ?? widget.analysis?.items ?? []);
 
     if (_intent == ItemReviewIntent.addToCloset) {
       _selectedIds.addAll(_items.map((i) => i.id));
@@ -78,8 +82,11 @@ class _ItemReviewScreenState extends State<ItemReviewScreen> {
     final nameCtrl = TextEditingController(text: item.name);
     final catCtrl = TextEditingController(text: item.category);
     final colorCtrl = TextEditingController(text: item.primaryColor);
+    final secColorCtrl = TextEditingController(text: item.secondaryColor ?? '');
     final materialCtrl = TextEditingController(text: item.attributes.material ?? '');
+    final patternCtrl = TextEditingController(text: item.attributes.pattern ?? '');
     final fitCtrl = TextEditingController(text: item.attributes.fit ?? '');
+    final seasonCtrl = TextEditingController(text: item.attributes.season ?? '');
 
     showDialog(
       context: context,
@@ -97,7 +104,7 @@ class _ItemReviewScreenState extends State<ItemReviewScreen> {
               const SizedBox(height: 12),
               TextField(
                 controller: catCtrl,
-                decoration: const InputDecoration(labelText: 'Category (tops, jackets, jeans, trousers, footwear, bags)'),
+                decoration: const InputDecoration(labelText: 'Category (tops, bottoms, outerwear, dresses, shoes, bags, accessories)'),
               ),
               const SizedBox(height: 12),
               TextField(
@@ -106,13 +113,28 @@ class _ItemReviewScreenState extends State<ItemReviewScreen> {
               ),
               const SizedBox(height: 12),
               TextField(
+                controller: secColorCtrl,
+                decoration: const InputDecoration(labelText: 'Secondary Color (optional)'),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: patternCtrl,
+                decoration: const InputDecoration(labelText: 'Pattern (e.g. solid, striped, floral, plaid)'),
+              ),
+              const SizedBox(height: 12),
+              TextField(
                 controller: materialCtrl,
-                decoration: const InputDecoration(labelText: 'Material (optional)'),
+                decoration: const InputDecoration(labelText: 'Material (e.g. cotton, denim, wool, linen)'),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: fitCtrl,
-                decoration: const InputDecoration(labelText: 'Fit / Silhouette (optional)'),
+                decoration: const InputDecoration(labelText: 'Fit / Silhouette (e.g. slim, regular, relaxed, oversized)'),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: seasonCtrl,
+                decoration: const InputDecoration(labelText: 'Season (spring, summer, fall, winter, all-season)'),
               ),
             ],
           ),
@@ -131,13 +153,13 @@ class _ItemReviewScreenState extends State<ItemReviewScreen> {
                   subCategory: item.subCategory,
                   name: nameCtrl.text.trim(),
                   primaryColor: colorCtrl.text.trim(),
-                  secondaryColor: item.secondaryColor,
+                  secondaryColor: secColorCtrl.text.trim().isEmpty ? null : secColorCtrl.text.trim(),
                   attributes: StyleAttributes(
                     material: materialCtrl.text.trim().isEmpty ? null : materialCtrl.text.trim(),
                     fit: fitCtrl.text.trim().isEmpty ? null : fitCtrl.text.trim(),
-                    pattern: item.attributes.pattern,
+                    pattern: patternCtrl.text.trim().isEmpty ? null : patternCtrl.text.trim(),
                     formality: item.attributes.formality,
-                    season: item.attributes.season,
+                    season: seasonCtrl.text.trim().isEmpty ? null : seasonCtrl.text.trim(),
                     necklineOrCollar: item.attributes.necklineOrCollar,
                   ),
                   confidence: item.confidence,
@@ -171,6 +193,8 @@ class _ItemReviewScreenState extends State<ItemReviewScreen> {
     if (_intent == ItemReviewIntent.addToCloset) {
       setState(() => _isSaving = true);
       final wardrobeProv = context.read<WardrobeProvider>();
+      final fallbackOriginal = widget.sourceImageUrl ?? widget.analysis?.imageUrl ?? '';
+
       final itemsToSave = _items.where((i) => _selectedIds.contains(i.id)).map((i) {
         if (_useOriginalCrop[i.id] == true) {
           return DetectedFashionItem(
@@ -184,8 +208,8 @@ class _ItemReviewScreenState extends State<ItemReviewScreen> {
             confidence: i.confidence,
             boundingBoxDescription: i.boundingBoxDescription,
             box2d: i.box2d,
-            extractedImagePath: widget.analysis.imageUrl,
-            extractedImageUrl: widget.analysis.imageUrl,
+            extractedImagePath: fallbackOriginal,
+            extractedImageUrl: fallbackOriginal,
           );
         }
         return i;
@@ -193,7 +217,7 @@ class _ItemReviewScreenState extends State<ItemReviewScreen> {
 
       final res = await wardrobeProv.bulkAddItems(
         itemsToSave,
-        sourceAnalysisId: widget.analysis.analysisId,
+        sourceAnalysisId: widget.analysis?.analysisId,
       );
 
       if (mounted) {
@@ -398,9 +422,10 @@ class _ItemReviewScreenState extends State<ItemReviewScreen> {
                 final item = _items[idx];
                 final isSelected = _selectedIds.contains(item.id);
                 final useOriginal = _useOriginalCrop[item.id] == true;
+                final fallbackOriginal = widget.sourceImageUrl ?? widget.analysis?.imageUrl ?? '';
                 final displayImageUrl = useOriginal
-                    ? widget.analysis.imageUrl
-                    : (item.extractedImageUrl ?? widget.analysis.imageUrl);
+                    ? fallbackOriginal
+                    : (item.extractedImageUrl ?? fallbackOriginal);
 
                 return InkWell(
                   onTap: () => _onToggleSelection(item.id),
@@ -485,7 +510,32 @@ class _ItemReviewScreenState extends State<ItemReviewScreen> {
                                       style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
                                     ),
                                   ),
-                                  if (item.attributes.material != null)
+                                  if (item.secondaryColor != null && item.secondaryColor!.isNotEmpty)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.surfaceElevated,
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(color: AppColors.borderLight),
+                                      ),
+                                      child: Text(
+                                        item.secondaryColor!,
+                                        style: const TextStyle(fontSize: 10, color: AppColors.textSecondary),
+                                      ),
+                                    ),
+                                  if (item.attributes.pattern != null && item.attributes.pattern!.isNotEmpty)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.surfaceElevated,
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        item.attributes.pattern!,
+                                        style: const TextStyle(fontSize: 10, color: AppColors.textSecondary),
+                                      ),
+                                    ),
+                                  if (item.attributes.material != null && item.attributes.material!.isNotEmpty)
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                                       decoration: BoxDecoration(
@@ -494,6 +544,30 @@ class _ItemReviewScreenState extends State<ItemReviewScreen> {
                                       ),
                                       child: Text(
                                         item.attributes.material!,
+                                        style: const TextStyle(fontSize: 10, color: AppColors.textSecondary),
+                                      ),
+                                    ),
+                                  if (item.attributes.fit != null && item.attributes.fit!.isNotEmpty)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.surfaceElevated,
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        item.attributes.fit!,
+                                        style: const TextStyle(fontSize: 10, color: AppColors.textSecondary),
+                                      ),
+                                    ),
+                                  if (item.attributes.season != null && item.attributes.season!.isNotEmpty)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.surfaceElevated,
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        item.attributes.season!,
                                         style: const TextStyle(fontSize: 10, color: AppColors.textSecondary),
                                       ),
                                     ),

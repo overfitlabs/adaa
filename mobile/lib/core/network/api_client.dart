@@ -233,60 +233,11 @@ class ApiClient {
     throw ApiException(error, res.statusCode);
   }
 
-  // Wardrobe Items
+  // Wardrobe Items Detection (Strictly separated from outfit analysis history)
   static Future<Map<String, dynamic>> detectWardrobeItemFromPhoto(
     XFile imageFile,
   ) async {
     try {
-      final analysis = await analyzeOutfitImage(imageFile);
-      final primaryItem = analysis.items.isNotEmpty ? analysis.items.first : null;
-      return {
-        'detected_item': primaryItem != null
-            ? {
-                'id': primaryItem.id,
-                'category': primaryItem.category,
-                'sub_category': primaryItem.subCategory,
-                'name': primaryItem.name,
-                'primary_color': primaryItem.primaryColor,
-                'secondary_color': primaryItem.secondaryColor,
-                'confidence': primaryItem.confidence,
-                'attributes': {
-                  'pattern': primaryItem.attributes.pattern,
-                  'material': primaryItem.attributes.material,
-                  'fit': primaryItem.attributes.fit,
-                  'formality': primaryItem.attributes.formality,
-                  'season': primaryItem.attributes.season,
-                  'neckline_or_collar': primaryItem.attributes.necklineOrCollar,
-                },
-                'box_2d': primaryItem.box2d,
-                'extracted_image_url': primaryItem.extractedImageUrl,
-                'extracted_image_path': primaryItem.extractedImagePath,
-              }
-            : null,
-        'detected_items': analysis.items.map((item) => {
-          'id': item.id,
-          'category': item.category,
-          'sub_category': item.subCategory,
-          'name': item.name,
-          'primary_color': item.primaryColor,
-          'secondary_color': item.secondaryColor,
-          'confidence': item.confidence,
-          'attributes': {
-            'pattern': item.attributes.pattern,
-            'material': item.attributes.material,
-            'fit': item.attributes.fit,
-            'formality': item.attributes.formality,
-            'season': item.attributes.season,
-            'neckline_or_collar': item.attributes.necklineOrCollar,
-          },
-          'box_2d': item.box2d,
-          'extracted_image_url': item.extractedImageUrl,
-          'extracted_image_path': item.extractedImagePath,
-        }).toList(),
-        'detected_vibe': analysis.vibeOrStyle,
-        'summary': analysis.summary,
-      };
-    } catch (_) {
       final uri = Uri.parse(ApiEndpoints.detectWardrobeItem);
       final request = http.MultipartRequest('POST', uri);
       final bytes = await imageFile.readAsBytes();
@@ -306,12 +257,15 @@ class ApiClient {
         request.headers['Authorization'] = 'Bearer ${authToken!.trim()}';
       }
 
-      final streamed = await request.send().timeout(_timeout);
+      final streamed = await request.send().timeout(_analysisTimeout);
       final res = await http.Response.fromStream(streamed);
-      if (res.statusCode == 200) {
-        return jsonDecode(utf8.decode(res.bodyBytes));
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        return jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
       }
-      throw ApiException(_extractError(res.body), res.statusCode);
+      final error = _extractError(res.body);
+      throw ApiException(error, res.statusCode);
+    } catch (e) {
+      throw _handleNetworkError(e);
     }
   }
 

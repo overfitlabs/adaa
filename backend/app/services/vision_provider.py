@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import List, Tuple
 from app.config import settings
 from app.schemas import DetectedFashionItem, StyleAttributes
+from app.services.metadata_normalizer import normalize_garment_metadata
 
 logger = logging.getLogger("wardrobelens.vision")
 
@@ -175,12 +176,24 @@ Note: box_2d is [ymin, xmin, ymax, xmax] with coordinates normalized from 0 to 1
 
         for item_data in parsed.get("items", []):
             attr_dict = item_data.get("attributes", {})
-            attributes = StyleAttributes(
+            clean = normalize_garment_metadata(
+                category=item_data.get("category"),
+                primary_color=item_data.get("primary_color"),
+                secondary_color=item_data.get("secondary_color"),
                 pattern=attr_dict.get("pattern"),
                 material=attr_dict.get("material"),
                 fit=attr_dict.get("fit"),
-                formality=attr_dict.get("formality"),
                 season=attr_dict.get("season"),
+                formality=attr_dict.get("formality"),
+                name=item_data.get("name"),
+                sub_category=item_data.get("sub_category"),
+            )
+            attributes = StyleAttributes(
+                pattern=clean["pattern"],
+                material=clean["material"],
+                fit=clean["fit"],
+                formality=clean["formality"],
+                season=clean["season"],
                 neckline_or_collar=attr_dict.get("neckline_or_collar"),
             )
             raw_box = item_data.get("box_2d")
@@ -193,11 +206,11 @@ Note: box_2d is [ymin, xmin, ymax, xmax] with coordinates normalized from 0 to 1
 
             item = DetectedFashionItem(
                 id=str(uuid.uuid4()),
-                category=item_data.get("category", "other").lower(),
-                sub_category=item_data.get("sub_category"),
-                name=item_data.get("name", "Fashion Item"),
-                primary_color=item_data.get("primary_color", "Neutral"),
-                secondary_color=item_data.get("secondary_color"),
+                category=clean["category"],
+                sub_category=clean["sub_category"],
+                name=clean["name"],
+                primary_color=clean["primary_color"],
+                secondary_color=clean["secondary_color"],
                 attributes=attributes,
                 confidence=float(item_data.get("confidence", 0.9)),
                 bounding_box_description=item_data.get("bounding_box_description"),
