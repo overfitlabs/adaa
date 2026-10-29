@@ -7,7 +7,7 @@ import time
 import uuid
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
-from fastapi import APIRouter, Depends, File, Header, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, Header, HTTPException, Query, Request, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -19,6 +19,7 @@ from app.schemas import (
     StyleAttributes,
     ScanStatusResponse,
     MediaFlowsWebhookPayload,
+    MediaFlowsUrlResponse,
 )
 from app.services.image_storage import image_storage_service
 from app.services.vision_provider import get_vision_provider
@@ -555,6 +556,100 @@ async def get_scan_status(
         result=res_data,
         error=record.error_message,
         created_at=record.created_at,
+    )
+
+
+@router.api_route("/mediaflows-url", methods=["GET", "POST"], response_model=MediaFlowsUrlResponse)
+async def get_mediaflows_auth_url(
+    request: Request,
+    public_id: Optional[str] = Query(None),
+    scan_id: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    x_mediaflows_secret: Optional[str] = Header(None, alias="X-MediaFlows-Secret"),
+    authorization: Optional[str] = Header(None),
+):
+    """
+    Supplies MediaFlows with a secure, short-lived (300s) private download URL
+    for an authenticated inspiration asset, referenced strictly by public_id or scan_id.
+    Zero permanent signed URLs are exposed in public metadata.
+    """
+    # 1. Constant-time secret comparison
+    expected_secret = settings.MEDIAFLOWS_WEBHOOK_SECRET
+    if not expected_secret:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="MediaFlows webhook secret is not configured on the server",
+        )
+
+    incoming_secret = x_mediaflows_secret
+    if not incoming_secret and authorization:
+        parts = authorization.split(" ", 1)
+        if len(parts) == 2 and parts[0].lower() == "bearer":
+            incoming_secret = parts[1]
+        else:
+            incoming_secret = authorization
+
+    if not incoming_secret or not hmac.compare_digest(
+        incoming_secret.strip().encode("utf-8"),
+        expected_secret.strip().encode("utf-8")
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid MediaFlows secret",
+        )
+
+    # 2. Extract target identifier from query params or POST body
+    target_pid = public_id
+    target_sid = scan_id
+
+    if request.method == "POST":
+        try:
+            body = await request.json()
+            if isinstance(body, dict):
+                target_pid = target_pid or body.get("public_id")
+                target_sid = target_sid or body.get("scan_id")
+        except Exception:
+            pass
+
+    if not target_pid and not target_sid:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Request must include public_id or scan_id",
+        )
+
+    # 3. Locate pending scan record
+    query = db.query(OutfitAnalysisRecord)
+    if target_sid:
+        record = query.filter(OutfitAnalysisRecord.id == target_sid).first()
+    else:
+        record = query.filter(
+            (OutfitAnalysisRecord.cloudinary_public_id == target_pid) |
+            (OutfitAnalysisRecord.image_path == target_pid)
+        ).first()
+
+    if not record:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Scan record not found for public_id='{target_pid}' or scan_id='{target_sid}'",
+        )
+
+    # 4. Generate fresh short-lived (300s) expiring private download URL
+    eff_pid = record.cloudinary_public_id or target_pid or record.image_path
+    fmt = record.image_format or "jpg"
+    exp = int(time.time()) + 300
+    download_url = image_storage_service.generate_private_download_url(
+        eff_pid,
+        format=fmt,
+        expires_at=exp,
+    )
+
+    return MediaFlowsUrlResponse(
+        url=download_url,
+        image_url=download_url,
+        signed_url=download_url,
+        public_id=eff_pid,
+        scan_id=record.id,
+        expires_in=300,
     )
 
 

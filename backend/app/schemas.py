@@ -70,6 +70,15 @@ class MediaFlowsWebhookPayload(BaseModel):
     error: Optional[str] = None
 
 
+class MediaFlowsUrlResponse(BaseModel):
+    url: str
+    image_url: str
+    signed_url: str
+    public_id: str
+    scan_id: str
+    expires_in: int = 300
+
+
 # Wardrobe Models
 class WardrobeItemBase(BaseModel):
     name: str
