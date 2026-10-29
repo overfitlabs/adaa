@@ -717,7 +717,7 @@ class _AdaaChatScreenState extends State<AdaaChatScreen>
               ),
               const SizedBox(height: 8),
               SizedBox(
-                height: 124,
+                height: 160,
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
                   itemCount: message.suggestedItems.length,
@@ -767,20 +767,22 @@ class _AdaaChatScreenState extends State<AdaaChatScreen>
                                 ),
                               ),
                             ),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 4,
-                              ),
-                              child: Text(
-                                item.name,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.forest,
-                                  height: 1.2,
+                            Expanded(
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 4,
+                                ),
+                                child: Text(
+                                  item.name,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.forest,
+                                    height: 1.2,
+                                  ),
                                 ),
                               ),
                             ),

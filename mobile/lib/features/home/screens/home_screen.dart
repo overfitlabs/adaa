@@ -702,7 +702,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 12),
               SizedBox(
-                height: 170,
+                height: 205,
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
                   itemCount: analysisProv.history.length,
@@ -748,31 +748,34 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                               ),
                             ),
-                            Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    item.vibeOrStyle.isNotEmpty
-                                        ? item.vibeOrStyle
-                                        : 'Outfit Look',
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w700,
+                            Expanded(
+                              child: Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      item.vibeOrStyle.isNotEmpty
+                                          ? item.vibeOrStyle
+                                          : 'Outfit Look',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                      ),
                                     ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    '${item.detectedGarmentCount} pieces',
-                                    style: const TextStyle(
-                                      fontSize: 11,
-                                      color: AppColors.textSecondary,
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      '${item.detectedGarmentCount} pieces',
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        color: AppColors.textSecondary,
+                                      ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
                             ),
                           ],
@@ -1877,7 +1880,7 @@ class _HomeScreenState extends State<HomeScreen> {
         else
           // Rich horizontal feed of shared pieces
           SizedBox(
-            height: 235,
+            height: 255,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: sharedItems.length,
@@ -1966,78 +1969,81 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
                       ),
-                        Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                garment.name,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.textPrimary,
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                Text(
+                                  garment.name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.textPrimary,
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(height: 3),
-                              // Owner Attribution
-                              InkWell(
-                                onTap: () => PublicProfileSheet.show(
-                                  context,
-                                  userId: shared.ownerId,
-                                  fallbackName: shared.resolvedOwnerName,
-                                ),
-                                borderRadius: BorderRadius.circular(4),
-                                child: Row(
-                                  children: [
-                                    CircleAvatar(
-                                      radius: 8,
-                                      backgroundColor: AppColors.accentSoft,
-                                      child: Text(
-                                        shared.ownerInitials,
-                                        style: const TextStyle(
-                                          fontSize: 8,
-                                          fontWeight: FontWeight.w800,
-                                          color: AppColors.primary,
+                                const SizedBox(height: 3),
+                                // Owner Attribution
+                                InkWell(
+                                  onTap: () => PublicProfileSheet.show(
+                                    context,
+                                    userId: shared.ownerId,
+                                    fallbackName: shared.resolvedOwnerName,
+                                  ),
+                                  borderRadius: BorderRadius.circular(4),
+                                  child: Row(
+                                    children: [
+                                      CircleAvatar(
+                                        radius: 8,
+                                        backgroundColor: AppColors.accentSoft,
+                                        child: Text(
+                                          shared.ownerInitials,
+                                          style: const TextStyle(
+                                            fontSize: 8,
+                                            fontWeight: FontWeight.w800,
+                                            color: AppColors.primary,
+                                          ),
                                         ),
                                       ),
+                                      const SizedBox(width: 4),
+                                      Expanded(
+                                        child: Text(
+                                          shared.resolvedOwnerName,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            fontSize: 10,
+                                            color: AppColors.textSecondary,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Wrap(
+                                  spacing: 4,
+                                  children: [
+                                    AdaaBrandBadge(
+                                      text: garment.category.toUpperCase(),
                                     ),
-                                    const SizedBox(width: 4),
-                                    Expanded(
-                                      child: Text(
-                                        shared.resolvedOwnerName,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
+                                    if (garment.primaryColor.isNotEmpty)
+                                      Text(
+                                        garment.primaryColor,
                                         style: const TextStyle(
                                           fontSize: 10,
                                           color: AppColors.textSecondary,
-                                          fontWeight: FontWeight.w500,
                                         ),
                                       ),
-                                    ),
                                   ],
                                 ),
-                              ),
-                              const SizedBox(height: 4),
-                              Wrap(
-                                spacing: 4,
-                                children: [
-                                  AdaaBrandBadge(
-                                    text: garment.category.toUpperCase(),
-                                  ),
-                                  if (garment.primaryColor.isNotEmpty)
-                                    Text(
-                                      garment.primaryColor,
-                                      style: const TextStyle(
-                                        fontSize: 10,
-                                        color: AppColors.textSecondary,
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       ],

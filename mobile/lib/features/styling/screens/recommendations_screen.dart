@@ -175,7 +175,8 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
                                 height: 70,
                                 child: PrivateImageView(
                                   imageUrl: item.imageUrl,
-                                  fit: BoxFit.cover,
+                                  fit: BoxFit.contain,
+                                  backgroundColor: AppColors.surfaceContainerLow,
                                   errorWidget: Container(
                                     color: AppColors.accentSoft,
                                     child: const Icon(
@@ -776,7 +777,7 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
 
           // Horizontal Garment Thumbnails
           SizedBox(
-            height: 120,
+            height: 148,
             child: ListView.separated(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               scrollDirection: Axis.horizontal,
@@ -822,29 +823,37 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
                             ),
                           ),
                         ),
-                        Padding(
-                          padding: const EdgeInsets.all(6),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                item.name,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 4,
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  item.name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
-                              ),
-                              Text(
-                                item.category,
-                                maxLines: 1,
-                                style: const TextStyle(
-                                  fontSize: 9,
-                                  color: AppColors.textSecondary,
+                                const SizedBox(height: 1),
+                                Text(
+                                  item.category,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 9,
+                                    color: AppColors.textSecondary,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       ],
