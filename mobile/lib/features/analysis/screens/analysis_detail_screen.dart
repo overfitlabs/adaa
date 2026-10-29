@@ -149,24 +149,25 @@ class _AnalysisDetailScreenState extends State<AnalysisDetailScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Inspiration Image Banner
-            Stack(
-              children: [
-                PrivateImageView(
-                  imageUrl: analysis.imageUrl,
-                  width: double.infinity,
-                  height: 260,
-                  fit: BoxFit.cover,
-                  placeholder: Container(
-                    height: 200,
-                    color: AppColors.accentSoft,
-                    child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+            AspectRatio(
+              aspectRatio: 1.0,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  PrivateImageView(
+                    imageUrl: analysis.imageUrl,
+                    width: double.infinity,
+                    height: double.infinity,
+                    fit: BoxFit.cover,
+                    placeholder: Container(
+                      color: AppColors.accentSoft,
+                      child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                    ),
+                    errorWidget: Container(
+                      color: AppColors.accentSoft,
+                      child: const Center(child: Icon(Icons.broken_image_outlined, size: 40)),
+                    ),
                   ),
-                  errorWidget: Container(
-                    height: 200,
-                    color: AppColors.accentSoft,
-                    child: const Center(child: Icon(Icons.broken_image_outlined, size: 40)),
-                  ),
-                ),
                 Positioned(
                   bottom: 12,
                   left: 16,
@@ -189,6 +190,7 @@ class _AnalysisDetailScreenState extends State<AnalysisDetailScreen> {
                 ),
               ],
             ),
+          ),
 
             // Summary Card
             Padding(
@@ -297,16 +299,25 @@ class _AnalysisDetailScreenState extends State<AnalysisDetailScreen> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: AppColors.accentSoft,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  _getCategoryIcon(item.category),
-                  color: AppColors.primary,
-                  size: 22,
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  width: 52,
+                  height: 52,
+                  color: AppColors.surfaceContainerLow,
+                  child: item.extractedImageUrl != null
+                      ? PrivateImageView(
+                          imageUrl: item.extractedImageUrl,
+                          width: 52,
+                          height: 52,
+                          fit: BoxFit.contain,
+                          backgroundColor: AppColors.surfaceContainerLow,
+                        )
+                      : Icon(
+                          _getCategoryIcon(item.category),
+                          color: AppColors.primary,
+                          size: 22,
+                        ),
                 ),
               ),
               const SizedBox(width: 14),

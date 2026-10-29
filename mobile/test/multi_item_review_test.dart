@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:wardrobelens/core/models/garment_item.dart';
 import 'package:wardrobelens/core/models/outfit_analysis.dart';
 import 'package:wardrobelens/core/models/wardrobe_item.dart';
+import 'package:wardrobelens/core/widgets/private_image_view.dart';
 import 'package:wardrobelens/features/analysis/screens/item_review_screen.dart';
 import 'package:wardrobelens/state/analysis_provider.dart';
 import 'package:wardrobelens/state/wardrobe_provider.dart';
@@ -237,6 +238,18 @@ void main() {
       await tester.pump();
 
       expect(find.text('Show crop'), findsOneWidget);
+    });
+
+    testWidgets('Garment items render in standardized 1:1 square containers with BoxFit.contain', (tester) async {
+      final fakeWardrobe = FakeWardrobeForReview();
+      await tester.pumpWidget(createReviewApp(wardrobeProv: fakeWardrobe, initialIntent: ItemReviewIntent.addToCloset));
+      await tester.pump();
+
+      final imageViews = tester.widgetList<PrivateImageView>(find.byType(PrivateImageView));
+      expect(imageViews, isNotEmpty);
+      for (final view in imageViews) {
+        expect(view.fit, equals(BoxFit.contain));
+      }
     });
   });
 }

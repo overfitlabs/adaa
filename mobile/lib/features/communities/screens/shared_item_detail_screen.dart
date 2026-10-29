@@ -97,25 +97,31 @@ class SharedItemDetailScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Garment Image
-            Stack(
-              children: [
-                PrivateImageView(
-                  imageUrl: garment.imageUrl,
-                  width: double.infinity,
-                  height: 360,
-                  fit: BoxFit.cover,
-                  placeholder: Container(
-                    height: 260,
-                    color: AppColors.accentSoft,
-                    child: const Center(
-                      child: Icon(
-                        Icons.checkroom,
-                        size: 50,
-                        color: AppColors.textMuted,
+            AspectRatio(
+              aspectRatio: 1.0,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Container(color: AppColors.surfaceContainerLow),
+                  Center(
+                    child: PrivateImageView(
+                      imageUrl: garment.imageUrl,
+                      width: double.infinity,
+                      height: double.infinity,
+                      fit: BoxFit.contain,
+                      backgroundColor: AppColors.surfaceContainerLow,
+                      placeholder: Container(
+                        color: AppColors.surfaceContainerLow,
+                        child: const Center(
+                          child: Icon(
+                            Icons.checkroom,
+                            size: 50,
+                            color: AppColors.textMuted,
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                ),
                 Positioned(
                   top: 14,
                   left: 14,
@@ -147,6 +153,7 @@ class SharedItemDetailScreen extends StatelessWidget {
                 ),
               ],
             ),
+          ),
             Padding(
               padding: const EdgeInsets.all(20),
               child: Column(

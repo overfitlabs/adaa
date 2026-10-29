@@ -1183,3 +1183,147 @@ def test_wardrobe_detect_item_with_mediaflows_disabled_uses_direct_gemini(client
             data = res.json()
             assert data["detected_item"]["name"] == "Linen Shirt"
             assert data["detected_vibe"] == "Casual"
+
+
+def test_multi_garment_extraction_creates_distinct_square_crops(client, sample_image_bytes):
+    """
+    Verifies that an outfit containing a top and bottom produces distinct garment results,
+    each extracted as an independent, actual image file standardized to 1:1 square dimensions (600x600).
+    """
+    from PIL import Image
+    from app.schemas import DetectedFashionItem, StyleAttributes
+    from app.config import settings
+
+    top_item = DetectedFashionItem(
+        id="item-top-1",
+        category="tops",
+        sub_category="T-Shirt",
+        name="Essential White T-Shirt",
+        primary_color="White",
+        attributes=StyleAttributes(material="cotton", fit="regular"),
+        box_2d=[100, 200, 500, 800],
+    )
+    bottom_item = DetectedFashionItem(
+        id="item-bottom-1",
+        category="bottoms",
+        sub_category="Jeans",
+        name="Straight Indigo Denim",
+        primary_color="Blue",
+        attributes=StyleAttributes(material="denim", fit="straight"),
+        box_2d=[520, 220, 950, 780],
+    )
+
+    files = {"file": ("outfit.jpg", io.BytesIO(sample_image_bytes), "image/jpeg")}
+    with patch("app.api.routes_analysis.get_vision_provider") as mock_get_provider:
+        mock_provider = MagicMock()
+        mock_provider.analyze_outfit_image = AsyncMock(
+            return_value=("Minimalist casual ensemble", "Casual Everyday", [top_item, bottom_item])
+        )
+        mock_get_provider.return_value = mock_provider
+
+        response = client.post("/api/analysis/analyze-image", files=files)
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data["items"]) == 2
+
+        item_top = data["items"][0]
+        item_bottom = data["items"][1]
+
+        # Verify items are distinct
+        assert item_top["name"] == "Essential White T-Shirt"
+        assert item_bottom["name"] == "Straight Indigo Denim"
+        assert item_top["extracted_image_path"] != item_bottom["extracted_image_path"]
+        assert item_top["extracted_image_url"] != data["image_url"]
+        assert item_bottom["extracted_image_url"] != data["image_url"]
+
+        # Verify extracted crops exist as physical square images (600x600)
+        top_crop_rel = item_top["extracted_image_path"].lstrip("/")
+        if top_crop_rel.startswith("storage/"):
+            top_crop_rel = top_crop_rel[len("storage/"):]
+        top_file = settings.storage_path / top_crop_rel
+        assert top_file.is_file(), f"Expected top crop file at {top_file}"
+        with Image.open(top_file) as top_img:
+            assert top_img.size == (600, 600), f"Expected 600x600 square, got {top_img.size}"
+
+        bottom_crop_rel = item_bottom["extracted_image_path"].lstrip("/")
+        if bottom_crop_rel.startswith("storage/"):
+            bottom_crop_rel = bottom_crop_rel[len("storage/"):]
+        bottom_file = settings.storage_path / bottom_crop_rel
+        assert bottom_file.is_file(), f"Expected bottom crop file at {bottom_file}"
+        with Image.open(bottom_file) as bot_img:
+            assert bot_img.size == (600, 600), f"Expected 600x600 square, got {bot_img.size}"
+
+
+def test_crop_idempotency_uses_deterministic_names(client, sample_image_bytes):
+    """
+    Verifies that re-extracting crops for the same asset produces identical deterministic public IDs,
+    preventing duplicate Cloudinary asset creation on retry.
+    """
+    from app.schemas import DetectedFashionItem, StyleAttributes
+    from app.api.routes_analysis import _extract_garment_crops
+
+    item = DetectedFashionItem(
+        id="det-idem-1",
+        category="outerwear",
+        name="Taupe Wool Coat",
+        primary_color="Taupe",
+        attributes=StyleAttributes(material="wool"),
+        box_2d=[100, 150, 700, 850],
+    )
+
+    import asyncio
+    asyncio.run(
+        _extract_garment_crops(
+            clean_bytes=sample_image_bytes,
+            items=[item],
+            user_id="test_user",
+            original_public_id="wardrobelens/users/test_user/inspirations/source_asset_123",
+            original_storage_provider="local",
+        )
+    )
+    first_path = item.extracted_image_path
+    assert "source_asset_123_garment_0" in first_path
+
+    # Second run on same asset
+    asyncio.run(
+        _extract_garment_crops(
+            clean_bytes=sample_image_bytes,
+            items=[item],
+            user_id="test_user",
+            original_public_id="wardrobelens/users/test_user/inspirations/source_asset_123",
+            original_storage_provider="local",
+        )
+    )
+    second_path = item.extracted_image_path
+    assert second_path == first_path, "Crop path should be deterministic across retries"
+
+
+def test_bulk_add_wardrobe_items_saves_extracted_crop_references(client):
+    """
+    Verifies that saving extracted garments into the wardrobe via bulk-add persists
+    the actual extracted crop image_path on each WardrobeItem record.
+    """
+    payload = {
+        "items": [
+            {
+                "client_id": "c-1",
+                "name": "Extracted Crop Shirt",
+                "category": "tops",
+                "primary_color": "White",
+                "image_path": "extracted/crop_shirt_sq.jpg",
+            },
+            {
+                "client_id": "c-2",
+                "name": "Extracted Crop Trousers",
+                "category": "bottoms",
+                "primary_color": "Charcoal",
+                "image_path": "extracted/crop_trousers_sq.jpg",
+            },
+        ]
+    }
+    res = client.post("/api/wardrobe/items/bulk", json=payload)
+    assert res.status_code == 201
+    data = res.json()
+    assert data["saved_count"] == 2
+    assert data["results"][0]["item"]["image_path"] == "extracted/crop_shirt_sq.jpg"
+    assert data["results"][1]["item"]["image_path"] == "extracted/crop_trousers_sq.jpg"

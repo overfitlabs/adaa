@@ -797,16 +797,19 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
+                        AspectRatio(
+                          aspectRatio: 1.0,
                           child: ClipRRect(
                             borderRadius: const BorderRadius.vertical(
                               top: Radius.circular(13),
                             ),
-                            child: SizedBox(
+                            child: Container(
+                              color: AppColors.surfaceContainerLow,
                               width: double.infinity,
                               child: PrivateImageView(
                                 imageUrl: item.imageUrl,
-                                fit: BoxFit.cover,
+                                fit: BoxFit.contain,
+                                backgroundColor: AppColors.surfaceContainerLow,
                                 errorWidget: Container(
                                   color: AppColors.accentSoft,
                                   child: const Icon(

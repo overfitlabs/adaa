@@ -245,9 +245,13 @@ class _TryOnScreenState extends State<TryOnScreen> {
                             child: Stack(
                               fit: StackFit.expand,
                               children: [
-                                PrivateImageView(
-                                  imageUrl: item.imageUrl,
-                                  fit: BoxFit.cover,
+                                Container(color: _surfaceLow),
+                                Center(
+                                  child: PrivateImageView(
+                                    imageUrl: item.imageUrl,
+                                    fit: BoxFit.contain,
+                                    backgroundColor: _surfaceLow,
+                                  ),
                                 ),
                                 Positioned(
                                   bottom: 0,
@@ -541,23 +545,25 @@ class _TryOnScreenState extends State<TryOnScreen> {
         ),
         const SizedBox(height: 16),
         // Image display with PrivateImageView
-        Container(
-          width: double.infinity,
-          height: 420,
-          clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(24),
-            boxShadow: [
-              BoxShadow(
-                color: _primary.withValues(alpha: 0.12),
-                blurRadius: 20,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: PrivateImageView(
-            imageUrl: task.resultImageUrl,
-            fit: BoxFit.cover,
+        AspectRatio(
+          aspectRatio: 1.0,
+          child: Container(
+            width: double.infinity,
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: _primary.withValues(alpha: 0.12),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: PrivateImageView(
+              imageUrl: task.resultImageUrl,
+              fit: BoxFit.cover,
+            ),
           ),
         ),
         const SizedBox(height: 24),
@@ -1222,18 +1228,20 @@ class _TryOnScreenState extends State<TryOnScreen> {
                 ),
                 const SizedBox(height: 16),
                 // Full image preview
-                Container(
-                  width: double.infinity,
-                  height: 360,
-                  clipBehavior: Clip.antiAlias,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(20),
-                    border:
-                        Border.all(color: Colors.black.withValues(alpha: 0.08)),
-                  ),
-                  child: PrivateImageView(
-                    imageUrl: item.resultImageUrl ?? item.garmentImageUrl,
-                    fit: BoxFit.cover,
+                AspectRatio(
+                  aspectRatio: 1.0,
+                  child: Container(
+                    width: double.infinity,
+                    clipBehavior: Clip.antiAlias,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(20),
+                      border:
+                          Border.all(color: Colors.black.withValues(alpha: 0.08)),
+                    ),
+                    child: PrivateImageView(
+                      imageUrl: item.resultImageUrl ?? item.garmentImageUrl,
+                      fit: BoxFit.cover,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 16),

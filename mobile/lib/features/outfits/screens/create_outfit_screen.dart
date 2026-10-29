@@ -224,7 +224,7 @@ class _CreateOutfitScreenState extends State<CreateOutfitScreen> {
                 physics: const NeverScrollableScrollPhysics(),
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 3,
-                  childAspectRatio: 0.75,
+                  childAspectRatio: 1.0,
                   crossAxisSpacing: 10,
                   mainAxisSpacing: 10,
                 ),
@@ -255,17 +255,22 @@ class _CreateOutfitScreenState extends State<CreateOutfitScreen> {
                         ),
                       ),
                       child: Stack(
+                        fit: StackFit.expand,
                         children: [
                           ClipRRect(
                             borderRadius: BorderRadius.circular(10),
-                            child: PrivateImageView(
-                              imageUrl: item.imageUrl,
-                              width: double.infinity,
-                              height: double.infinity,
-                              fit: BoxFit.cover,
-                              errorWidget: Container(
-                                color: AppColors.accentSoft,
-                                child: const Icon(Icons.checkroom, size: 24),
+                            child: Container(
+                              color: AppColors.surfaceContainerLow,
+                              child: PrivateImageView(
+                                imageUrl: item.imageUrl,
+                                width: double.infinity,
+                                height: double.infinity,
+                                fit: BoxFit.contain,
+                                backgroundColor: AppColors.surfaceContainerLow,
+                                errorWidget: Container(
+                                  color: AppColors.accentSoft,
+                                  child: const Icon(Icons.checkroom, size: 24),
+                                ),
                               ),
                             ),
                           ),

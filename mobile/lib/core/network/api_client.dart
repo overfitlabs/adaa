@@ -263,7 +263,28 @@ class ApiClient {
                 'extracted_image_path': primaryItem.extractedImagePath,
               }
             : null,
+        'detected_items': analysis.items.map((item) => {
+          'id': item.id,
+          'category': item.category,
+          'sub_category': item.subCategory,
+          'name': item.name,
+          'primary_color': item.primaryColor,
+          'secondary_color': item.secondaryColor,
+          'confidence': item.confidence,
+          'attributes': {
+            'pattern': item.attributes.pattern,
+            'material': item.attributes.material,
+            'fit': item.attributes.fit,
+            'formality': item.attributes.formality,
+            'season': item.attributes.season,
+            'neckline_or_collar': item.attributes.necklineOrCollar,
+          },
+          'box_2d': item.box2d,
+          'extracted_image_url': item.extractedImageUrl,
+          'extracted_image_path': item.extractedImagePath,
+        }).toList(),
         'detected_vibe': analysis.vibeOrStyle,
+        'summary': analysis.summary,
       };
     } catch (_) {
       final uri = Uri.parse(ApiEndpoints.detectWardrobeItem);

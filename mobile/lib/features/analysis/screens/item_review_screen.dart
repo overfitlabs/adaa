@@ -432,12 +432,14 @@ class _ItemReviewScreenState extends State<ItemReviewScreen> {
                         ),
                         ClipRRect(
                           borderRadius: BorderRadius.circular(10),
-                          child: SizedBox(
+                          child: Container(
                             width: 84,
                             height: 84,
+                            color: AppColors.surfaceContainerLow,
                             child: PrivateImageView(
                               imageUrl: displayImageUrl,
-                              fit: BoxFit.cover,
+                              fit: BoxFit.contain,
+                              backgroundColor: AppColors.surfaceContainerLow,
                             ),
                           ),
                         ),

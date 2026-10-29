@@ -729,21 +729,21 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            ClipRRect(
-                              borderRadius: const BorderRadius.vertical(
-                                top: Radius.circular(14),
-                              ),
-                              child: PrivateImageView(
-                                imageUrl: item.imageUrl,
-                                height: 100,
-                                width: double.infinity,
-                                fit: BoxFit.cover,
-                                errorWidget: Container(
-                                  height: 100,
-                                  color: AppColors.accentSoft,
-                                  child: const Icon(
-                                    Icons.image_outlined,
-                                    color: AppColors.textMuted,
+                            AspectRatio(
+                              aspectRatio: 1.0,
+                              child: ClipRRect(
+                                borderRadius: const BorderRadius.vertical(
+                                  top: Radius.circular(14),
+                                ),
+                                child: PrivateImageView(
+                                  imageUrl: item.imageUrl,
+                                  fit: BoxFit.cover,
+                                  errorWidget: Container(
+                                    color: AppColors.accentSoft,
+                                    child: const Icon(
+                                      Icons.image_outlined,
+                                      color: AppColors.textMuted,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -1919,18 +1919,23 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        ClipRRect(
-                          borderRadius: const BorderRadius.vertical(
-                            top: Radius.circular(14),
-                          ),
-                          child: Stack(
-                            children: [
-                              PrivateImageView(
-                                imageUrl: garment.imageUrl,
-                                height: 115,
-                                width: 155,
-                                fit: BoxFit.cover,
-                              ),
+                        AspectRatio(
+                          aspectRatio: 1.0,
+                          child: ClipRRect(
+                            borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(14),
+                            ),
+                            child: Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                Container(color: AppColors.surfaceContainerLow),
+                                Center(
+                                  child: PrivateImageView(
+                                    imageUrl: garment.imageUrl,
+                                    fit: BoxFit.contain,
+                                    backgroundColor: AppColors.surfaceContainerLow,
+                                  ),
+                                ),
                               Positioned(
                                 top: 6,
                                 left: 6,
@@ -1960,6 +1965,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             ],
                           ),
                         ),
+                      ),
                         Padding(
                           padding: const EdgeInsets.all(8.0),
                           child: Column(

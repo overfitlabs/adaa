@@ -475,39 +475,44 @@ class _WardrobeDetailScreenState extends State<WardrobeDetailScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Hero Garment Image with Replace Photo Overlay
-            Stack(
-              children: [
-                PrivateImageView(
-                  imageUrl: currentItem.imageUrl,
-                  width: double.infinity,
-                  height: 360,
-                  fit: BoxFit.cover,
-                  onRefreshUrl: () async {
-                    await prov.refreshItem(currentItem.id);
-                  },
-                  placeholder: Container(
-                    height: 360,
-                    color: AppColors.surfaceContainerLow,
-                    child: const Center(
-                      child: Icon(
-                        Icons.checkroom,
-                        size: 50,
-                        color: AppColors.textMuted,
+            AspectRatio(
+              aspectRatio: 1.0,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Container(color: AppColors.surfaceContainerLow),
+                  Center(
+                    child: PrivateImageView(
+                      imageUrl: currentItem.imageUrl,
+                      width: double.infinity,
+                      height: double.infinity,
+                      fit: BoxFit.contain,
+                      backgroundColor: AppColors.surfaceContainerLow,
+                      onRefreshUrl: () async {
+                        await prov.refreshItem(currentItem.id);
+                      },
+                      placeholder: Container(
+                        color: AppColors.surfaceContainerLow,
+                        child: const Center(
+                          child: Icon(
+                            Icons.checkroom,
+                            size: 50,
+                            color: AppColors.textMuted,
+                          ),
+                        ),
+                      ),
+                      errorWidget: Container(
+                        color: AppColors.surfaceContainerLow,
+                        child: const Center(
+                          child: Icon(
+                            Icons.checkroom,
+                            size: 50,
+                            color: AppColors.textMuted,
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                  errorWidget: Container(
-                    height: 360,
-                    color: AppColors.surfaceContainerLow,
-                    child: const Center(
-                      child: Icon(
-                        Icons.checkroom,
-                        size: 50,
-                        color: AppColors.textMuted,
-                      ),
-                    ),
-                  ),
-                ),
                 if (_isReplacingPhoto)
                   Positioned.fill(
                     child: Container(
@@ -561,6 +566,7 @@ class _WardrobeDetailScreenState extends State<WardrobeDetailScreen> {
                 ),
               ],
             ),
+          ),
 
             Padding(
               padding: const EdgeInsets.all(20),

@@ -695,11 +695,17 @@ class _RequestsScreenState extends State<RequestsScreen>
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.circular(10),
-                  child: PrivateImageView(
-                    imageUrl: request.item?.imageUrl,
+                  child: Container(
                     width: 56,
-                    height: 64,
-                    fit: BoxFit.cover,
+                    height: 56,
+                    color: AppColors.surfaceContainerLow,
+                    child: PrivateImageView(
+                      imageUrl: request.item?.imageUrl,
+                      width: 56,
+                      height: 56,
+                      fit: BoxFit.contain,
+                      backgroundColor: AppColors.surfaceContainerLow,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -898,11 +904,17 @@ class _RequestsScreenState extends State<RequestsScreen>
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(10),
-                child: PrivateImageView(
-                  imageUrl: request.item?.imageUrl,
+                child: Container(
                   width: 48,
-                  height: 56,
-                  fit: BoxFit.cover,
+                  height: 48,
+                  color: AppColors.surfaceContainerLow,
+                  child: PrivateImageView(
+                    imageUrl: request.item?.imageUrl,
+                    width: 48,
+                    height: 48,
+                    fit: BoxFit.contain,
+                    backgroundColor: AppColors.surfaceContainerLow,
+                  ),
                 ),
               ),
               const SizedBox(width: 12),

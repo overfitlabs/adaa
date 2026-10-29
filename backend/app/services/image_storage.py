@@ -25,6 +25,39 @@ class ImageMetadata(BaseModel):
     bytes_size: Optional[int] = None
 
 
+def standardize_to_square(
+    pil_img: Image.Image,
+    target_size: int = 600,
+    padding_ratio: float = 0.06,
+    bg_color: Tuple[int, int, int] = (250, 248, 245),
+) -> Image.Image:
+    """
+    Centers an image within a square canvas of target_size x target_size,
+    preserving original aspect ratio and applying balanced neutral padding (#FAF8F5).
+    Guarantees that garments are never stretched, distorted, or cropped.
+    """
+    if pil_img.mode != "RGB":
+        pil_img = pil_img.convert("RGB")
+
+    w, h = pil_img.size
+    if w <= 0 or h <= 0:
+        return Image.new("RGB", (target_size, target_size), color=bg_color)
+
+    inner_pad = int(target_size * padding_ratio)
+    inner_size = max(10, target_size - (2 * inner_pad))
+
+    scale = min(inner_size / float(w), inner_size / float(h))
+    new_w = max(1, int(round(w * scale)))
+    new_h = max(1, int(round(h * scale)))
+
+    resized = pil_img.resize((new_w, new_h), Image.Resampling.LANCZOS)
+    canvas = Image.new("RGB", (target_size, target_size), color=bg_color)
+    offset_x = (target_size - new_w) // 2
+    offset_y = (target_size - new_h) // 2
+    canvas.paste(resized, (offset_x, offset_y))
+    return canvas
+
+
 class ImageStorageService:
     """
     Unified Image Storage Service supporting:
@@ -136,10 +169,13 @@ class ImageStorageService:
         pre_sanitized: Optional[Tuple[bytes, str, int, int]] = None,
         tags: Optional[List[str]] = None,
         context: Optional[Dict[str, str]] = None,
+        custom_asset_id: Optional[str] = None,
+        overwrite: bool = False,
     ) -> ImageMetadata:
         """
         Uploads image using authenticated user ID.
         If Cloudinary is configured and STORAGE_BACKEND is 'cloudinary', stores asset as type='authenticated'.
+        Supports deterministic custom_asset_id and overwrite to prevent asset duplication across retries.
         Otherwise falls back cleanly to local disk storage.
         """
         if pre_sanitized:
@@ -158,15 +194,15 @@ class ImageStorageService:
             import cloudinary.uploader
 
             folder_path = f"wardrobelens/users/{effective_user}/{safe_subfolder}"
-            asset_uuid = uuid.uuid4().hex
-            public_id = f"{folder_path}/{asset_uuid}"
+            asset_name = custom_asset_id or uuid.uuid4().hex
+            public_id = f"{folder_path}/{asset_name}"
 
             try:
                 upload_kwargs: Dict[str, Any] = {
                     "public_id": public_id,
                     "type": "authenticated",
                     "resource_type": "image",
-                    "overwrite": False,
+                    "overwrite": overwrite or (custom_asset_id is not None),
                 }
                 if tags:
                     upload_kwargs["tags"] = tags
@@ -203,7 +239,8 @@ class ImageStorageService:
                 )
 
         # Local storage fallback
-        filename = f"{uuid.uuid4().hex}.{ext}"
+        asset_name = custom_asset_id or uuid.uuid4().hex
+        filename = f"{asset_name}.{ext}"
         target_dir = self.base_dir / safe_subfolder
         target_dir.mkdir(parents=True, exist_ok=True)
         target_path = target_dir / filename
@@ -229,6 +266,7 @@ class ImageStorageService:
         storage_provider: str = "cloudinary",
         ttl_seconds: Optional[int] = None,
         transformation: Optional[List[Dict[str, Any]]] = None,
+        square: bool = False,
     ) -> str:
         """
         Generates a delivery URL.
@@ -239,6 +277,7 @@ class ImageStorageService:
           expire by time on the Free plan.
         - Paid Tier (Optional): If CLOUDINARY_AUTH_TOKEN_KEY is configured, time-based token expiry
           (__cld_token__) is attached.
+        - If square=True and no custom transformation is given, applies a nondestructive 1:1 pad transformation.
         For local: returns the local storage relative path (/storage/...).
         """
         if storage_provider == "cloudinary":
@@ -258,6 +297,17 @@ class ImageStorageService:
 
             if transformation:
                 url_options["transformation"] = transformation
+            elif square:
+                url_options["transformation"] = [
+                    {
+                        "aspect_ratio": "1.0",
+                        "crop": "pad",
+                        "background": "rgb:faf8f5",
+                        "gravity": "center",
+                        "quality": "auto",
+                        "fetch_format": "auto",
+                    }
+                ]
             else:
                 url_options["transformation"] = [
                     {"quality": "auto", "fetch_format": "auto"}

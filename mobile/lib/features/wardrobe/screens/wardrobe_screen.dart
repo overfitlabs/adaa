@@ -298,20 +298,24 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
+            AspectRatio(
+              aspectRatio: 1.0,
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: Container(
                   color: AppColors.surfaceContainerLow,
                   child: Stack(
                     children: [
-                      PrivateImageView(
-                        imageUrl: item.imageUrl,
-                        width: double.infinity,
-                        height: double.infinity,
-                        fit: BoxFit.cover,
-                        onRefreshUrl: () =>
-                            context.read<WardrobeProvider>().loadWardrobe(),
+                      Center(
+                        child: PrivateImageView(
+                          imageUrl: item.imageUrl,
+                          width: double.infinity,
+                          height: double.infinity,
+                          fit: BoxFit.contain,
+                          backgroundColor: AppColors.surfaceContainerLow,
+                          onRefreshUrl: () =>
+                              context.read<WardrobeProvider>().loadWardrobe(),
+                        ),
                       ),
                       Positioned(
                         top: 8,

@@ -77,8 +77,9 @@ async def detect_wardrobe_item_from_photo(
     current_user: Optional[AuthenticatedUser] = Depends(get_optional_current_user),
 ):
     """
-    Analyzes a photo of a single wardrobe garment to pre-fill metadata
+    Analyzes a photo of a wardrobe garment or full outfit to pre-fill metadata
     (category, colors, material, pattern, fit) before saving.
+    Extracts individual garments as standardized square crops.
     When USE_MEDIAFLOWS is enabled, routes through the MediaFlows pipeline with Gemini fallback.
     Cleans up any temporary staging files immediately to prevent orphaned disk assets.
     """
@@ -101,7 +102,9 @@ async def detect_wardrobe_item_from_photo(
                     primary_item = items_list[0] if items_list else None
                     return {
                         "detected_item": primary_item,
+                        "detected_items": items_list,
                         "detected_vibe": rec.vibe,
+                        "summary": rec.summary,
                     }
                 elif rec and rec.status == "failed":
                     break
@@ -114,7 +117,9 @@ async def detect_wardrobe_item_from_photo(
                     items_list = json.loads(rec.items_json) if rec.items_json else []
                     return {
                         "detected_item": items_list[0] if items_list else None,
+                        "detected_items": items_list,
                         "detected_vibe": rec.vibe,
+                        "summary": rec.summary,
                     }
                 except Exception as fb_err:
                     logger.warning("MediaFlows fallback failed in detect-item: %s", str(fb_err))
@@ -122,11 +127,13 @@ async def detect_wardrobe_item_from_photo(
         primary_item = analysis_res.items[0] if analysis_res.items else None
         return {
             "detected_item": primary_item.model_dump() if hasattr(primary_item, "model_dump") else primary_item,
+            "detected_items": [i.model_dump() if hasattr(i, "model_dump") else i for i in analysis_res.items],
             "detected_vibe": analysis_res.vibe_or_style,
+            "summary": analysis_res.summary,
         }
 
     raw_bytes = await file.read()
-    clean_bytes, ext, _, _ = image_storage_service.validate_and_sanitize_image(file, raw_bytes)
+    clean_bytes, ext, width, height = image_storage_service.validate_and_sanitize_image(file, raw_bytes)
 
     temp_filename = f"detect_staging_{uuid.uuid4().hex}.{ext}"
     temp_dir = settings.storage_path / "temp"
@@ -139,10 +146,29 @@ async def detect_wardrobe_item_from_photo(
 
         vision = get_vision_provider()
         summary, vibe, items = await vision.analyze_outfit_image(temp_path)
+
+        # Upload original photo under inspirations/wardrobe
+        uploaded_meta = await image_storage_service.upload(
+            user_id=current_user.id if current_user else None,
+            subfolder="wardrobe",
+            pre_sanitized=(clean_bytes, ext, width, height),
+        )
+
+        from app.api.routes_analysis import _extract_garment_crops
+        await _extract_garment_crops(
+            clean_bytes=clean_bytes,
+            items=items,
+            user_id=current_user.id if current_user else None,
+            original_public_id=uploaded_meta.public_id,
+            original_storage_provider=uploaded_meta.storage_provider,
+        )
+
         primary_item = items[0] if items else None
         return {
-            "detected_item": primary_item,
+            "detected_item": primary_item.model_dump() if hasattr(primary_item, "model_dump") else primary_item,
+            "detected_items": [i.model_dump() if hasattr(i, "model_dump") else i for i in items],
             "detected_vibe": vibe,
+            "summary": summary,
         }
     except Exception as e:
         logger.error("Wardrobe item detection failed: %s", str(e), exc_info=True)
@@ -200,10 +226,25 @@ async def create_wardrobe_item(
     uploaded_meta = None
 
     if file:
+        raw_bytes = await file.read()
+        clean_bytes, ext, width, height = image_storage_service.validate_and_sanitize_image(file, raw_bytes)
+        from PIL import Image
+        from app.services.image_storage import standardize_to_square
+        try:
+            with Image.open(io.BytesIO(clean_bytes)) as pil_img:
+                sq_img = standardize_to_square(pil_img, target_size=600, padding_ratio=0.06)
+                out_buf = io.BytesIO()
+                sq_img.save(out_buf, format="JPEG", quality=90)
+                clean_bytes = out_buf.getvalue()
+                ext = "jpg"
+                width, height = 600, 600
+        except Exception as sq_err:
+            logger.warning("Could not pre-square upload: %s", str(sq_err))
+
         uploaded_meta = await image_storage_service.upload(
-            file,
             user_id=user_id,
             subfolder="wardrobe",
+            pre_sanitized=(clean_bytes, ext, width, height),
         )
         final_image_path = uploaded_meta.public_id
         final_storage_provider = uploaded_meta.storage_provider
@@ -211,11 +252,19 @@ async def create_wardrobe_item(
         final_format = uploaded_meta.format
         final_version = uploaded_meta.version
     else:
-        # Fallback for manual or test fixture image_path
-        final_image_path = image_path
-        final_storage_provider = "local"
-        final_cloudinary_id = None
-        final_format = image_path.split(".")[-1] if "." in image_path else "jpg"
+        # Fallback for manual or review flow image_path (e.g. extracted square crops)
+        clean_path = (image_path or "").strip().lstrip("/")
+        if clean_path.startswith("storage/"):
+            clean_path = clean_path[len("storage/"):]
+        final_image_path = clean_path
+        is_cloudinary = (
+            settings.is_cloudinary_configured
+            and settings.STORAGE_BACKEND == "cloudinary"
+            and ("wardrobelens/" in clean_path or clean_path.startswith("extracted/"))
+        )
+        final_storage_provider = "cloudinary" if is_cloudinary else "local"
+        final_cloudinary_id = final_image_path if is_cloudinary else None
+        final_format = final_image_path.split(".")[-1] if "." in final_image_path else "jpg"
         final_version = None
 
     item = WardrobeItem(

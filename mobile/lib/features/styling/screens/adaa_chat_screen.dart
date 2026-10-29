@@ -743,22 +743,26 @@ class _AdaaChatScreenState extends State<AdaaChatScreen>
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            ClipRRect(
-                              borderRadius: const BorderRadius.vertical(
-                                top: Radius.circular(10),
-                              ),
-                              child: PrivateImageView(
-                                imageUrl: item.imageUrl,
-                                height: 78,
-                                width: double.infinity,
-                                fit: BoxFit.cover,
-                                errorWidget: Container(
-                                  height: 78,
-                                  color: AppColors.accentSoft,
-                                  child: const Icon(
-                                    Icons.checkroom,
-                                    color: AppColors.textMuted,
-                                    size: 24,
+                            AspectRatio(
+                              aspectRatio: 1.0,
+                              child: ClipRRect(
+                                borderRadius: const BorderRadius.vertical(
+                                  top: Radius.circular(10),
+                                ),
+                                child: Container(
+                                  color: AppColors.surfaceContainerLow,
+                                  child: PrivateImageView(
+                                    imageUrl: item.imageUrl,
+                                    fit: BoxFit.contain,
+                                    backgroundColor: AppColors.surfaceContainerLow,
+                                    errorWidget: Container(
+                                      color: AppColors.accentSoft,
+                                      child: const Icon(
+                                        Icons.checkroom,
+                                        color: AppColors.textMuted,
+                                        size: 24,
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ),

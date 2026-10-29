@@ -422,19 +422,24 @@ class _WardrobeBottomSheetState extends State<WardrobeBottomSheet> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
+            AspectRatio(
+              aspectRatio: 1.0,
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  PrivateImageView(
-                    imageUrl: item.imageUrl,
-                    fit: BoxFit.cover,
-                    errorWidget: Container(
-                      color: AppColors.accentSoft,
-                      child: const Icon(
-                        Icons.checkroom,
-                        color: AppColors.textMuted,
-                        size: 32,
+                  Container(color: AppColors.surfaceContainerLow),
+                  Center(
+                    child: PrivateImageView(
+                      imageUrl: item.imageUrl,
+                      fit: BoxFit.contain,
+                      backgroundColor: AppColors.surfaceContainerLow,
+                      errorWidget: Container(
+                        color: AppColors.accentSoft,
+                        child: const Icon(
+                          Icons.checkroom,
+                          color: AppColors.textMuted,
+                          size: 32,
+                        ),
                       ),
                     ),
                   ),

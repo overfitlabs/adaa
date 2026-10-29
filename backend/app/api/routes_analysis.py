@@ -93,14 +93,20 @@ async def _extract_garment_crops(
 ) -> None:
     """
     Extracts individual garment crops using Pillow bounding boxes and uploads them.
-    Stored under subfolder='extracted' WITHOUT the 'adaa-scan-pending' tag to prevent recursive triggers.
+    Guarantees:
+    - Each garment is centered on a consistent 1:1 square canvas (600x600) with ADAA neutral background (#FAF8F5).
+    - Proportions are preserved with balanced padding; garments are never stretched, sheared, or distorted.
+    - Derived assets use deterministic IDs based on source asset to prevent duplicate Cloudinary uploads across retries.
+    - Stored under subfolder='extracted' WITHOUT the 'adaa-scan-pending' tag to prevent recursive triggers.
     """
     try:
         from PIL import Image
+        from app.services.image_storage import standardize_to_square
         pil_source = Image.open(io.BytesIO(clean_bytes)).convert("RGB")
         src_w, src_h = pil_source.size
+        clean_parent = re.sub(r"[^a-zA-Z0-9_\-]", "_", original_public_id.split("/")[-1])
 
-        for item in items:
+        for idx, item in enumerate(items):
             crop_img = None
             if item.box_2d and len(item.box_2d) == 4:
                 ymin, xmin, ymax, xmax = item.box_2d
@@ -115,8 +121,8 @@ async def _extract_garment_crops(
                     bottom = int((ymax / 1000.0) * src_h)
                     right = int((xmax / 1000.0) * src_w)
 
-                    pad_y = max(2, int((bottom - top) * 0.03))
-                    pad_x = max(2, int((right - left) * 0.03))
+                    pad_y = max(2, int((bottom - top) * 0.04))
+                    pad_x = max(2, int((right - left) * 0.04))
                     crop_box = (
                         max(0, left - pad_x),
                         max(0, top - pad_y),
@@ -126,18 +132,36 @@ async def _extract_garment_crops(
                     crop_img = pil_source.crop(crop_box)
 
             if crop_img is None or crop_img.width < 10 or crop_img.height < 10:
-                crop_img = pil_source.copy()
+                if len(items) == 1:
+                    crop_img = pil_source.copy()
+                else:
+                    # For multi-item without valid box, safe center crop of half height
+                    half_h = max(10, src_h // 2)
+                    crop_img = pil_source.crop((0, 0, src_w, half_h))
+
+            # Standardize garment image to a square 600x600 canvas with neutral ADAA background
+            square_img = standardize_to_square(
+                crop_img,
+                target_size=600,
+                padding_ratio=0.06,
+                bg_color=(250, 248, 245),
+            )
 
             crop_buf = io.BytesIO()
-            crop_img.save(crop_buf, format="JPEG", quality=90)
+            square_img.save(crop_buf, format="JPEG", quality=90)
             crop_bytes = crop_buf.getvalue()
+
+            # Deterministic public ID ensures idempotency and prevents duplicate Cloudinary assets on retry
+            deterministic_crop_id = f"{clean_parent}_garment_{idx}"
 
             try:
                 # Untagged upload ensures recursive MediaFlows upload triggers are strictly prevented
                 extracted_meta = await image_storage_service.upload(
                     user_id=user_id,
                     subfolder="extracted",
-                    pre_sanitized=(crop_bytes, "jpg", crop_img.width, crop_img.height),
+                    pre_sanitized=(crop_bytes, "jpg", square_img.width, square_img.height),
+                    custom_asset_id=deterministic_crop_id,
+                    overwrite=True,
                 )
                 item.extracted_image_path = extracted_meta.public_id
                 item.extracted_image_url = image_storage_service.generate_delivery_url(
