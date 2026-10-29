@@ -170,8 +170,22 @@ class ImageStorageService:
                 }
                 if tags:
                     upload_kwargs["tags"] = tags
-                if context:
-                    upload_kwargs["context"] = context
+
+                effective_context = dict(context) if context else {}
+
+                # If this is a MediaFlows scan trigger upload, attach a secure, short-lived expiring private download URL
+                # via standard Cloudinary API signing (300s expiry). Uses standard API credentials without requiring
+                # paid token-auth features or creating permanent signed URLs.
+                if tags and "adaa-scan-pending" in tags:
+                    short_lived_url = self.generate_private_download_url(
+                        public_id,
+                        format=ext or "jpg",
+                        expires_at=int(time.time()) + 300,
+                    )
+                    effective_context["signed_url"] = short_lived_url
+
+                if effective_context:
+                    upload_kwargs["context"] = effective_context
 
                 upload_res = cloudinary.uploader.upload(
                     clean_bytes,
@@ -192,6 +206,8 @@ class ImageStorageService:
                     height=upload_res.get("height", height),
                     bytes_size=upload_res.get("bytes", len(clean_bytes)),
                 )
+            except HTTPException:
+                raise
             except Exception as e:
                 logger.error("Cloudinary upload failed: %s", str(e), exc_info=True)
                 raise HTTPException(

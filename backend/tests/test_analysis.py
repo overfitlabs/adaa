@@ -966,3 +966,83 @@ def test_database_migration_compatibility_for_analysis_status(db_session):
     # Automatically has status 'completed' by default
     assert record.status == "completed"
     assert record.error_message is None
+
+
+def test_mediaflows_upload_attaches_short_lived_private_download_url(sample_image_bytes):
+    """
+    Guarantees that when Cloudinary storage is active, uploading an inspiration asset
+    with 'adaa-scan-pending' securely injects a short-lived private download URL
+    (with explicit expires_at) into the Cloudinary upload context without requiring paid token auth.
+    """
+    from app.config import settings
+    from app.services.image_storage import image_storage_service
+    import cloudinary.uploader
+
+    with patch.object(settings, "STORAGE_BACKEND", "cloudinary"):
+        with patch.object(settings, "CLOUDINARY_CLOUD_NAME", "mock-cloud"):
+            with patch.object(settings, "CLOUDINARY_API_KEY", "mock-key"):
+                with patch.object(settings, "CLOUDINARY_API_SECRET", "mock-secret"):
+                    mock_upload_ret = {
+                        "public_id": "wardrobelens/users/test/inspirations/123",
+                        "format": "jpg",
+                        "version": "12345",
+                        "width": 200,
+                        "height": 200,
+                        "bytes": len(sample_image_bytes),
+                    }
+                    with patch.object(cloudinary.uploader, "upload", return_value=mock_upload_ret) as mock_upload:
+                        import asyncio
+                        meta = asyncio.run(
+                            image_storage_service.upload(
+                                user_id="user-123",
+                                subfolder="inspirations",
+                                pre_sanitized=(sample_image_bytes, "jpg", 200, 200),
+                                tags=["adaa-scan-pending"],
+                                context={"scan_id": "scan-123"},
+                            )
+                        )
+                        mock_upload.assert_called_once()
+                        upload_kwargs = mock_upload.call_args.kwargs
+                        assert "context" in upload_kwargs
+                        assert upload_kwargs["context"]["scan_id"] == "scan-123"
+                        signed_url = upload_kwargs["context"]["signed_url"]
+                        assert "api.cloudinary.com" in signed_url
+                        assert "expires_at=" in signed_url
+                        assert "signature=" in signed_url
+                        assert "type=authenticated" in signed_url
+
+
+def test_crops_and_regular_uploads_do_not_inject_signed_url_into_context(sample_image_bytes):
+    """
+    Guarantees regular uploads without 'adaa-scan-pending' do not generate or inject
+    signed URLs into asset context.
+    """
+    from app.config import settings
+    from app.services.image_storage import image_storage_service
+    import cloudinary.uploader
+
+    with patch.object(settings, "STORAGE_BACKEND", "cloudinary"):
+        with patch.object(settings, "CLOUDINARY_CLOUD_NAME", "mock-cloud"):
+            with patch.object(settings, "CLOUDINARY_API_KEY", "mock-key"):
+                with patch.object(settings, "CLOUDINARY_API_SECRET", "mock-secret"):
+                    mock_upload_ret = {
+                        "public_id": "wardrobelens/users/test/extracted/crop-1",
+                        "format": "jpg",
+                        "version": "12345",
+                        "width": 100,
+                        "height": 100,
+                        "bytes": len(sample_image_bytes),
+                    }
+                    with patch.object(cloudinary.uploader, "upload", return_value=mock_upload_ret) as mock_upload:
+                        import asyncio
+                        meta = asyncio.run(
+                            image_storage_service.upload(
+                                user_id="user-123",
+                                subfolder="extracted",
+                                pre_sanitized=(sample_image_bytes, "jpg", 100, 100),
+                                tags=None,
+                            )
+                        )
+                        mock_upload.assert_called_once()
+                        upload_kwargs = mock_upload.call_args.kwargs
+                        assert "context" not in upload_kwargs or "signed_url" not in upload_kwargs.get("context", {})

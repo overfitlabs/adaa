@@ -376,6 +376,8 @@ async def analyze_outfit_image(
                 tags=["adaa-scan-pending"],
                 context={"scan_id": scan_id, "user_id": current_user.id if current_user else "anonymous"},
             )
+        except HTTPException:
+            raise
         except Exception as upload_err:
             logger.error("Failed to upload inspiration image for MediaFlows: %s", str(upload_err))
             raise HTTPException(
