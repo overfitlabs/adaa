@@ -134,6 +134,8 @@ class ImageStorageService:
         user_id: Optional[str] = None,
         subfolder: str = "wardrobe",
         pre_sanitized: Optional[Tuple[bytes, str, int, int]] = None,
+        tags: Optional[List[str]] = None,
+        context: Optional[Dict[str, str]] = None,
     ) -> ImageMetadata:
         """
         Uploads image using authenticated user ID.
@@ -160,17 +162,26 @@ class ImageStorageService:
             public_id = f"{folder_path}/{asset_uuid}"
 
             try:
+                upload_kwargs: Dict[str, Any] = {
+                    "public_id": public_id,
+                    "type": "authenticated",
+                    "resource_type": "image",
+                    "overwrite": False,
+                }
+                if tags:
+                    upload_kwargs["tags"] = tags
+                if context:
+                    upload_kwargs["context"] = context
+
                 upload_res = cloudinary.uploader.upload(
                     clean_bytes,
-                    public_id=public_id,
-                    type="authenticated",
-                    resource_type="image",
-                    overwrite=False,
+                    **upload_kwargs,
                 )
                 logger.info(
-                    "Uploaded authenticated Cloudinary asset: public_id=%s, bytes=%d",
+                    "Uploaded authenticated Cloudinary asset: public_id=%s, bytes=%d, tags=%s",
                     public_id,
                     len(clean_bytes),
+                    tags,
                 )
                 return ImageMetadata(
                     public_id=upload_res.get("public_id", public_id),

@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Any
 from pydantic import BaseModel, Field, ConfigDict, model_validator
 
 
@@ -44,10 +44,30 @@ class OutfitAnalysisResponse(BaseModel):
     image_url: str
     summary: str
     vibe_or_style: Optional[str] = None
-    items: List[DetectedFashionItem]
-    detected_garment_count: int
+    items: List[DetectedFashionItem] = Field(default_factory=list)
+    detected_garment_count: int = 0
     created_at: datetime
     user_id: Optional[str] = None
+    status: str = "completed"
+    error: Optional[str] = None
+
+
+class ScanStatusResponse(BaseModel):
+    scan_id: str
+    status: str  # "pending", "processing", "completed", "failed"
+    result: Optional[OutfitAnalysisResponse] = None
+    error: Optional[str] = None
+    created_at: Optional[datetime] = None
+
+
+class MediaFlowsWebhookPayload(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    scan_id: Optional[str] = None
+    public_id: Optional[str] = None
+    gemini_output: Optional[Any] = None
+    status: Optional[str] = None
+    error: Optional[str] = None
 
 
 # Wardrobe Models

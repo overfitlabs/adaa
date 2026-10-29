@@ -8,6 +8,8 @@ class OutfitAnalysisResponse {
   final List<DetectedFashionItem> items;
   final int detectedGarmentCount;
   final DateTime createdAt;
+  final String status;
+  final String? error;
 
   OutfitAnalysisResponse({
     required this.analysisId,
@@ -17,6 +19,8 @@ class OutfitAnalysisResponse {
     required this.items,
     required this.detectedGarmentCount,
     required this.createdAt,
+    this.status = 'completed',
+    this.error,
   });
 
   factory OutfitAnalysisResponse.fromJson(Map<String, dynamic> json) {
@@ -32,6 +36,8 @@ class OutfitAnalysisResponse {
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'])
           : DateTime.now(),
+      status: json['status'] ?? 'completed',
+      error: json['error'],
     );
   }
 }

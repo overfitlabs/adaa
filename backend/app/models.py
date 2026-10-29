@@ -51,7 +51,9 @@ class OutfitAnalysisRecord(Base):
     image_version = Column(String(30), nullable=True)
     summary = Column(Text, nullable=True)
     vibe = Column(String(80), nullable=True)
-    items_json = Column(Text, nullable=False)  # JSON encoded detected items
+    items_json = Column(Text, nullable=False, default="[]", server_default="[]")  # JSON encoded detected items
+    status = Column(String(30), nullable=False, default="completed", server_default="completed", index=True)
+    error_message = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 

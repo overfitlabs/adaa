@@ -141,8 +141,15 @@ class ApiClient {
       final response = await http.Response.fromStream(streamedResponse);
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
-        final json = jsonDecode(utf8.decode(response.bodyBytes));
-        return OutfitAnalysisResponse.fromJson(json);
+        final json = jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+        final initial = OutfitAnalysisResponse.fromJson(json);
+
+        // If MediaFlows is enabled on server and analysis is pending/processing, poll until ready
+        if (initial.status.toLowerCase() == 'processing' || initial.status.toLowerCase() == 'pending') {
+          return await pollScanUntilComplete(initial.analysisId);
+        }
+
+        return initial;
       } else {
         final error = _extractError(response.body);
         throw ApiException(error, response.statusCode);
@@ -150,6 +157,57 @@ class ApiClient {
     } catch (e) {
       throw _handleNetworkError(e);
     }
+  }
+
+  static Future<Map<String, dynamic>> getScanStatus(String scanId) async {
+    try {
+      final uri = Uri.parse(ApiEndpoints.scanStatus(scanId));
+      final response = await http.get(uri, headers: _defaultHeaders).timeout(_timeout);
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+      } else {
+        final error = _extractError(response.body);
+        throw ApiException(error, response.statusCode);
+      }
+    } catch (e) {
+      throw _handleNetworkError(e);
+    }
+  }
+
+  static Future<OutfitAnalysisResponse> pollScanUntilComplete(
+    String scanId, {
+    Duration timeout = const Duration(seconds: 35),
+    Duration interval = const Duration(milliseconds: 1500),
+  }) async {
+    final startTime = DateTime.now();
+    while (DateTime.now().difference(startTime) < timeout) {
+      await Future.delayed(interval);
+      final statusData = await getScanStatus(scanId);
+      final status = (statusData['status'] as String? ?? 'processing').toLowerCase();
+
+      if (status == 'completed') {
+        final resultData = statusData['result'] as Map<String, dynamic>?;
+        if (resultData != null) {
+          return OutfitAnalysisResponse.fromJson(resultData);
+        }
+        return await getAnalysisDetail(scanId);
+      } else if (status == 'failed') {
+        final err = statusData['error'] as String? ?? 'Outfit analysis failed';
+        throw ApiException(err, 500);
+      }
+    }
+    throw ApiException('Scan timed out waiting for results', 504);
+  }
+
+  static Future<OutfitAnalysisResponse> getAnalysisDetail(String analysisId) async {
+    final res = await http
+        .get(Uri.parse(ApiEndpoints.analysisDetail(analysisId)), headers: _defaultHeaders)
+        .timeout(_timeout);
+    if (res.statusCode >= 200 && res.statusCode < 300) {
+      final json = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
+      return OutfitAnalysisResponse.fromJson(json);
+    }
+    throw ApiException('Failed to fetch analysis details', res.statusCode);
   }
 
   static Future<List<OutfitAnalysisResponse>> getAnalysisHistory() async {

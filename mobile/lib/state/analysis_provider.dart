@@ -21,8 +21,16 @@ class AnalysisProvider extends ChangeNotifier {
   bool get isMatching => _isMatching;
   String? get error => _error;
   XFile? get lastAnalyzedFile => _lastAnalyzedFile;
+  int _activeScanToken = 0;
 
   void clearError() {
+    _error = null;
+    notifyListeners();
+  }
+
+  void cancelActiveScan() {
+    _activeScanToken++;
+    _isAnalyzing = false;
     _error = null;
     notifyListeners();
   }
@@ -37,22 +45,31 @@ class AnalysisProvider extends ChangeNotifier {
     _isAnalyzing = true;
     _error = null;
     _currentMatchResult = null;
+    final token = ++_activeScanToken;
     notifyListeners();
 
     try {
       final res = await ApiClient.analyzeOutfitImage(imageFile);
+      if (_activeScanToken != token) {
+        return false;
+      }
       _currentAnalysis = res;
       _history.insert(0, res);
       _error = null;
       notifyListeners();
       return true;
     } catch (e) {
+      if (_activeScanToken != token) {
+        return false;
+      }
       _error = e.toString();
       notifyListeners();
       return false;
     } finally {
-      _isAnalyzing = false;
-      notifyListeners();
+      if (_activeScanToken == token) {
+        _isAnalyzing = false;
+        notifyListeners();
+      }
     }
   }
 

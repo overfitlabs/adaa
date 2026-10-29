@@ -54,6 +54,7 @@ class ApiEndpoints {
   static String get analyzeImage => '$baseUrl/api/analysis/analyze-image';
   static String get analysisHistory => '$baseUrl/api/analysis';
   static String analysisDetail(String id) => '$baseUrl/api/analysis/$id';
+  static String scanStatus(String scanId) => '$baseUrl/api/analysis/scans/$scanId';
 
   // Wardrobe
   static String get wardrobeItems => '$baseUrl/api/wardrobe/items';

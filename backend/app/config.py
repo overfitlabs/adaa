@@ -43,6 +43,11 @@ class Settings(BaseSettings):
     TRYON_RETENTION_DAYS: int = 7
     OPERATOR_SECRET: str = ""  # Secret for operator CLI / cron endpoints
 
+    # Cloudinary MediaFlows Integration
+    USE_MEDIAFLOWS: bool = False
+    MEDIAFLOWS_WEBHOOK_SECRET: str = ""
+    MEDIAFLOWS_TIMEOUT_SECONDS: int = 25
+
     model_config = SettingsConfigDict(
         env_file=(
             str(Path(__file__).resolve().parent.parent / ".env")

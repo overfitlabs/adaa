@@ -81,6 +81,8 @@ REQUIRED_COLUMNS = {
         ("cloudinary_public_id", "VARCHAR(255)"),
         ("image_format", "VARCHAR(20)"),
         ("image_version", "VARCHAR(30)"),
+        ("status", "VARCHAR(30) DEFAULT 'completed'"),
+        ("error_message", "TEXT"),
     ],
     "saved_outfits": [
         ("user_id", "VARCHAR(36)"),

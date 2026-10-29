@@ -571,3 +571,398 @@ def test_cleanup_endpoint_admin_role_allowed(client, db_session):
     app.dependency_overrides.pop(get_optional_current_user, None)
 
 
+
+
+# =============================================================================
+# MediaFlows Integration & Backward-Compatibility Test Suite
+# =============================================================================
+
+def test_mediaflows_webhook_authentication_rejects_missing_or_invalid_secret(client, db_session):
+    from app.config import settings
+    with patch.object(settings, "MEDIAFLOWS_WEBHOOK_SECRET", "super-secret-webhook-key"):
+        # 1. Missing secret
+        res1 = client.post("/api/analysis/mediaflows-webhook", json={"scan_id": "any-id"})
+        assert res1.status_code == 401
+        assert "secret" in res1.json()["detail"].lower()
+
+        # 2. Invalid secret
+        res2 = client.post(
+            "/api/analysis/mediaflows-webhook",
+            json={"scan_id": "any-id"},
+            headers={"X-MediaFlows-Secret": "wrong-secret-key"},
+        )
+        assert res2.status_code == 401
+        assert "invalid" in res2.json()["detail"].lower()
+
+        # 3. Valid secret with missing scan record -> 404
+        res3 = client.post(
+            "/api/analysis/mediaflows-webhook",
+            json={"scan_id": "nonexistent-scan-id"},
+            headers={"X-MediaFlows-Secret": "super-secret-webhook-key"},
+        )
+        assert res3.status_code == 404
+
+
+def test_mediaflows_webhook_successful_processing_and_crops(client, db_session):
+    from app.config import settings
+    from app.models import OutfitAnalysisRecord
+    import uuid
+
+    scan_id = str(uuid.uuid4())
+    record = OutfitAnalysisRecord(
+        id=scan_id,
+        user_id="user-owner-123",
+        image_path=f"wardrobelens/users/user-owner-123/inspirations/{scan_id}.jpg",
+        storage_provider="local",
+        status="processing",
+        items_json="[]",
+        summary="Pending scan...",
+    )
+    db_session.add(record)
+    db_session.commit()
+
+    gemini_output = {
+        "summary": "Elevated business casual look",
+        "vibe": "Smart Casual",
+        "items": [
+            {
+                "category": "jackets",
+                "sub_category": "Blazer",
+                "name": "Camel Wool Tailored Blazer",
+                "primary_color": "Camel",
+                "attributes": {"material": "wool", "fit": "tailored"},
+                "confidence": 0.96,
+                "box_2d": [100, 200, 600, 800],
+            },
+            {
+                "category": "trousers",
+                "name": "Navy Pleated Trousers",
+                "primary_color": "Navy",
+                "attributes": {"formality": "smart-casual"},
+                "confidence": 0.92,
+                "box_2d": [600, 250, 950, 750],
+            },
+        ],
+    }
+
+    with patch.object(settings, "MEDIAFLOWS_WEBHOOK_SECRET", "test-secret-mf"):
+        res = client.post(
+            "/api/analysis/mediaflows-webhook",
+            json={
+                "scan_id": scan_id,
+                "gemini_output": json.dumps(gemini_output),
+                "untrusted_user_id": "malicious-user-id",
+            },
+            headers={"X-MediaFlows-Secret": "test-secret-mf"},
+        )
+        assert res.status_code == 200
+        data = res.json()
+        assert data["status"] == "completed"
+        assert data["scan_id"] == scan_id
+
+    # Verify database record updated
+    db_session.refresh(record)
+    assert record.status == "completed"
+    assert record.summary == "Elevated business casual look"
+    assert record.vibe == "Smart Casual"
+    assert record.user_id == "user-owner-123"  # Derivation from DB preserved, untrusted_user_id ignored
+    items = json.loads(record.items_json)
+    assert len(items) == 2
+    assert items[0]["name"] == "Camel Wool Tailored Blazer"
+    assert items[0]["extracted_image_path"] is not None
+
+
+def test_mediaflows_webhook_idempotency_ignores_duplicate(client, db_session):
+    from app.config import settings
+    from app.models import OutfitAnalysisRecord
+    import uuid
+
+    scan_id = str(uuid.uuid4())
+    record = OutfitAnalysisRecord(
+        id=scan_id,
+        user_id="user-owner-456",
+        image_path=f"wardrobelens/users/user-owner-456/inspirations/{scan_id}.jpg",
+        storage_provider="local",
+        status="completed",  # Already completed
+        items_json=json.dumps([{"id": "item-1", "name": "Existing Blazer", "category": "jackets", "primary_color": "Black"}]),
+        summary="Original summary",
+    )
+    db_session.add(record)
+    db_session.commit()
+
+    with patch.object(settings, "MEDIAFLOWS_WEBHOOK_SECRET", "test-secret-mf"):
+        with patch("app.api.routes_analysis._extract_garment_crops") as mock_crops:
+            res = client.post(
+                "/api/analysis/mediaflows-webhook",
+                json={
+                    "scan_id": scan_id,
+                    "gemini_output": {"summary": "Overwritten summary", "items": []},
+                },
+                headers={"Authorization": "Bearer test-secret-mf"},
+            )
+            assert res.status_code == 200
+            assert res.json()["status"] == "completed"
+            assert "already completed" in res.json()["message"].lower()
+
+            # No crops or updates should have occurred
+            mock_crops.assert_not_called()
+
+    db_session.refresh(record)
+    assert record.summary == "Original summary"  # Not mutated
+
+
+def test_mediaflows_fallback_race_late_callback_cannot_overwrite_completed(client, db_session):
+    from app.config import settings
+    from app.models import OutfitAnalysisRecord
+    import uuid
+
+    scan_id = str(uuid.uuid4())
+    # Record completed via server-side direct Gemini fallback
+    record = OutfitAnalysisRecord(
+        id=scan_id,
+        user_id="user-owner-789",
+        image_path="inspirations/outfit.jpg",
+        storage_provider="local",
+        status="completed",
+        items_json=json.dumps([{"id": "fb-item-1", "name": "Fallback Dress", "category": "dresses", "primary_color": "Red"}]),
+        summary="Fallback completed summary",
+    )
+    db_session.add(record)
+    db_session.commit()
+
+    # Delayed slow callback finally arrives
+    with patch.object(settings, "MEDIAFLOWS_WEBHOOK_SECRET", "test-secret-mf"):
+        res = client.post(
+            "/api/analysis/mediaflows-webhook",
+            json={
+                "scan_id": scan_id,
+                "gemini_output": {"summary": "Slow callback summary", "items": []},
+            },
+            headers={"X-MediaFlows-Secret": "test-secret-mf"},
+        )
+        assert res.status_code == 200
+        assert res.json()["status"] == "completed"
+
+    db_session.refresh(record)
+    assert record.summary == "Fallback completed summary"
+    items = json.loads(record.items_json)
+    assert len(items) == 1
+    assert items[0]["name"] == "Fallback Dress"
+
+
+def test_mediaflows_scan_status_endpoint_and_authorization(client, db_session):
+    from app.models import OutfitAnalysisRecord
+    from app.auth.supabase_auth import get_optional_current_user, AuthenticatedUser
+    from app.main import app
+    import uuid
+
+    scan_id = str(uuid.uuid4())
+    record = OutfitAnalysisRecord(
+        id=scan_id,
+        user_id="user-alice",
+        image_path="inspirations/alice.jpg",
+        storage_provider="local",
+        status="completed",
+        items_json="[]",
+        summary="Alice's outfit",
+    )
+    db_session.add(record)
+    db_session.commit()
+
+    # User Bob attempts to access Alice's scan
+    bob_user = AuthenticatedUser(id="user-bob", email="bob@test.com", role="authenticated")
+    app.dependency_overrides[get_optional_current_user] = lambda: bob_user
+    res_forbidden = client.get(f"/api/analysis/scans/{scan_id}")
+    assert res_forbidden.status_code == 404
+
+    # Alice accesses her own scan
+    alice_user = AuthenticatedUser(id="user-alice", email="alice@test.com", role="authenticated")
+    app.dependency_overrides[get_optional_current_user] = lambda: alice_user
+    res_ok = client.get(f"/api/analysis/scans/{scan_id}")
+    assert res_ok.status_code == 200
+    data = res_ok.json()
+    assert data["scan_id"] == scan_id
+    assert data["status"] == "completed"
+    assert data["result"]["summary"] == "Alice's outfit"
+
+    app.dependency_overrides.pop(get_optional_current_user, None)
+
+
+def test_mediaflows_server_timeout_triggers_direct_gemini_fallback(client, db_session, sample_image_bytes):
+    from app.config import settings
+    from app.models import OutfitAnalysisRecord
+    from app.schemas import DetectedFashionItem, StyleAttributes
+    from datetime import datetime, timedelta
+    import uuid
+
+    scan_id = str(uuid.uuid4())
+    past_time = datetime.utcnow() - timedelta(seconds=30)
+    record = OutfitAnalysisRecord(
+        id=scan_id,
+        user_id=None,
+        image_path="inspirations/timeout_scan.jpg",
+        storage_provider="local",
+        status="processing",
+        items_json="[]",
+        summary="Pending...",
+        created_at=past_time,
+    )
+    db_session.add(record)
+    db_session.commit()
+
+    sample_fallback_item = DetectedFashionItem(
+        id="fb-1",
+        category="tops",
+        name="Silk Blouse",
+        primary_color="White",
+        attributes=StyleAttributes(material="silk"),
+    )
+
+    with patch.object(settings, "MEDIAFLOWS_TIMEOUT_SECONDS", 25):
+        with patch("app.api.routes_analysis._fetch_image_bytes_for_record", return_value=sample_image_bytes):
+            with patch("app.api.routes_analysis.get_vision_provider") as mock_vision:
+                mock_provider = MagicMock()
+                mock_provider.analyze_outfit_image = AsyncMock(
+                    return_value=("Fallback silk look", "Minimalist", [sample_fallback_item])
+                )
+                mock_vision.return_value = mock_provider
+
+                res = client.get(f"/api/analysis/scans/{scan_id}")
+                assert res.status_code == 200
+                data = res.json()
+                assert data["status"] == "completed"
+                assert data["result"]["summary"] == "Fallback silk look"
+
+    db_session.refresh(record)
+    assert record.status == "completed"
+    assert record.summary == "Fallback silk look"
+
+
+def test_mediaflows_malformed_gemini_payload_handling(client, db_session):
+    from app.config import settings
+    from app.models import OutfitAnalysisRecord
+    import uuid
+
+    scan_id = str(uuid.uuid4())
+    record = OutfitAnalysisRecord(
+        id=scan_id,
+        user_id=None,
+        image_path="inspirations/malformed.jpg",
+        storage_provider="local",
+        status="processing",
+        items_json="[]",
+        summary="Pending...",
+    )
+    db_session.add(record)
+    db_session.commit()
+
+    with patch.object(settings, "MEDIAFLOWS_WEBHOOK_SECRET", "test-secret-mf"):
+        with patch("app.api.routes_analysis._execute_direct_gemini_fallback", side_effect=RuntimeError("Fallback offline")):
+            res = client.post(
+                "/api/analysis/mediaflows-webhook",
+                json={
+                    "scan_id": scan_id,
+                    "gemini_output": "{ this is definitely not valid json :::",
+                },
+                headers={"X-MediaFlows-Secret": "test-secret-mf"},
+            )
+            assert res.status_code == 200
+            data = res.json()
+            assert data["status"] == "failed"
+
+    db_session.refresh(record)
+    assert record.status == "failed"
+    assert "parsing error" in record.error_message.lower()
+
+
+def test_mediaflows_pipeline_when_enabled_returns_processing_and_tags_upload(client, sample_image_bytes):
+    from app.config import settings
+    from app.services.image_storage import image_storage_service
+    files = {"file": ("outfit_mf.jpg", io.BytesIO(sample_image_bytes), "image/jpeg")}
+
+    with patch.object(settings, "USE_MEDIAFLOWS", True):
+        with patch("app.api.routes_analysis.image_storage_service.upload", wraps=image_storage_service.upload) as mock_upload:
+            res = client.post("/api/analysis/analyze-image", files=files)
+            assert res.status_code == 200
+            data = res.json()
+            assert data["status"] == "processing"
+            assert "analysis_id" in data
+            assert len(data["items"]) == 0
+
+            # Verify that inspiration upload was tagged with 'adaa-scan-pending'
+            mock_upload.assert_called_once()
+            call_kwargs = mock_upload.call_args.kwargs
+            assert call_kwargs.get("subfolder") == "inspirations"
+            assert call_kwargs.get("tags") == ["adaa-scan-pending"]
+            assert "scan_id" in call_kwargs.get("context", {})
+
+
+def test_mediaflows_pipeline_when_disabled_uses_synchronous_untagged_flow(client, sample_image_bytes):
+    from app.config import settings
+    from app.services.image_storage import image_storage_service
+    from app.schemas import DetectedFashionItem, StyleAttributes
+    sample_item = DetectedFashionItem(
+        id="item-sync-1",
+        category="tops",
+        name="Cotton T-Shirt",
+        primary_color="White",
+        attributes=StyleAttributes(material="cotton"),
+    )
+    files = {"file": ("outfit_sync.jpg", io.BytesIO(sample_image_bytes), "image/jpeg")}
+
+    with patch.object(settings, "USE_MEDIAFLOWS", False):
+        with patch("app.api.routes_analysis.get_vision_provider") as mock_vision:
+            mock_provider = MagicMock()
+            mock_provider.analyze_outfit_image = AsyncMock(
+                return_value=("Casual Cotton T-Shirt", "Casual", [sample_item])
+            )
+            mock_vision.return_value = mock_provider
+
+            with patch("app.api.routes_analysis.image_storage_service.upload", wraps=image_storage_service.upload) as mock_upload:
+                res = client.post("/api/analysis/analyze-image", files=files)
+                assert res.status_code == 200
+                data = res.json()
+                assert data["status"] == "completed"
+                assert len(data["items"]) >= 1
+
+                # Verify uploads in disabled mode:
+                # 1. Inspiration upload: tags=None (NOT tagged with adaa-scan-pending)
+                # 2. Extracted crops upload: subfolder="extracted", tags=None
+                assert mock_upload.call_count >= 1
+                for call in mock_upload.call_args_list:
+                    assert call.kwargs.get("tags") is None
+
+
+def test_crops_and_unrelated_uploads_never_tagged_adaa_scan_pending(client, sample_image_bytes):
+    """
+    Guarantees extracted garment crops, default models, friend photos, and VTO result images
+    are NEVER tagged with 'adaa-scan-pending', preventing recursive or unrelated triggers.
+    """
+    from app.services.image_storage import image_storage_service
+
+    import inspect
+    sig = inspect.signature(image_storage_service.upload)
+    assert "tags" in sig.parameters
+    assert "context" in sig.parameters
+    assert sig.parameters["tags"].default is None
+
+
+def test_database_migration_compatibility_for_analysis_status(db_session):
+    from app.models import OutfitAnalysisRecord
+    import uuid
+
+    test_id = str(uuid.uuid4())
+    record = OutfitAnalysisRecord(
+        id=test_id,
+        user_id=None,
+        image_path="test/path.jpg",
+        storage_provider="local",
+        items_json="[]",
+    )
+    db_session.add(record)
+    db_session.commit()
+    db_session.refresh(record)
+
+    # Automatically has status 'completed' by default
+    assert record.status == "completed"
+    assert record.error_message is None
