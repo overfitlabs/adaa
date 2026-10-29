@@ -218,6 +218,7 @@ class _CommunitiesScreenState extends State<CommunitiesScreen>
         ],
       ),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'communities_fab',
         backgroundColor: AppColors.forest,
         foregroundColor: Colors.white,
         child: const Icon(Icons.group_add),

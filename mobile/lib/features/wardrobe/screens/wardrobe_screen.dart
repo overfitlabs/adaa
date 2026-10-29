@@ -158,6 +158,7 @@ class _WardrobeScreenState extends State<WardrobeScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'wardrobe_fab',
         backgroundColor: AppColors.forest,
         foregroundColor: Colors.white,
         child: const Icon(Icons.add),

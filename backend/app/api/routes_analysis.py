@@ -2,14 +2,14 @@ import json
 import logging
 import time
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List, Optional
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, Header, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.database import get_db
-from app.models import OutfitAnalysisRecord
+from app.models import OutfitAnalysisRecord, WardrobeItem, SavedOutfit
 from app.schemas import OutfitAnalysisResponse, DetectedFashionItem, StyleAttributes
 from app.services.image_storage import image_storage_service
 from app.services.vision_provider import get_vision_provider
@@ -273,3 +273,201 @@ def list_recent_analyses(
 
     records = query.order_by(OutfitAnalysisRecord.created_at.desc()).limit(limit).all()
     return [_record_to_response(r) for r in records]
+
+
+def delete_analysis_record_and_assets(
+    db: Session,
+    record: OutfitAnalysisRecord,
+) -> bool:
+    """
+    Deletes the OutfitAnalysisRecord and all associated image assets (original photo and crops).
+    CRITICAL: Preserves any crop assets that have been saved into a WardrobeItem or SavedOutfit.
+    Returns True if deletion succeeded.
+    Raises RuntimeError if image storage cleanup failed.
+    """
+    candidate_assets = set()
+    if record.cloudinary_public_id:
+        candidate_assets.add(record.cloudinary_public_id)
+    if record.image_path:
+        candidate_assets.add(record.image_path)
+
+    try:
+        raw_items = json.loads(record.items_json) if record.items_json else []
+        for item in raw_items:
+            ext_path = item.get("extracted_image_path")
+            if ext_path:
+                candidate_assets.add(ext_path)
+    except Exception as e:
+        logger.warning("Failed to parse items_json for analysis %s: %s", record.id, e)
+
+    candidate_assets.discard("")
+    candidate_assets.discard(None)
+    candidate_assets.discard("wardrobe/placeholder.jpg")
+
+    # Check which candidate assets are in use by WardrobeItem or SavedOutfit
+    wardrobe_items = db.query(WardrobeItem).filter(
+        (WardrobeItem.image_path.in_(candidate_assets)) |
+        (WardrobeItem.cloudinary_public_id.in_(candidate_assets))
+    ).all()
+    protected_assets = set()
+    for w_item in wardrobe_items:
+        if w_item.image_path:
+            protected_assets.add(w_item.image_path)
+            protected_assets.add(w_item.image_path.lstrip("/"))
+        if w_item.cloudinary_public_id:
+            protected_assets.add(w_item.cloudinary_public_id)
+
+    saved_outfits = db.query(SavedOutfit).filter(
+        (SavedOutfit.image_path.in_(candidate_assets)) |
+        (SavedOutfit.cloudinary_public_id.in_(candidate_assets))
+    ).all()
+    for s_outfit in saved_outfits:
+        if s_outfit.image_path:
+            protected_assets.add(s_outfit.image_path)
+            protected_assets.add(s_outfit.image_path.lstrip("/"))
+        if s_outfit.cloudinary_public_id:
+            protected_assets.add(s_outfit.cloudinary_public_id)
+
+    # Also protect if another analysis references the same asset
+    other_records = db.query(OutfitAnalysisRecord).filter(
+        OutfitAnalysisRecord.id != record.id,
+        (OutfitAnalysisRecord.image_path.in_(candidate_assets)) |
+        (OutfitAnalysisRecord.cloudinary_public_id.in_(candidate_assets))
+    ).all()
+    for o_rec in other_records:
+        if o_rec.image_path:
+            protected_assets.add(o_rec.image_path)
+        if o_rec.cloudinary_public_id:
+            protected_assets.add(o_rec.cloudinary_public_id)
+
+    assets_to_delete = candidate_assets - protected_assets
+
+    storage_provider = getattr(record, "storage_provider", "local")
+    failed_assets = []
+    for asset in assets_to_delete:
+        success = image_storage_service.delete(asset, storage_provider=storage_provider)
+        if not success:
+            failed_assets.append(asset)
+
+    if failed_assets:
+        logger.error(
+            "Failed to delete storage assets for analysis %s: %s",
+            record.id,
+            failed_assets,
+        )
+        raise RuntimeError(f"Storage asset deletion failed for {len(failed_assets)} asset(s).")
+
+    db.delete(record)
+    db.commit()
+    logger.info("Successfully deleted analysis %s and %d asset(s)", record.id, len(assets_to_delete))
+    return True
+
+
+def cleanup_abandoned_analyses(db: Session, max_age_hours: int = 24) -> dict:
+    """
+    Cleans up abandoned outfit analyses older than max_age_hours.
+    An analysis is abandoned if:
+    1. created_at <= now - max_age_hours
+    2. NOT linked to any SavedOutfit (via inspiration_analysis_id)
+    Any cropped garments saved to WardrobeItem are protected.
+    """
+    cutoff = datetime.utcnow() - timedelta(hours=max_age_hours)
+
+    saved_inspiration_ids = [
+        row[0] for row in db.query(SavedOutfit.inspiration_analysis_id)
+        .filter(SavedOutfit.inspiration_analysis_id.isnot(None))
+        .all()
+    ]
+
+    query = db.query(OutfitAnalysisRecord).filter(
+        OutfitAnalysisRecord.created_at <= cutoff
+    )
+    if saved_inspiration_ids:
+        query = query.filter(~OutfitAnalysisRecord.id.in_(saved_inspiration_ids))
+
+    abandoned_records = query.all()
+    cleaned_count = 0
+    failed_count = 0
+
+    for rec in abandoned_records:
+        try:
+            delete_analysis_record_and_assets(db, rec)
+            cleaned_count += 1
+        except Exception as e:
+            db.rollback()
+            logger.error("Failed to clean up abandoned analysis %s: %s", rec.id, e)
+            failed_count += 1
+
+    return {
+        "status": "success",
+        "abandoned_scans_cleaned": cleaned_count,
+        "failed_scans": failed_count,
+        "retention_cutoff": cutoff.isoformat(),
+    }
+
+
+@router.delete("/{analysis_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_analysis(
+    analysis_id: str,
+    db: Session = Depends(get_db),
+    current_user: Optional[AuthenticatedUser] = Depends(get_optional_current_user),
+):
+    record = db.query(OutfitAnalysisRecord).filter(OutfitAnalysisRecord.id == analysis_id).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="Analysis record not found.")
+
+    # Authorization guard:
+    # A user cannot access or delete another user's private analysis record.
+    # Return 404 to avoid leaking existence of another user's record.
+    if record.user_id is not None:
+        if current_user is None or current_user.id != record.user_id:
+            raise HTTPException(status_code=404, detail="Analysis record not found.")
+    else:
+        # Legacy unowned record cannot be deleted by authenticated users
+        if current_user is not None:
+            raise HTTPException(status_code=403, detail="Cannot delete unowned legacy analysis.")
+
+    try:
+        delete_analysis_record_and_assets(db, record)
+    except RuntimeError as e:
+        logger.error("Storage error during deletion of analysis %s: %s", analysis_id, str(e))
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Failed to clean up storage assets for analysis. Please retry.",
+        )
+    except Exception as e:
+        db.rollback()
+        logger.error("Unexpected error deleting analysis %s: %s", analysis_id, str(e), exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to delete analysis record.",
+        )
+
+    return None
+
+
+@router.post("/cleanup")
+def trigger_analysis_cleanup(
+    max_age_hours: int = 24,
+    db: Session = Depends(get_db),
+    current_user: Optional[AuthenticatedUser] = Depends(get_optional_current_user),
+    x_operator_secret: Optional[str] = Header(None, alias="X-Operator-Secret"),
+):
+    """
+    Operator cleanup endpoint to purge abandoned scans older than max_age_hours (default: 24h).
+    Preserves all wardrobe items and saved outfit assets.
+    Restricted: Ordinary users cannot trigger global scan cleanups.
+    """
+    is_admin = current_user and getattr(current_user, "role", None) in ("admin", "service_role")
+    configured_secret = getattr(settings, "OPERATOR_SECRET", "")
+    is_operator = bool(configured_secret and x_operator_secret == configured_secret)
+
+    if not is_admin and not is_operator:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: Operator authorization required for global cleanup.",
+        )
+
+    result = cleanup_abandoned_analyses(db, max_age_hours=max_age_hours)
+    return result
+

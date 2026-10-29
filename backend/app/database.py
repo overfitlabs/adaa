@@ -94,6 +94,8 @@ REQUIRED_COLUMNS = {
         ("garment_image_public_id", "VARCHAR(255)"),
         ("result_image_public_id", "VARCHAR(255)"),
         ("expires_at", "DATETIME"),
+        ("is_friend_tryon", "BOOLEAN DEFAULT 0"),
+        ("used_saved_model", "BOOLEAN DEFAULT 0"),
     ],
     "communities": [
         ("status", "VARCHAR(30) DEFAULT 'active'"),

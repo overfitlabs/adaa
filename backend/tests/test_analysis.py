@@ -299,3 +299,275 @@ def test_multi_item_overlapping_garments_and_storage_privacy(client, sample_imag
         assert unsupported_res.status_code == 400
 
     app.dependency_overrides.pop(get_optional_current_user, None)
+
+
+def test_delete_analysis_owner_success(client, db_session):
+    from app.models import OutfitAnalysisRecord
+    from app.auth.supabase_auth import get_optional_current_user, AuthenticatedUser
+    from app.main import app
+
+    user = AuthenticatedUser(id="owner-del-test", email="owner@adaa.style", role="authenticated")
+    app.dependency_overrides[get_optional_current_user] = lambda: user
+
+    rec = OutfitAnalysisRecord(
+        id="analysis-to-delete-1",
+        user_id="owner-del-test",
+        image_path="inspirations/outfit_del.jpg",
+        storage_provider="local",
+        items_json=json.dumps([
+            {"id": "c1", "extracted_image_path": "extracted/crop_del1.jpg"},
+            {"id": "c2", "extracted_image_path": "extracted/crop_del2.jpg"},
+        ]),
+    )
+    db_session.add(rec)
+    db_session.commit()
+
+    with patch("app.api.routes_analysis.image_storage_service.delete", return_value=True) as mock_del:
+        res = client.delete(f"/api/analysis/{rec.id}")
+        assert res.status_code == 204
+
+        deleted_assets = [call.args[0] for call in mock_del.call_args_list]
+        assert "inspirations/outfit_del.jpg" in deleted_assets
+        assert "extracted/crop_del1.jpg" in deleted_assets
+        assert "extracted/crop_del2.jpg" in deleted_assets
+
+    assert db_session.query(OutfitAnalysisRecord).filter(OutfitAnalysisRecord.id == "analysis-to-delete-1").first() is None
+    app.dependency_overrides.pop(get_optional_current_user, None)
+
+
+def test_delete_analysis_cross_user_denial(client, db_session):
+    from app.models import OutfitAnalysisRecord
+    from app.auth.supabase_auth import get_optional_current_user, AuthenticatedUser
+    from app.main import app
+
+    user_owner = AuthenticatedUser(id="owner-user-xyz", email="owner@adaa.style", role="authenticated")
+    user_other = AuthenticatedUser(id="other-user-abc", email="other@adaa.style", role="authenticated")
+
+    rec = OutfitAnalysisRecord(
+        id="analysis-cross-user-1",
+        user_id="owner-user-xyz",
+        image_path="inspirations/secret_fit.jpg",
+        storage_provider="local",
+        items_json="[]",
+    )
+    db_session.add(rec)
+    db_session.commit()
+
+    # User Other attempts to delete User Owner's record
+    app.dependency_overrides[get_optional_current_user] = lambda: user_other
+    with patch("app.api.routes_analysis.image_storage_service.delete") as mock_del:
+        res = client.delete(f"/api/analysis/{rec.id}")
+        assert res.status_code == 404
+        mock_del.assert_not_called()
+
+    # Anonymous user attempts to delete
+    app.dependency_overrides[get_optional_current_user] = lambda: None
+    with patch("app.api.routes_analysis.image_storage_service.delete") as mock_del:
+        res = client.delete(f"/api/analysis/{rec.id}")
+        assert res.status_code == 404
+        mock_del.assert_not_called()
+
+    assert db_session.query(OutfitAnalysisRecord).filter(OutfitAnalysisRecord.id == rec.id).first() is not None
+    app.dependency_overrides.pop(get_optional_current_user, None)
+
+
+def test_delete_analysis_repeated_idempotence(client, db_session):
+    from app.models import OutfitAnalysisRecord
+    from app.auth.supabase_auth import get_optional_current_user, AuthenticatedUser
+    from app.main import app
+
+    user = AuthenticatedUser(id="repeat-del-user", email="user@adaa.style", role="authenticated")
+    app.dependency_overrides[get_optional_current_user] = lambda: user
+
+    rec = OutfitAnalysisRecord(
+        id="analysis-repeat-1",
+        user_id="repeat-del-user",
+        image_path="inspirations/fit_repeat.jpg",
+        storage_provider="local",
+        items_json="[]",
+    )
+    db_session.add(rec)
+    db_session.commit()
+
+    with patch("app.api.routes_analysis.image_storage_service.delete", return_value=True):
+        res1 = client.delete(f"/api/analysis/{rec.id}")
+        assert res1.status_code == 204
+
+        res2 = client.delete(f"/api/analysis/{rec.id}")
+        assert res2.status_code == 404
+
+    app.dependency_overrides.pop(get_optional_current_user, None)
+
+
+def test_delete_analysis_preserves_wardrobe_items(client, db_session):
+    from app.models import OutfitAnalysisRecord, WardrobeItem
+    from app.auth.supabase_auth import get_optional_current_user, AuthenticatedUser
+    from app.main import app
+
+    user = AuthenticatedUser(id="preserve-user", email="preserve@adaa.style", role="authenticated")
+    app.dependency_overrides[get_optional_current_user] = lambda: user
+
+    saved_crop_path = "extracted/saved_blazer_crop.jpg"
+    unsaved_crop_path = "extracted/unsaved_tie_crop.jpg"
+    main_photo_path = "inspirations/main_outfit.jpg"
+
+    # User saved the blazer crop to their wardrobe
+    wardrobe_item = WardrobeItem(
+        id="w-item-preserved-1",
+        user_id="preserve-user",
+        name="Saved Navy Blazer",
+        category="jackets",
+        primary_color="Navy",
+        image_path=saved_crop_path,
+        storage_provider="local",
+    )
+    db_session.add(wardrobe_item)
+
+    rec = OutfitAnalysisRecord(
+        id="analysis-preserve-test",
+        user_id="preserve-user",
+        image_path=main_photo_path,
+        storage_provider="local",
+        items_json=json.dumps([
+            {"id": "crop1", "extracted_image_path": saved_crop_path},
+            {"id": "crop2", "extracted_image_path": unsaved_crop_path},
+        ]),
+    )
+    db_session.add(rec)
+    db_session.commit()
+
+    with patch("app.api.routes_analysis.image_storage_service.delete", return_value=True) as mock_del:
+        res = client.delete(f"/api/analysis/{rec.id}")
+        assert res.status_code == 204
+
+        deleted_assets = [call.args[0] for call in mock_del.call_args_list]
+        assert main_photo_path in deleted_assets
+        assert unsaved_crop_path in deleted_assets
+        assert saved_crop_path not in deleted_assets
+
+    assert db_session.query(WardrobeItem).filter(WardrobeItem.id == "w-item-preserved-1").first() is not None
+    app.dependency_overrides.pop(get_optional_current_user, None)
+
+
+def test_delete_analysis_storage_failure_rollback(client, db_session):
+    from app.models import OutfitAnalysisRecord
+    from app.auth.supabase_auth import get_optional_current_user, AuthenticatedUser
+    from app.main import app
+
+    user = AuthenticatedUser(id="fail-user", email="fail@adaa.style", role="authenticated")
+    app.dependency_overrides[get_optional_current_user] = lambda: user
+
+    rec = OutfitAnalysisRecord(
+        id="analysis-storage-fail",
+        user_id="fail-user",
+        image_path="inspirations/outfit_err.jpg",
+        storage_provider="local",
+        items_json="[]",
+    )
+    db_session.add(rec)
+    db_session.commit()
+
+    with patch("app.api.routes_analysis.image_storage_service.delete", return_value=False):
+        res = client.delete(f"/api/analysis/{rec.id}")
+        assert res.status_code == 502
+        assert "clean up storage" in res.json()["detail"].lower()
+
+    assert db_session.query(OutfitAnalysisRecord).filter(OutfitAnalysisRecord.id == rec.id).first() is not None
+    app.dependency_overrides.pop(get_optional_current_user, None)
+
+
+def test_cleanup_abandoned_analyses_logic(db_session):
+    from datetime import datetime, timedelta
+    from app.models import OutfitAnalysisRecord, SavedOutfit
+    from app.api.routes_analysis import cleanup_abandoned_analyses
+
+    now = datetime.utcnow()
+    old_abandoned = OutfitAnalysisRecord(
+        id="scan-abandoned-old",
+        user_id="test-clean-user",
+        image_path="inspirations/old_abandoned.jpg",
+        storage_provider="local",
+        items_json="[]",
+        created_at=now - timedelta(hours=30),
+    )
+
+    recent_scan = OutfitAnalysisRecord(
+        id="scan-recent-active",
+        user_id="test-clean-user",
+        image_path="inspirations/recent_active.jpg",
+        storage_provider="local",
+        items_json="[]",
+        created_at=now - timedelta(hours=2),
+    )
+
+    old_saved = OutfitAnalysisRecord(
+        id="scan-old-saved-outfit",
+        user_id="test-clean-user",
+        image_path="inspirations/old_saved.jpg",
+        storage_provider="local",
+        items_json="[]",
+        created_at=now - timedelta(hours=30),
+    )
+    saved_outfit = SavedOutfit(
+        id="saved-outfit-ref-1",
+        user_id="test-clean-user",
+        name="Summer Linen Set",
+        inspiration_analysis_id="scan-old-saved-outfit",
+    )
+
+    db_session.add_all([old_abandoned, recent_scan, old_saved, saved_outfit])
+    db_session.commit()
+
+    with patch("app.api.routes_analysis.image_storage_service.delete", return_value=True):
+        result = cleanup_abandoned_analyses(db_session, max_age_hours=24)
+        assert result["status"] == "success"
+        assert result["abandoned_scans_cleaned"] == 1
+
+        assert db_session.query(OutfitAnalysisRecord).filter(OutfitAnalysisRecord.id == "scan-abandoned-old").first() is None
+        assert db_session.query(OutfitAnalysisRecord).filter(OutfitAnalysisRecord.id == "scan-recent-active").first() is not None
+        assert db_session.query(OutfitAnalysisRecord).filter(OutfitAnalysisRecord.id == "scan-old-saved-outfit").first() is not None
+
+
+def test_cleanup_endpoint_ordinary_user_denied(client):
+    from app.auth.supabase_auth import get_optional_current_user, AuthenticatedUser
+    from app.main import app
+
+    ordinary_user = AuthenticatedUser(id="ordinary-user", email="user@adaa.style", role="authenticated")
+    app.dependency_overrides[get_optional_current_user] = lambda: ordinary_user
+
+    res = client.post("/api/analysis/cleanup")
+    assert res.status_code == 403
+    assert "Operator authorization required" in res.json()["detail"]
+
+    app.dependency_overrides[get_optional_current_user] = lambda: None
+    res_anon = client.post("/api/analysis/cleanup")
+    assert res_anon.status_code == 403
+
+    app.dependency_overrides.pop(get_optional_current_user, None)
+
+
+def test_cleanup_endpoint_operator_secret_allowed(client, db_session):
+    from app.config import settings
+    with patch.object(settings, "OPERATOR_SECRET", "super-secret-operator-key"):
+        headers = {"X-Operator-Secret": "super-secret-operator-key"}
+        res = client.post("/api/analysis/cleanup", headers=headers)
+        assert res.status_code == 200
+        data = res.json()
+        assert data["status"] == "success"
+        assert "abandoned_scans_cleaned" in data
+
+
+def test_cleanup_endpoint_admin_role_allowed(client, db_session):
+    from app.auth.supabase_auth import get_optional_current_user, AuthenticatedUser
+    from app.main import app
+
+    admin_user = AuthenticatedUser(id="admin-user", email="admin@adaa.style", role="service_role")
+    app.dependency_overrides[get_optional_current_user] = lambda: admin_user
+
+    res = client.post("/api/analysis/cleanup")
+    assert res.status_code == 200
+    assert res.json()["status"] == "success"
+
+    app.dependency_overrides.pop(get_optional_current_user, None)
+
+

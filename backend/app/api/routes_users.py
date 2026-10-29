@@ -206,44 +206,58 @@ def update_my_profile(
     _get_or_create_profile_dict(db, current_user)
     updates = {}
 
-    if body.display_name is not None:
-        trimmed = body.display_name.strip()
+    if "display_name" in body.model_fields_set:
+        trimmed = body.display_name.strip() if body.display_name else ""
         if trimmed:
             updates["full_name"] = trimmed
-    if body.bio is not None:
-        updates["bio"] = body.bio.strip() if body.bio.strip() else None
-    if body.avatar_url is not None:
-        updates["avatar_url"] = body.avatar_url.strip() if body.avatar_url.strip() else None
-    if body.age is not None:
+    if "bio" in body.model_fields_set:
+        updates["bio"] = body.bio.strip() if body.bio and body.bio.strip() else None
+    if "avatar_url" in body.model_fields_set:
+        updates["avatar_url"] = body.avatar_url.strip() if body.avatar_url and body.avatar_url.strip() else None
+    if "age" in body.model_fields_set:
         updates["age"] = body.age
-    if body.phone_number is not None:
-        updates["phone_number"] = body.phone_number.strip() if body.phone_number.strip() else None
-    if body.tops_size is not None:
-        updates["tops_size"] = body.tops_size.strip() if body.tops_size.strip() else None
-    if body.bottoms_size is not None:
-        updates["bottoms_size"] = body.bottoms_size.strip() if body.bottoms_size.strip() else None
-    if body.shoe_size is not None:
-        updates["shoe_size"] = body.shoe_size.strip() if body.shoe_size.strip() else None
-    if body.preferred_fit is not None:
-        updates["preferred_fit"] = body.preferred_fit.strip() if body.preferred_fit.strip() else None
-    if body.preferred_styles is not None:
-        updates["preferred_styles"] = json.dumps(body.preferred_styles)
+    if "phone_number" in body.model_fields_set:
+        updates["phone_number"] = body.phone_number.strip() if body.phone_number and body.phone_number.strip() else None
 
-    if body.privacy_settings is not None:
+    # Handle sizing & fit preferences (accept nested fit_preferences or legacy flat fields)
+    if "fit_preferences" in body.model_fields_set and body.fit_preferences is not None:
+        fp = body.fit_preferences
+        if "tops_size" in fp.model_fields_set:
+            updates["tops_size"] = fp.tops_size.strip() if fp.tops_size and fp.tops_size.strip() else None
+        if "bottoms_size" in fp.model_fields_set:
+            updates["bottoms_size"] = fp.bottoms_size.strip() if fp.bottoms_size and fp.bottoms_size.strip() else None
+        if "shoe_size" in fp.model_fields_set:
+            updates["shoe_size"] = fp.shoe_size.strip() if fp.shoe_size and fp.shoe_size.strip() else None
+        if "preferred_fit" in fp.model_fields_set:
+            updates["preferred_fit"] = fp.preferred_fit.strip() if fp.preferred_fit and fp.preferred_fit.strip() else None
+    else:
+        if "tops_size" in body.model_fields_set:
+            updates["tops_size"] = body.tops_size.strip() if body.tops_size and body.tops_size.strip() else None
+        if "bottoms_size" in body.model_fields_set:
+            updates["bottoms_size"] = body.bottoms_size.strip() if body.bottoms_size and body.bottoms_size.strip() else None
+        if "shoe_size" in body.model_fields_set:
+            updates["shoe_size"] = body.shoe_size.strip() if body.shoe_size and body.shoe_size.strip() else None
+        if "preferred_fit" in body.model_fields_set:
+            updates["preferred_fit"] = body.preferred_fit.strip() if body.preferred_fit and body.preferred_fit.strip() else None
+
+    if "preferred_styles" in body.model_fields_set:
+        updates["preferred_styles"] = json.dumps(body.preferred_styles) if body.preferred_styles is not None else "[]"
+
+    if "privacy_settings" in body.model_fields_set and body.privacy_settings is not None:
         ps = body.privacy_settings
-        if ps.show_profile_photo is not None:
+        if "show_profile_photo" in ps.model_fields_set and ps.show_profile_photo is not None:
             updates["show_profile_photo"] = 1 if ps.show_profile_photo else 0
-        if ps.show_bio is not None:
+        if "show_bio" in ps.model_fields_set and ps.show_bio is not None:
             updates["show_bio"] = 1 if ps.show_bio else 0
-        if ps.show_age is not None:
+        if "show_age" in ps.model_fields_set and ps.show_age is not None:
             updates["show_age"] = 1 if ps.show_age else 0
-        if ps.show_phone is not None:
+        if "show_phone" in ps.model_fields_set and ps.show_phone is not None:
             updates["show_phone"] = 1 if ps.show_phone else 0
-        if ps.show_email is not None:
+        if "show_email" in ps.model_fields_set and ps.show_email is not None:
             updates["show_email"] = 1 if ps.show_email else 0
-        if ps.show_fit_preferences is not None:
+        if "show_fit_preferences" in ps.model_fields_set and ps.show_fit_preferences is not None:
             updates["show_fit_preferences"] = 1 if ps.show_fit_preferences else 0
-        if ps.show_preferred_styles is not None:
+        if "show_preferred_styles" in ps.model_fields_set and ps.show_preferred_styles is not None:
             updates["show_preferred_styles"] = 1 if ps.show_preferred_styles else 0
 
     if updates:

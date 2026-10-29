@@ -23,6 +23,7 @@ import '../../communities/screens/shared_closet_screen.dart';
 import '../../outfits/screens/outfits_screen.dart';
 import '../../profile/screens/profile_screen.dart';
 import '../../styling/screens/recommendations_screen.dart';
+import '../../styling/screens/adaa_chat_screen.dart';
 import '../../tryon/screens/tryon_screen.dart';
 import '../../communities/screens/shared_item_detail_screen.dart';
 import '../../communities/widgets/public_profile_sheet.dart';
@@ -660,6 +661,10 @@ class _HomeScreenState extends State<HomeScreen> {
             _buildGreetingHeader(),
             const SizedBox(height: 16),
 
+            // Persistent Ask adaa Stylist Entry Point (Option 1)
+            _buildAskAdaaCard(),
+            const SizedBox(height: 16),
+
             // Wardrobe Capsule Summary Card
             _buildCapsuleCard(wardrobe),
             const SizedBox(height: 18),
@@ -835,6 +840,120 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildAskAdaaCard() {
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const AdaaChatScreen()),
+        );
+      },
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF1E3A2B), Color(0xFF14271D)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: const Color(0xFFD4AF37).withValues(alpha: 0.35),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF1E3A2B).withValues(alpha: 0.25),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: const Color(0xFFD4AF37).withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: const Color(0xFFD4AF37).withValues(alpha: 0.4),
+                ),
+              ),
+              child: const Icon(
+                Icons.auto_awesome,
+                color: Color(0xFFE5C07B),
+                size: 22,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        'Ask adaa',
+                        style: AppTypography.titleMedium.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFD4AF37)
+                              .withValues(alpha: 0.25),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Text(
+                          'AI STYLIST',
+                          style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFFE5C07B),
+                            letterSpacing: 0.8,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    'What should I wear? Outfit pairings & styling',
+                    style: AppTypography.bodySmall.copyWith(
+                      color: const Color(0xFFD0D7D2),
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.arrow_forward,
+                size: 16,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

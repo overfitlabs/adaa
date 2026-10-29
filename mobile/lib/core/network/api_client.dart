@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io' show SocketException;
+
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:image_picker/image_picker.dart';
@@ -16,6 +17,7 @@ import '../models/community_model.dart';
 import '../models/user_profile_model.dart';
 import '../models/notification_model.dart';
 import '../models/recommended_outfit.dart';
+import '../models/stylist_chat_model.dart';
 import 'api_endpoints.dart';
 
 class ApiException implements Exception {
@@ -87,7 +89,9 @@ class ApiClient {
   static Future<bool> checkHealth([String? url]) async {
     final target = url != null ? '$url/health' : ApiEndpoints.health;
     try {
-      final res = await http.get(Uri.parse(target)).timeout(const Duration(seconds: 4));
+      final res = await http
+          .get(Uri.parse(target))
+          .timeout(const Duration(seconds: 4));
       return res.statusCode == 200;
     } catch (_) {
       return false;
@@ -109,7 +113,9 @@ class ApiClient {
   }
 
   // Outfit Analysis
-  static Future<OutfitAnalysisResponse> analyzeOutfitImage(XFile imageFile) async {
+  static Future<OutfitAnalysisResponse> analyzeOutfitImage(
+    XFile imageFile,
+  ) async {
     try {
       final uri = Uri.parse(ApiEndpoints.analyzeImage);
       final request = http.MultipartRequest('POST', uri);
@@ -147,7 +153,9 @@ class ApiClient {
   }
 
   static Future<List<OutfitAnalysisResponse>> getAnalysisHistory() async {
-    final res = await http.get(Uri.parse(ApiEndpoints.analysisHistory), headers: _defaultHeaders).timeout(_timeout);
+    final res = await http
+        .get(Uri.parse(ApiEndpoints.analysisHistory), headers: _defaultHeaders)
+        .timeout(_timeout);
     if (res.statusCode == 200) {
       final list = jsonDecode(utf8.decode(res.bodyBytes)) as List<dynamic>;
       return list.map((e) => OutfitAnalysisResponse.fromJson(e)).toList();
@@ -157,7 +165,9 @@ class ApiClient {
 
   // Auth Profile
   static Future<Map<String, dynamic>> getCurrentUser() async {
-    final res = await http.get(Uri.parse(ApiEndpoints.authMe), headers: _defaultHeaders).timeout(_timeout);
+    final res = await http
+        .get(Uri.parse(ApiEndpoints.authMe), headers: _defaultHeaders)
+        .timeout(_timeout);
     if (res.statusCode == 200) {
       return jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
     }
@@ -166,7 +176,9 @@ class ApiClient {
   }
 
   // Wardrobe Items
-  static Future<Map<String, dynamic>> detectWardrobeItemFromPhoto(XFile imageFile) async {
+  static Future<Map<String, dynamic>> detectWardrobeItemFromPhoto(
+    XFile imageFile,
+  ) async {
     final uri = Uri.parse(ApiEndpoints.detectWardrobeItem);
     final request = http.MultipartRequest('POST', uri);
     final bytes = await imageFile.readAsBytes();
@@ -219,16 +231,28 @@ class ApiClient {
     request.fields['name'] = name;
     request.fields['category'] = category;
     request.fields['primary_color'] = primaryColor;
-    if (subCategory != null && subCategory.isNotEmpty) request.fields['sub_category'] = subCategory;
-    if (secondaryColor != null && secondaryColor.isNotEmpty) request.fields['secondary_color'] = secondaryColor;
-    if (pattern != null && pattern.isNotEmpty) request.fields['pattern'] = pattern;
-    if (material != null && material.isNotEmpty) request.fields['material'] = material;
+    if (subCategory != null && subCategory.isNotEmpty) {
+      request.fields['sub_category'] = subCategory;
+    }
+    if (secondaryColor != null && secondaryColor.isNotEmpty) {
+      request.fields['secondary_color'] = secondaryColor;
+    }
+    if (pattern != null && pattern.isNotEmpty) {
+      request.fields['pattern'] = pattern;
+    }
+    if (material != null && material.isNotEmpty) {
+      request.fields['material'] = material;
+    }
     if (fit != null && fit.isNotEmpty) request.fields['fit'] = fit;
     if (season != null && season.isNotEmpty) request.fields['season'] = season;
-    if (formality != null && formality.isNotEmpty) request.fields['formality'] = formality;
+    if (formality != null && formality.isNotEmpty) {
+      request.fields['formality'] = formality;
+    }
     if (brand != null && brand.isNotEmpty) request.fields['brand'] = brand;
     if (size != null && size.isNotEmpty) request.fields['size'] = size;
-    if (condition != null && condition.isNotEmpty) request.fields['condition'] = condition;
+    if (condition != null && condition.isNotEmpty) {
+      request.fields['condition'] = condition;
+    }
     if (notes != null && notes.isNotEmpty) request.fields['notes'] = notes;
     request.fields['tags'] = jsonEncode(tags);
 
@@ -292,14 +316,13 @@ class ApiClient {
       }).toList(),
     };
 
-    final res = await http.post(
-      uri,
-      headers: _defaultHeaders,
-      body: jsonEncode(payload),
-    ).timeout(_timeout);
+    final res = await http
+        .post(uri, headers: _defaultHeaders, body: jsonEncode(payload))
+        .timeout(_timeout);
 
     if (res.statusCode == 201) {
-      final data = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
+      final data =
+          jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
       final results = data['results'] as List<dynamic>? ?? [];
       final savedItems = <WardrobeItem>[];
       for (final r in results) {
@@ -329,7 +352,8 @@ class ApiClient {
     if (color != null && color.isNotEmpty) params['color'] = color;
     if (brand != null && brand.isNotEmpty) params['brand'] = brand;
 
-    final uri = Uri.parse(ApiEndpoints.wardrobeItems).replace(queryParameters: params);
+    final uri = Uri.parse(ApiEndpoints.wardrobeItems)
+        .replace(queryParameters: params);
     final res = await http.get(uri, headers: _defaultHeaders).timeout(_timeout);
     if (res.statusCode == 200) {
       final list = jsonDecode(utf8.decode(res.bodyBytes)) as List<dynamic>;
@@ -347,13 +371,14 @@ class ApiClient {
     throw ApiException(_extractError(res.body), res.statusCode);
   }
 
-  static Future<WardrobeItem> updateWardrobeItem(String id, Map<String, dynamic> updates) async {
+  static Future<WardrobeItem> updateWardrobeItem(
+    String id,
+    Map<String, dynamic> updates,
+  ) async {
     final uri = Uri.parse(ApiEndpoints.wardrobeItemDetail(id));
-    final res = await http.put(
-      uri,
-      headers: _defaultHeaders,
-      body: jsonEncode(updates),
-    ).timeout(_timeout);
+    final res = await http
+        .put(uri, headers: _defaultHeaders, body: jsonEncode(updates))
+        .timeout(_timeout);
 
     if (res.statusCode == 200) {
       return WardrobeItem.fromJson(jsonDecode(utf8.decode(res.bodyBytes)));
@@ -361,7 +386,10 @@ class ApiClient {
     throw ApiException(_extractError(res.body), res.statusCode);
   }
 
-  static Future<WardrobeItem> updateWardrobeItemPhoto(String id, XFile file) async {
+  static Future<WardrobeItem> updateWardrobeItemPhoto(
+    String id,
+    XFile file,
+  ) async {
     final uri = Uri.parse(ApiEndpoints.wardrobeItemPhoto(id));
     final request = http.MultipartRequest('PUT', uri);
 
@@ -391,7 +419,9 @@ class ApiClient {
 
   static Future<void> deleteWardrobeItem(String id) async {
     final uri = Uri.parse(ApiEndpoints.wardrobeItemDetail(id));
-    final res = await http.delete(uri, headers: _defaultHeaders).timeout(_timeout);
+    final res = await http
+        .delete(uri, headers: _defaultHeaders)
+        .timeout(_timeout);
     if (res.statusCode != 204) {
       throw ApiException('Failed to delete item', res.statusCode);
     }
@@ -401,7 +431,8 @@ class ApiClient {
     final uri = Uri.parse(ApiEndpoints.wardrobeCategories);
     final res = await http.get(uri, headers: _defaultHeaders).timeout(_timeout);
     if (res.statusCode == 200) {
-      return (jsonDecode(utf8.decode(res.bodyBytes)) as List<dynamic>).cast<Map<String, dynamic>>();
+      return (jsonDecode(utf8.decode(res.bodyBytes)) as List<dynamic>)
+          .cast<Map<String, dynamic>>();
     }
     return [];
   }
@@ -417,14 +448,14 @@ class ApiClient {
       'analysis_id': analysisId,
     });
 
-    final res = await http.post(
-      uri,
-      headers: _defaultHeaders,
-      body: body,
-    ).timeout(_timeout);
+    final res = await http
+        .post(uri, headers: _defaultHeaders, body: body)
+        .timeout(_timeout);
 
     if (res.statusCode == 200) {
-      return OutfitMatchResponse.fromJson(jsonDecode(utf8.decode(res.bodyBytes)));
+      return OutfitMatchResponse.fromJson(
+        jsonDecode(utf8.decode(res.bodyBytes)),
+      );
     }
     throw ApiException(_extractError(res.body), res.statusCode);
   }
@@ -446,11 +477,9 @@ class ApiClient {
       'inspiration_analysis_id': inspirationAnalysisId,
     });
 
-    final res = await http.post(
-      uri,
-      headers: _defaultHeaders,
-      body: body,
-    ).timeout(_timeout);
+    final res = await http
+        .post(uri, headers: _defaultHeaders, body: body)
+        .timeout(_timeout);
 
     if (res.statusCode == 201) {
       return SavedOutfit.fromJson(jsonDecode(utf8.decode(res.bodyBytes)));
@@ -459,7 +488,9 @@ class ApiClient {
   }
 
   static Future<List<SavedOutfit>> getSavedOutfits() async {
-    final res = await http.get(Uri.parse(ApiEndpoints.outfits), headers: _defaultHeaders).timeout(_timeout);
+    final res = await http
+        .get(Uri.parse(ApiEndpoints.outfits), headers: _defaultHeaders)
+        .timeout(_timeout);
     if (res.statusCode == 200) {
       final list = jsonDecode(utf8.decode(res.bodyBytes)) as List<dynamic>;
       return list.map((o) => SavedOutfit.fromJson(o)).toList();
@@ -468,7 +499,12 @@ class ApiClient {
   }
 
   static Future<void> deleteSavedOutfit(String id) async {
-    final res = await http.delete(Uri.parse(ApiEndpoints.outfitDetail(id)), headers: _defaultHeaders).timeout(_timeout);
+    final res = await http
+        .delete(
+          Uri.parse(ApiEndpoints.outfitDetail(id)),
+          headers: _defaultHeaders,
+        )
+        .timeout(_timeout);
     if (res.statusCode != 204) {
       throw ApiException('Failed to delete outfit', res.statusCode);
     }
@@ -476,23 +512,29 @@ class ApiClient {
 
   // Virtual Try-On
   static Future<TryOnTask> createTryOnTask({
-    required XFile userImage,
+    XFile? userImage,
     XFile? garmentImage,
     String? wardrobeItemId,
     String garmentCategory = 'upper body',
+    bool useSavedModel = false,
+    bool isFriendTryon = false,
+    bool friendConsentAcknowledged = false,
+    bool saveAsDefaultModel = false,
   }) async {
     final uri = Uri.parse(ApiEndpoints.tryOnTasks);
     final request = http.MultipartRequest('POST', uri);
 
-    final userBytes = await userImage.readAsBytes();
-    request.files.add(
-      http.MultipartFile.fromBytes(
-        'user_image',
-        userBytes,
-        filename: userImage.name.isNotEmpty ? userImage.name : 'user.jpg',
-        contentType: MediaType.parse('image/jpeg'),
-      ),
-    );
+    if (userImage != null) {
+      final userBytes = await userImage.readAsBytes();
+      request.files.add(
+        http.MultipartFile.fromBytes(
+          'user_image',
+          userBytes,
+          filename: userImage.name.isNotEmpty ? userImage.name : 'user.jpg',
+          contentType: MediaType.parse('image/jpeg'),
+        ),
+      );
+    }
 
     if (garmentImage != null) {
       final gBytes = await garmentImage.readAsBytes();
@@ -500,7 +542,9 @@ class ApiClient {
         http.MultipartFile.fromBytes(
           'garment_image',
           gBytes,
-          filename: garmentImage.name.isNotEmpty ? garmentImage.name : 'garment.jpg',
+          filename: garmentImage.name.isNotEmpty
+              ? garmentImage.name
+              : 'garment.jpg',
           contentType: MediaType.parse('image/jpeg'),
         ),
       );
@@ -509,6 +553,12 @@ class ApiClient {
     }
 
     request.fields['garment_category'] = garmentCategory;
+    if (useSavedModel) request.fields['use_saved_model'] = 'true';
+    if (isFriendTryon) request.fields['is_friend_tryon'] = 'true';
+    if (friendConsentAcknowledged) {
+      request.fields['friend_consent_acknowledged'] = 'true';
+    }
+    if (saveAsDefaultModel) request.fields['save_as_default_model'] = 'true';
 
     if (authToken != null && authToken!.trim().isNotEmpty) {
       request.headers['Authorization'] = 'Bearer ${authToken!.trim()}';
@@ -517,10 +567,55 @@ class ApiClient {
     final streamed = await request.send().timeout(_timeout);
     final res = await http.Response.fromStream(streamed);
 
-    if (res.statusCode == 202) {
+    if (res.statusCode == 201 || res.statusCode == 202) {
       return TryOnTask.fromJson(jsonDecode(utf8.decode(res.bodyBytes)));
     }
     throw ApiException(_extractError(res.body), res.statusCode);
+  }
+
+  static Future<UserTryOnModel> getTryOnModel() async {
+    final res = await http
+        .get(Uri.parse(ApiEndpoints.tryOnModel), headers: _defaultHeaders)
+        .timeout(_timeout);
+    if (res.statusCode == 200) {
+      return UserTryOnModel.fromJson(jsonDecode(utf8.decode(res.bodyBytes)));
+    }
+    throw ApiException('Failed to load try-on model', res.statusCode);
+  }
+
+  static Future<UserTryOnModel> saveTryOnModel(XFile image) async {
+    final uri = Uri.parse(ApiEndpoints.tryOnModel);
+    final request = http.MultipartRequest('POST', uri);
+    final bytes = await image.readAsBytes();
+    request.files.add(
+      http.MultipartFile.fromBytes(
+        'image',
+        bytes,
+        filename: image.name.isNotEmpty ? image.name : 'model.jpg',
+        contentType: MediaType.parse('image/jpeg'),
+      ),
+    );
+
+    if (authToken != null && authToken!.trim().isNotEmpty) {
+      request.headers['Authorization'] = 'Bearer ${authToken!.trim()}';
+    }
+
+    final streamed = await request.send().timeout(_analysisTimeout);
+    final res = await http.Response.fromStream(streamed);
+
+    if (res.statusCode == 200 || res.statusCode == 201) {
+      return UserTryOnModel.fromJson(jsonDecode(utf8.decode(res.bodyBytes)));
+    }
+    throw ApiException(_extractError(res.body), res.statusCode);
+  }
+
+  static Future<void> deleteTryOnModel() async {
+    final res = await http
+        .delete(Uri.parse(ApiEndpoints.tryOnModel), headers: _defaultHeaders)
+        .timeout(_timeout);
+    if (res.statusCode != 200 && res.statusCode != 204) {
+      throw ApiException('Failed to delete try-on model', res.statusCode);
+    }
   }
 
   static Future<TryOnTask> pollTryOnTask(String taskId) async {
@@ -532,9 +627,37 @@ class ApiClient {
     throw ApiException('Failed to poll try-on task', res.statusCode);
   }
 
+  static Future<TryOnHistoryResponseModel> getTryOnHistory({
+    int limit = 20,
+    String? cursor,
+    String? status,
+  }) async {
+    final uri = Uri.parse(
+      ApiEndpoints.tryOnHistory(limit: limit, cursor: cursor, status: status),
+    );
+    final res = await http.get(uri, headers: _defaultHeaders).timeout(_timeout);
+    if (res.statusCode == 200) {
+      return TryOnHistoryResponseModel.fromJson(
+        jsonDecode(utf8.decode(res.bodyBytes)),
+      );
+    }
+    throw ApiException(_extractError(res.body), res.statusCode);
+  }
+
+  static Future<bool> deleteTryOnTask(String taskId) async {
+    final uri = Uri.parse(ApiEndpoints.tryOnTaskDetail(taskId));
+    final res = await http.delete(uri, headers: _defaultHeaders).timeout(_timeout);
+    if (res.statusCode == 204 || res.statusCode == 200) {
+      return true;
+    }
+    throw ApiException(_extractError(res.body), res.statusCode);
+  }
+
   // Recommendations & AI Stylist
   static Future<List<StyleRecommendation>> getRecommendations() async {
-    final res = await http.get(Uri.parse(ApiEndpoints.recommendations), headers: _defaultHeaders).timeout(_timeout);
+    final res = await http
+        .get(Uri.parse(ApiEndpoints.recommendations), headers: _defaultHeaders)
+        .timeout(_timeout);
     if (res.statusCode == 200) {
       final list = jsonDecode(utf8.decode(res.bodyBytes)) as List<dynamic>;
       return list.map((r) => StyleRecommendation.fromJson(r)).toList();
@@ -550,21 +673,27 @@ class ApiClient {
     List<String>? excludeItemIds,
   }) async {
     final payload = <String, dynamic>{
-      if (occasion != null && occasion.trim().isNotEmpty) 'occasion': occasion.trim(),
+      if (occasion != null && occasion.trim().isNotEmpty)
+        'occasion': occasion.trim(),
       if (vibe != null && vibe.trim().isNotEmpty) 'vibe': vibe.trim(),
-      if (instructions != null && instructions.trim().isNotEmpty) 'instructions': instructions.trim(),
+      if (instructions != null && instructions.trim().isNotEmpty)
+        'instructions': instructions.trim(),
       'refine_index': ?refineIndex,
       'exclude_item_ids': ?excludeItemIds,
     };
 
-    final res = await http.post(
-      Uri.parse(ApiEndpoints.generateRecommendations),
-      headers: _defaultHeaders,
-      body: jsonEncode(payload),
-    ).timeout(_timeout);
+    final res = await http
+        .post(
+          Uri.parse(ApiEndpoints.generateRecommendations),
+          headers: _defaultHeaders,
+          body: jsonEncode(payload),
+        )
+        .timeout(_timeout);
 
     if (res.statusCode == 200) {
-      return OutfitGenerationResponse.fromJson(jsonDecode(utf8.decode(res.bodyBytes)));
+      return OutfitGenerationResponse.fromJson(
+        jsonDecode(utf8.decode(res.bodyBytes)),
+      );
     }
     throw ApiException(_extractError(res.body), res.statusCode);
   }
@@ -584,7 +713,9 @@ class ApiClient {
   }
 
   static Future<List<CommunityModel>> getMyCommunities() async {
-    final res = await http.get(Uri.parse(ApiEndpoints.myCommunities), headers: _defaultHeaders).timeout(_timeout);
+    final res = await http
+        .get(Uri.parse(ApiEndpoints.myCommunities), headers: _defaultHeaders)
+        .timeout(_timeout);
     if (res.statusCode == 200) {
       final list = jsonDecode(utf8.decode(res.bodyBytes)) as List<dynamic>;
       return list.map((c) => CommunityModel.fromJson(c)).toList();
@@ -593,7 +724,12 @@ class ApiClient {
   }
 
   static Future<CommunityModel> getCommunityDetail(String id) async {
-    final res = await http.get(Uri.parse(ApiEndpoints.communityDetail(id)), headers: _defaultHeaders).timeout(_timeout);
+    final res = await http
+        .get(
+          Uri.parse(ApiEndpoints.communityDetail(id)),
+          headers: _defaultHeaders,
+        )
+        .timeout(_timeout);
     if (res.statusCode == 200) {
       return CommunityModel.fromJson(jsonDecode(utf8.decode(res.bodyBytes)));
     }
@@ -607,22 +743,33 @@ class ApiClient {
   }) async {
     final body = jsonEncode({
       'name': name.trim(),
-      'description': description?.trim().isEmpty == true ? null : description?.trim(),
+      'description': description?.trim().isEmpty == true
+          ? null
+          : description?.trim(),
       'is_private': isPrivate,
     });
-    final res = await http.post(
-      Uri.parse(ApiEndpoints.communities),
-      headers: _defaultHeaders,
-      body: body,
-    ).timeout(_timeout);
+    final res = await http
+        .post(
+          Uri.parse(ApiEndpoints.communities),
+          headers: _defaultHeaders,
+          body: body,
+        )
+        .timeout(_timeout);
     if (res.statusCode == 201) {
       return CommunityModel.fromJson(jsonDecode(utf8.decode(res.bodyBytes)));
     }
     throw ApiException(_extractError(res.body), res.statusCode);
   }
 
-  static Future<List<CommunityMemberModel>> getCommunityMembers(String commId) async {
-    final res = await http.get(Uri.parse(ApiEndpoints.communityMembers(commId)), headers: _defaultHeaders).timeout(_timeout);
+  static Future<List<CommunityMemberModel>> getCommunityMembers(
+    String commId,
+  ) async {
+    final res = await http
+        .get(
+          Uri.parse(ApiEndpoints.communityMembers(commId)),
+          headers: _defaultHeaders,
+        )
+        .timeout(_timeout);
     if (res.statusCode == 200) {
       final list = jsonDecode(utf8.decode(res.bodyBytes)) as List<dynamic>;
       return list.map((m) => CommunityMemberModel.fromJson(m)).toList();
@@ -631,60 +778,99 @@ class ApiClient {
   }
 
   static Future<CommunityMemberModel> joinCommunity(String commId) async {
-    final res = await http.post(Uri.parse(ApiEndpoints.communityJoin(commId)), headers: _defaultHeaders).timeout(_timeout);
+    final res = await http
+        .post(
+          Uri.parse(ApiEndpoints.communityJoin(commId)),
+          headers: _defaultHeaders,
+        )
+        .timeout(_timeout);
     if (res.statusCode == 200) {
-      return CommunityMemberModel.fromJson(jsonDecode(utf8.decode(res.bodyBytes)));
+      return CommunityMemberModel.fromJson(
+        jsonDecode(utf8.decode(res.bodyBytes)),
+      );
     }
     throw ApiException(_extractError(res.body), res.statusCode);
   }
 
   static Future<void> leaveCommunity(String commId) async {
-    final res = await http.post(Uri.parse(ApiEndpoints.communityLeave(commId)), headers: _defaultHeaders).timeout(_timeout);
+    final res = await http
+        .post(
+          Uri.parse(ApiEndpoints.communityLeave(commId)),
+          headers: _defaultHeaders,
+        )
+        .timeout(_timeout);
     if (res.statusCode != 200) {
       throw ApiException(_extractError(res.body), res.statusCode);
     }
   }
 
-  static Future<CommunityMemberModel> approveJoinRequest(String commId, String userId) async {
-    final res = await http.post(
-      Uri.parse(ApiEndpoints.communityApproveMember(commId, userId)),
-      headers: _defaultHeaders,
-    ).timeout(_timeout);
+  static Future<CommunityMemberModel> approveJoinRequest(
+    String commId,
+    String userId,
+  ) async {
+    final res = await http
+        .post(
+          Uri.parse(ApiEndpoints.communityApproveMember(commId, userId)),
+          headers: _defaultHeaders,
+        )
+        .timeout(_timeout);
     if (res.statusCode == 200) {
-      return CommunityMemberModel.fromJson(jsonDecode(utf8.decode(res.bodyBytes)));
+      return CommunityMemberModel.fromJson(
+        jsonDecode(utf8.decode(res.bodyBytes)),
+      );
     }
     throw ApiException(_extractError(res.body), res.statusCode);
   }
 
-  static Future<CommunityMemberModel> rejectJoinRequest(String commId, String userId) async {
-    final res = await http.post(
-      Uri.parse(ApiEndpoints.communityRejectMember(commId, userId)),
-      headers: _defaultHeaders,
-    ).timeout(_timeout);
+  static Future<CommunityMemberModel> rejectJoinRequest(
+    String commId,
+    String userId,
+  ) async {
+    final res = await http
+        .post(
+          Uri.parse(ApiEndpoints.communityRejectMember(commId, userId)),
+          headers: _defaultHeaders,
+        )
+        .timeout(_timeout);
     if (res.statusCode == 200) {
-      return CommunityMemberModel.fromJson(jsonDecode(utf8.decode(res.bodyBytes)));
+      return CommunityMemberModel.fromJson(
+        jsonDecode(utf8.decode(res.bodyBytes)),
+      );
     }
     throw ApiException(_extractError(res.body), res.statusCode);
   }
 
-  static Future<void> removeCommunityMember(String commId, String userId) async {
-    final res = await http.delete(
-      Uri.parse(ApiEndpoints.communityRemoveMember(commId, userId)),
-      headers: _defaultHeaders,
-    ).timeout(_timeout);
+  static Future<void> removeCommunityMember(
+    String commId,
+    String userId,
+  ) async {
+    final res = await http
+        .delete(
+          Uri.parse(ApiEndpoints.communityRemoveMember(commId, userId)),
+          headers: _defaultHeaders,
+        )
+        .timeout(_timeout);
     if (res.statusCode != 200) {
       throw ApiException(_extractError(res.body), res.statusCode);
     }
   }
 
-  static Future<CommunityMemberModel> updateMemberRole(String commId, String userId, String role) async {
-    final res = await http.patch(
-      Uri.parse(ApiEndpoints.communityMemberRole(commId, userId)),
-      headers: _defaultHeaders,
-      body: jsonEncode({'role': role}),
-    ).timeout(_timeout);
+  static Future<CommunityMemberModel> updateMemberRole(
+    String commId,
+    String userId,
+    String role,
+  ) async {
+    final res = await http
+        .patch(
+          Uri.parse(ApiEndpoints.communityMemberRole(commId, userId)),
+          headers: _defaultHeaders,
+          body: jsonEncode({'role': role}),
+        )
+        .timeout(_timeout);
     if (res.statusCode == 200) {
-      return CommunityMemberModel.fromJson(jsonDecode(utf8.decode(res.bodyBytes)));
+      return CommunityMemberModel.fromJson(
+        jsonDecode(utf8.decode(res.bodyBytes)),
+      );
     }
     throw ApiException(_extractError(res.body), res.statusCode);
   }
@@ -745,32 +931,42 @@ class ApiClient {
       'wardrobe_item_id': wardrobeItemId,
       'notes': notes?.trim().isEmpty == true ? null : notes?.trim(),
     });
-    final res = await http.post(
-      Uri.parse(ApiEndpoints.communityListings(commId)),
-      headers: _defaultHeaders,
-      body: body,
-    ).timeout(_timeout);
+    final res = await http
+        .post(
+          Uri.parse(ApiEndpoints.communityListings(commId)),
+          headers: _defaultHeaders,
+          body: body,
+        )
+        .timeout(_timeout);
     if (res.statusCode == 201) {
-      return CommunityListingModel.fromJson(jsonDecode(utf8.decode(res.bodyBytes)));
+      return CommunityListingModel.fromJson(
+        jsonDecode(utf8.decode(res.bodyBytes)),
+      );
     }
     throw ApiException(_extractError(res.body), res.statusCode);
   }
 
   static Future<void> unlistSharedItem(String commId, String listingId) async {
-    final res = await http.delete(
-      Uri.parse(ApiEndpoints.communityListingDetail(commId, listingId)),
-      headers: _defaultHeaders,
-    ).timeout(_timeout);
+    final res = await http
+        .delete(
+          Uri.parse(ApiEndpoints.communityListingDetail(commId, listingId)),
+          headers: _defaultHeaders,
+        )
+        .timeout(_timeout);
     if (res.statusCode != 200) {
       throw ApiException(_extractError(res.body), res.statusCode);
     }
   }
 
-  static Future<List<CommunityListingModel>> getWardrobeItemListings(String itemId) async {
-    final res = await http.get(
-      Uri.parse(ApiEndpoints.wardrobeItemListings(itemId)),
-      headers: _defaultHeaders,
-    ).timeout(_timeout);
+  static Future<List<CommunityListingModel>> getWardrobeItemListings(
+    String itemId,
+  ) async {
+    final res = await http
+        .get(
+          Uri.parse(ApiEndpoints.wardrobeItemListings(itemId)),
+          headers: _defaultHeaders,
+        )
+        .timeout(_timeout);
     if (res.statusCode == 200) {
       final list = jsonDecode(utf8.decode(res.bodyBytes)) as List<dynamic>;
       return list.map((l) => CommunityListingModel.fromJson(l)).toList();
@@ -791,18 +987,22 @@ class ApiClient {
       'start_date': startDate?.toIso8601String(),
       'end_date': endDate?.toIso8601String(),
     });
-    final res = await http.post(
-      Uri.parse(ApiEndpoints.borrowRequest(commId, listingId)),
-      headers: _defaultHeaders,
-      body: body,
-    ).timeout(_timeout);
+    final res = await http
+        .post(
+          Uri.parse(ApiEndpoints.borrowRequest(commId, listingId)),
+          headers: _defaultHeaders,
+          body: body,
+        )
+        .timeout(_timeout);
     if (res.statusCode == 201) {
       return ItemRequestModel.fromJson(jsonDecode(utf8.decode(res.bodyBytes)));
     }
     throw ApiException(_extractError(res.body), res.statusCode);
   }
 
-  static Future<List<ItemRequestModel>> getIncomingRequests({String? status}) async {
+  static Future<List<ItemRequestModel>> getIncomingRequests({
+    String? status,
+  }) async {
     var uri = Uri.parse(ApiEndpoints.incomingRequests);
     if (status != null && status.isNotEmpty && status != 'all') {
       uri = uri.replace(queryParameters: {'status': status.trim()});
@@ -815,7 +1015,9 @@ class ApiClient {
     throw ApiException(_extractError(res.body), res.statusCode);
   }
 
-  static Future<List<ItemRequestModel>> getOutgoingRequests({String? status}) async {
+  static Future<List<ItemRequestModel>> getOutgoingRequests({
+    String? status,
+  }) async {
     var uri = Uri.parse(ApiEndpoints.outgoingRequests);
     if (status != null && status.isNotEmpty && status != 'all') {
       uri = uri.replace(queryParameters: {'status': status.trim()});
@@ -828,13 +1030,18 @@ class ApiClient {
     throw ApiException(_extractError(res.body), res.statusCode);
   }
 
-  static Future<ItemRequestModel> updateRequestStatus(String requestId, String status) async {
+  static Future<ItemRequestModel> updateRequestStatus(
+    String requestId,
+    String status,
+  ) async {
     final body = jsonEncode({'status': status.trim()});
-    final res = await http.patch(
-      Uri.parse(ApiEndpoints.updateRequestStatus(requestId)),
-      headers: _defaultHeaders,
-      body: body,
-    ).timeout(_timeout);
+    final res = await http
+        .patch(
+          Uri.parse(ApiEndpoints.updateRequestStatus(requestId)),
+          headers: _defaultHeaders,
+          body: body,
+        )
+        .timeout(_timeout);
     if (res.statusCode == 200) {
       return ItemRequestModel.fromJson(jsonDecode(utf8.decode(res.bodyBytes)));
     }
@@ -843,22 +1050,25 @@ class ApiClient {
 
   // Public Profiles & Self Profile Updates
   static Future<PublicUserProfileModel> getPublicProfile(String userId) async {
-    final res = await http.get(
-      Uri.parse(ApiEndpoints.publicProfile(userId)),
-      headers: _defaultHeaders,
-    ).timeout(_timeout);
+    final res = await http
+        .get(
+          Uri.parse(ApiEndpoints.publicProfile(userId)),
+          headers: _defaultHeaders,
+        )
+        .timeout(_timeout);
     if (res.statusCode == 200) {
-      return PublicUserProfileModel.fromJson(jsonDecode(utf8.decode(res.bodyBytes)));
+      return PublicUserProfileModel.fromJson(
+        jsonDecode(utf8.decode(res.bodyBytes)),
+      );
     }
     throw ApiException(_extractError(res.body), res.statusCode);
   }
 
   // Users, Profiles & Field-Level Privacy
   static Future<UserProfileModel> getMyProfile() async {
-    final res = await http.get(
-      Uri.parse(ApiEndpoints.myProfile),
-      headers: _defaultHeaders,
-    ).timeout(_timeout);
+    final res = await http
+        .get(Uri.parse(ApiEndpoints.myProfile), headers: _defaultHeaders)
+        .timeout(_timeout);
     if (res.statusCode == 200) {
       return UserProfileModel.fromJson(jsonDecode(utf8.decode(res.bodyBytes)));
     }
@@ -880,17 +1090,27 @@ class ApiClient {
     if (bio != null) payload['bio'] = bio.trim().isEmpty ? null : bio.trim();
     if (avatarUrl != null) payload['avatar_url'] = avatarUrl.trim();
     if (age != null) payload['age'] = age;
-    if (phoneNumber != null) payload['phone_number'] = phoneNumber.trim().isEmpty ? null : phoneNumber.trim();
-    if (fitPreferences != null) payload['fit_preferences'] = fitPreferences.toJson();
+    if (phoneNumber != null) {
+      payload['phone_number'] = phoneNumber.trim().isEmpty
+          ? null
+          : phoneNumber.trim();
+    }
+    if (fitPreferences != null) {
+      payload['fit_preferences'] = fitPreferences.toJson();
+    }
     if (preferredStyles != null) payload['preferred_styles'] = preferredStyles;
-    if (privacySettings != null) payload['privacy_settings'] = privacySettings.toJson();
+    if (privacySettings != null) {
+      payload['privacy_settings'] = privacySettings.toJson();
+    }
 
     final body = jsonEncode(payload);
-    final res = await http.patch(
-      Uri.parse(ApiEndpoints.updateMyProfile),
-      headers: _defaultHeaders,
-      body: body,
-    ).timeout(_timeout);
+    final res = await http
+        .patch(
+          Uri.parse(ApiEndpoints.updateMyProfile),
+          headers: _defaultHeaders,
+          body: body,
+        )
+        .timeout(_timeout);
     if (res.statusCode == 200) {
       return UserProfileModel.fromJson(jsonDecode(utf8.decode(res.bodyBytes)));
     }
@@ -898,12 +1118,13 @@ class ApiClient {
   }
 
   static Future<ProfilePrivacySettingsModel> getMyPrivacySettings() async {
-    final res = await http.get(
-      Uri.parse(ApiEndpoints.myPrivacy),
-      headers: _defaultHeaders,
-    ).timeout(_timeout);
+    final res = await http
+        .get(Uri.parse(ApiEndpoints.myPrivacy), headers: _defaultHeaders)
+        .timeout(_timeout);
     if (res.statusCode == 200) {
-      return ProfilePrivacySettingsModel.fromJson(jsonDecode(utf8.decode(res.bodyBytes)));
+      return ProfilePrivacySettingsModel.fromJson(
+        jsonDecode(utf8.decode(res.bodyBytes)),
+      );
     }
     throw ApiException(_extractError(res.body), res.statusCode);
   }
@@ -912,13 +1133,17 @@ class ApiClient {
     ProfilePrivacySettingsModel settings,
   ) async {
     final body = jsonEncode(settings.toJson());
-    final res = await http.patch(
-      Uri.parse(ApiEndpoints.myPrivacy),
-      headers: _defaultHeaders,
-      body: body,
-    ).timeout(_timeout);
+    final res = await http
+        .patch(
+          Uri.parse(ApiEndpoints.myPrivacy),
+          headers: _defaultHeaders,
+          body: body,
+        )
+        .timeout(_timeout);
     if (res.statusCode == 200) {
-      return ProfilePrivacySettingsModel.fromJson(jsonDecode(utf8.decode(res.bodyBytes)));
+      return ProfilePrivacySettingsModel.fromJson(
+        jsonDecode(utf8.decode(res.bodyBytes)),
+      );
     }
     throw ApiException(_extractError(res.body), res.statusCode);
   }
@@ -946,7 +1171,8 @@ class ApiClient {
     final streamed = await request.send().timeout(_timeout);
     final res = await http.Response.fromStream(streamed);
     if (res.statusCode == 200) {
-      final json = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
+      final json =
+          jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
       return json['avatar_url'] as String? ?? '';
     }
     throw ApiException(_extractError(res.body), res.statusCode);
@@ -963,11 +1189,14 @@ class ApiClient {
       'limit': limit.toString(),
       'offset': offset.toString(),
     };
-    final uri = Uri.parse(ApiEndpoints.notifications).replace(queryParameters: queryParams);
+    final uri = Uri.parse(ApiEndpoints.notifications)
+        .replace(queryParameters: queryParams);
     final res = await http.get(uri, headers: _defaultHeaders).timeout(_timeout);
     if (res.statusCode == 200) {
       final list = jsonDecode(utf8.decode(res.bodyBytes)) as List<dynamic>;
-      return list.map((n) => NotificationModel.fromJson(n as Map<String, dynamic>)).toList();
+      return list
+          .map((n) => NotificationModel.fromJson(n as Map<String, dynamic>))
+          .toList();
     }
     throw ApiException(_extractError(res.body), res.statusCode);
   }
@@ -976,33 +1205,61 @@ class ApiClient {
     final uri = Uri.parse(ApiEndpoints.unreadNotificationCount);
     final res = await http.get(uri, headers: _defaultHeaders).timeout(_timeout);
     if (res.statusCode == 200) {
-      final data = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
+      final data =
+          jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
       return data['unread_count'] as int? ?? 0;
     }
     throw ApiException(_extractError(res.body), res.statusCode);
   }
 
-  static Future<NotificationModel> markNotificationAsRead(String notificationId) async {
+  static Future<NotificationModel> markNotificationAsRead(
+    String notificationId,
+  ) async {
     final uri = Uri.parse(ApiEndpoints.markNotificationRead(notificationId));
-    final res = await http.patch(uri, headers: _defaultHeaders).timeout(_timeout);
+    final res = await http
+        .patch(uri, headers: _defaultHeaders)
+        .timeout(_timeout);
     if (res.statusCode == 200) {
-      return NotificationModel.fromJson(jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>);
+      return NotificationModel.fromJson(
+        jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>,
+      );
     }
     throw ApiException(_extractError(res.body), res.statusCode);
   }
 
   static Future<int> markAllNotificationsAsRead() async {
     final uri = Uri.parse(ApiEndpoints.markAllNotificationsRead);
-    final res = await http.post(uri, headers: _defaultHeaders).timeout(_timeout);
+    final res = await http
+        .post(uri, headers: _defaultHeaders)
+        .timeout(_timeout);
     if (res.statusCode == 200) {
-      final data = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
+      final data =
+          jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
       return data['marked_count'] as int? ?? 0;
     }
     throw ApiException(_extractError(res.body), res.statusCode);
   }
 
-  static String _extractError(String body) {
+  // adaa Conversational Stylist
+  static Future<StylistChatResponseModel> sendStylistChat({
+    required String message,
+    List<Map<String, dynamic>> history = const [],
+  }) async {
+    final uri = Uri.parse(ApiEndpoints.stylistChat);
+    final payload = jsonEncode({'message': message, 'history': history});
+    final res = await http
+        .post(uri, headers: _defaultHeaders, body: payload)
+        .timeout(_defaultTimeout);
 
+    if (res.statusCode == 200) {
+      final json =
+          jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
+      return StylistChatResponseModel.fromJson(json);
+    }
+    throw ApiException(_extractError(res.body), res.statusCode);
+  }
+
+  static String _extractError(String body) {
     try {
       final json = jsonDecode(body);
       if (json is Map && json.containsKey('detail')) {

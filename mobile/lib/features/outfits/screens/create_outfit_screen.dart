@@ -118,6 +118,7 @@ class _CreateOutfitScreenState extends State<CreateOutfitScreen> {
         titleSpacing: 0,
       ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'create_outfit_fab',
         backgroundColor: AppColors.forest,
         foregroundColor: Colors.white,
         onPressed: _isSaving ? null : _submitOutfit,

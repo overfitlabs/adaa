@@ -202,7 +202,7 @@ graph LR
    - **SQLite**: Seamlessly supported for zero-dependency local development and testing with thread safety flags (`check_same_thread=False`).
 2. **Zero-Trust Media Access**:
    - User photos are **never** mounted via open static file servers.
-   - Cloudinary assets are delivered through signed URLs with time-to-live restrictions (`IMAGE_DELIVERY_TTL_SECONDS=1800`).
+   - Cloudinary assets are stored as `type="authenticated"` and delivered through server-generated HMAC-signed URLs with dynamic access checks (see [Cloudinary Image Privacy](deployment.md#cloudinary-image-privacy-current-approach-and-limitations)).
    - Local storage fallbacks enforce ownership validation and path traversal checks within `routes_storage.py`.
 3. **Graceful Provider Fallbacks**:
    - Multimodal vision defaults to Gemini 2.5 Flash when `GEMINI_API_KEY` is present, falling back to a structured mock provider if unconfigured.
@@ -344,5 +344,5 @@ sequenceDiagram
 | **Session Isolation** | Multi-account safety: in-memory state in Flutter is cleared on logout; backend database queries strictly partition records by `user_id = current_user.id`. |
 | **Column Anti-Escalation** | PostgreSQL trigger `protect_profile_fields()` blocks client modifications to `id`, `email`, `created_at`, and `is_student_verified`. |
 | **Field-Level Privacy** | User profile visibility controls (`show_email`, `show_phone`, `show_age`, `show_fit_preferences`) ensure unshared fields are stripped before transmitting public profiles. |
-| **Zero Public Media Buckets** | Cloudinary media delivered with signed authentication tokens; local files guarded against directory traversal attacks (`Path.resolve()`). |
+| **Zero Public Media Buckets** | Cloudinary media delivered with HMAC-signed URLs and dynamic access checks; local files guarded against directory traversal attacks (`Path.resolve()`). |
 | **Deduplication Constraints** | Unique SQL partial indexes prevent duplicate pending borrow requests and idempotent notification delivery. |

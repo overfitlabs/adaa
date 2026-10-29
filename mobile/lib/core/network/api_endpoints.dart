@@ -1,4 +1,5 @@
 import 'dart:io' show Platform;
+
 import 'package:flutter/foundation.dart';
 
 class ApiEndpoints {
@@ -56,8 +57,10 @@ class ApiEndpoints {
 
   // Wardrobe
   static String get wardrobeItems => '$baseUrl/api/wardrobe/items';
-  static String wardrobeItemDetail(String id) => '$baseUrl/api/wardrobe/items/$id';
-  static String wardrobeItemPhoto(String id) => '$baseUrl/api/wardrobe/items/$id/photo';
+  static String wardrobeItemDetail(String id) =>
+      '$baseUrl/api/wardrobe/items/$id';
+  static String wardrobeItemPhoto(String id) =>
+      '$baseUrl/api/wardrobe/items/$id/photo';
   static String get wardrobeCategories => '$baseUrl/api/wardrobe/categories';
   static String get detectWardrobeItem => '$baseUrl/api/wardrobe/detect-item';
   static String get wardrobeBulkItems => '$baseUrl/api/wardrobe/items/bulk';
@@ -71,51 +74,80 @@ class ApiEndpoints {
 
   // Virtual Try-On
   static String get tryOnTasks => '$baseUrl/api/tryon/tasks';
-  static String tryOnTaskDetail(String taskId) => '$baseUrl/api/tryon/tasks/$taskId';
+  static String tryOnTaskDetail(String taskId) =>
+      '$baseUrl/api/tryon/tasks/$taskId';
+  static String get tryOnModel => '$baseUrl/api/tryon/model';
+  static String tryOnHistory({int limit = 20, String? cursor, String? status}) {
+    var url = '$baseUrl/api/tryon/history?limit=$limit';
+    if (cursor != null && cursor.isNotEmpty) {
+      url += '&cursor=${Uri.encodeComponent(cursor)}';
+    }
+    if (status != null && status.isNotEmpty) {
+      url += '&status=${Uri.encodeComponent(status)}';
+    }
+    return url;
+  }
 
-  // Recommendations
+  // Recommendations & adaa Conversational Stylist
   static String get recommendations => '$baseUrl/api/recommendations';
-  static String get generateRecommendations => '$baseUrl/api/recommendations/generate';
+  static String get generateRecommendations =>
+      '$baseUrl/api/recommendations/generate';
+  static String get stylistChat => '$baseUrl/api/stylist/chat';
 
   // Communities & Shared Closets
   static String get communities => '$baseUrl/api/communities';
   static String get myCommunities => '$baseUrl/api/communities/my';
   static String get sharedCloset => '$baseUrl/api/communities/shared-closet';
   static String communityDetail(String id) => '$baseUrl/api/communities/$id';
-  static String communityMembers(String id) => '$baseUrl/api/communities/$id/members';
+  static String communityMembers(String id) =>
+      '$baseUrl/api/communities/$id/members';
   static String communityJoin(String id) => '$baseUrl/api/communities/$id/join';
-  static String communityLeave(String id) => '$baseUrl/api/communities/$id/leave';
-  static String communityMembership(String id) => '$baseUrl/api/communities/$id/membership';
-  static String communityApproveMember(String commId, String userId) => '$baseUrl/api/communities/$commId/members/$userId/approve';
-  static String communityRejectMember(String commId, String userId) => '$baseUrl/api/communities/$commId/members/$userId/reject';
-  static String communityRemoveMember(String commId, String userId) => '$baseUrl/api/communities/$commId/members/$userId';
-  static String communityMemberRole(String commId, String userId) => '$baseUrl/api/communities/$commId/members/$userId/role';
-  static String communityListings(String commId) => '$baseUrl/api/communities/$commId/listings';
-  static String communityListingDetail(String commId, String listingId) => '$baseUrl/api/communities/$commId/listings/$listingId';
-  static String wardrobeItemListings(String itemId) => '$baseUrl/api/wardrobe/items/$itemId/listings';
+  static String communityLeave(String id) =>
+      '$baseUrl/api/communities/$id/leave';
+  static String communityMembership(String id) =>
+      '$baseUrl/api/communities/$id/membership';
+  static String communityApproveMember(String commId, String userId) =>
+      '$baseUrl/api/communities/$commId/members/$userId/approve';
+  static String communityRejectMember(String commId, String userId) =>
+      '$baseUrl/api/communities/$commId/members/$userId/reject';
+  static String communityRemoveMember(String commId, String userId) =>
+      '$baseUrl/api/communities/$commId/members/$userId';
+  static String communityMemberRole(String commId, String userId) =>
+      '$baseUrl/api/communities/$commId/members/$userId/role';
+  static String communityListings(String commId) =>
+      '$baseUrl/api/communities/$commId/listings';
+  static String communityListingDetail(String commId, String listingId) =>
+      '$baseUrl/api/communities/$commId/listings/$listingId';
+  static String wardrobeItemListings(String itemId) =>
+      '$baseUrl/api/wardrobe/items/$itemId/listings';
 
   // Borrowing Requests
-  static String borrowRequest(String commId, String listingId) => '$baseUrl/api/communities/$commId/listings/$listingId/requests';
+  static String borrowRequest(String commId, String listingId) =>
+      '$baseUrl/api/communities/$commId/listings/$listingId/requests';
   static String get incomingRequests => '$baseUrl/api/requests/incoming';
   static String get outgoingRequests => '$baseUrl/api/requests/outgoing';
-  static String updateRequestStatus(String reqId) => '$baseUrl/api/requests/$reqId/status';
+  static String updateRequestStatus(String reqId) =>
+      '$baseUrl/api/requests/$reqId/status';
 
   // Users & Profiles
   static String get myProfile => '$baseUrl/api/users/me';
   static String get updateMyProfile => '$baseUrl/api/users/me/profile';
   static String get myPrivacy => '$baseUrl/api/users/me/privacy';
   static String get uploadAvatar => '$baseUrl/api/users/me/avatar';
-  static String publicProfile(String userId) => '$baseUrl/api/users/$userId/public-profile';
+  static String publicProfile(String userId) =>
+      '$baseUrl/api/users/$userId/public-profile';
 
   // Auth
   static String get authMe => '$baseUrl/api/auth/me';
 
   // Notifications & Activity Center
   static String get notifications => '$baseUrl/api/notifications';
-  static String get unreadNotificationCount => '$baseUrl/api/notifications/unread-count';
-  static String markNotificationRead(String id) => '$baseUrl/api/notifications/$id/read';
-  static String get markAllNotificationsRead => '$baseUrl/api/notifications/read-all';
-
+  static String get unreadNotificationCount =>
+      '$baseUrl/api/notifications/unread-count';
+  static String markNotificationRead(String id) =>
+      '$baseUrl/api/notifications/$id/read';
+  static String get markAllNotificationsRead =>
+      '$baseUrl/api/notifications/read-all';
 
   // Health
   static String get health => '$baseUrl/health';

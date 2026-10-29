@@ -40,6 +40,7 @@ class ImageStorageService:
         (self.base_dir / "inspirations").mkdir(exist_ok=True)
         (self.base_dir / "tryon").mkdir(exist_ok=True)
         (self.base_dir / "profiles").mkdir(exist_ok=True)
+        (self.base_dir / "models").mkdir(exist_ok=True)
 
     def _configure_cloudinary(self) -> None:
         if not settings.is_cloudinary_configured:
@@ -52,12 +53,19 @@ class ImageStorageService:
             "api_secret": settings.CLOUDINARY_API_SECRET,
             "secure": settings.CLOUDINARY_SECURE_DELIVERY,
         }
-        if settings.CLOUDINARY_AUTH_TOKEN_KEY:
+        if settings.is_cloudinary_token_auth_configured:
             config_kwargs["auth_token"] = {
-                "key": settings.CLOUDINARY_AUTH_TOKEN_KEY,
+                "key": settings.CLOUDINARY_AUTH_TOKEN_KEY.strip(),
                 "duration": settings.IMAGE_DELIVERY_TTL_SECONDS,
             }
+        else:
+            config_kwargs["auth_token"] = None
         cloudinary.config(**config_kwargs)
+
+    @property
+    def is_token_auth_active(self) -> bool:
+        """True ONLY if Cloudinary Token-Based Authentication key is active."""
+        return settings.is_cloudinary_token_auth_configured
 
     def validate_and_sanitize_image(
         self, file: UploadFile, contents: Optional[bytes] = None
@@ -210,14 +218,24 @@ class ImageStorageService:
     ) -> str:
         """
         Generates a delivery URL.
-        For Cloudinary: generates a signed URL with type='authenticated' and HMAC signature/expiry.
+        For Cloudinary:
+        - Free Tier (Standard): Authenticated assets (type='authenticated') are delivered with
+          an HMAC path signature (sign_url=True) via the global CDN edge with f_auto/q_auto optimization.
+          The signature prevents parameter tampering and blocks unauthorized access, but does not
+          expire by time on the Free plan.
+        - Paid Tier (Optional): If CLOUDINARY_AUTH_TOKEN_KEY is configured, time-based token expiry
+          (__cld_token__) is attached.
         For local: returns the local storage relative path (/storage/...).
         """
         if storage_provider == "cloudinary":
             self._configure_cloudinary()
             import cloudinary.utils
 
-            effective_ttl = ttl_seconds or settings.IMAGE_DELIVERY_TTL_SECONDS
+            effective_ttl = (
+                ttl_seconds
+                if (ttl_seconds is not None and ttl_seconds > 0)
+                else settings.IMAGE_DELIVERY_TTL_SECONDS
+            )
             url_options: Dict[str, Any] = {
                 "type": "authenticated",
                 "sign_url": True,
@@ -231,16 +249,13 @@ class ImageStorageService:
                     {"quality": "auto", "fetch_format": "auto"}
                 ]
 
-            if settings.CLOUDINARY_AUTH_TOKEN_KEY:
+            if settings.is_cloudinary_token_auth_configured:
                 url_options["auth_token"] = {
-                    "key": settings.CLOUDINARY_AUTH_TOKEN_KEY,
+                    "key": settings.CLOUDINARY_AUTH_TOKEN_KEY.strip(),
                     "duration": effective_ttl,
                 }
             else:
-                logger.debug(
-                    "CLOUDINARY_AUTH_TOKEN_KEY not set: generating tamper-proof HMAC-signed URL for '%s'. Note: 30-minute time-expiry requires Token-Based Authentication key.",
-                    public_id,
-                )
+                url_options["auth_token"] = None
 
             signed_url, _ = cloudinary.utils.cloudinary_url(public_id, **url_options)
             return signed_url
@@ -248,6 +263,37 @@ class ImageStorageService:
         # Local storage
         clean_path = public_id.lstrip("/")
         return f"/storage/{clean_path}"
+
+    def generate_private_download_url(
+        self,
+        public_id: str,
+        format: str = "jpg",
+        expires_at: Optional[int] = None,
+        attachment: bool = False,
+    ) -> str:
+        """
+        Generates a time-limited private download URL via Cloudinary REST API.
+        NOTE ON FREE TIER BEHAVIOR:
+        - Delivered via api.cloudinary.com REST API endpoint, NOT the CDN edge.
+        - Bypasses edge caching and incurs double bandwidth cost against monthly credits.
+        - Downloads the raw master asset; does NOT support dynamic transformations (f_auto, q_auto).
+        - Intended for administrative export or explicit user downloads, NOT for inline gallery views.
+        """
+        if not settings.is_cloudinary_configured:
+            return f"/storage/{public_id.lstrip('/')}"
+        self._configure_cloudinary()
+        import cloudinary.utils
+        import time
+
+        exp = expires_at or (int(time.time()) + settings.IMAGE_DELIVERY_TTL_SECONDS)
+        clean_format = format.lstrip(".").lower() if format else "jpg"
+        return cloudinary.utils.private_download_url(
+            public_id,
+            clean_format,
+            type="authenticated",
+            expires_at=exp,
+            attachment=attachment,
+        )
 
     def delete(self, public_id: str, storage_provider: str = "cloudinary") -> bool:
         """
@@ -275,6 +321,9 @@ class ImageStorageService:
         # Local disk deletion
         try:
             abs_path = self.get_absolute_path(public_id)
+            if not abs_path.exists():
+                logger.info("Local file already gone: %s", abs_path)
+                return True
             if abs_path.is_file():
                 abs_path.unlink()
                 logger.info("Deleted local file: %s", abs_path)
@@ -290,6 +339,25 @@ class ImageStorageService:
         if not str(abs_path).startswith(str(self.base_dir.resolve())):
             raise HTTPException(status_code=403, detail="Access denied: invalid path.")
         return abs_path
+
+    async def get_image_bytes(self, public_id: str, storage_provider: str = "cloudinary") -> bytes:
+        """
+        Retrieves the raw bytes of an image asset safely, whether stored locally or on Cloudinary.
+        """
+        if storage_provider == "local" or not settings.is_cloudinary_configured:
+            abs_path = self.get_absolute_path(public_id)
+            if not abs_path.is_file():
+                raise FileNotFoundError(f"Local asset not found: {public_id}")
+            with open(abs_path, "rb") as f:
+                return f.read()
+
+        # Cloudinary: fetch using signed delivery URL
+        signed_url = self.generate_delivery_url(public_id, storage_provider="cloudinary")
+        import httpx
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.get(signed_url)
+            resp.raise_for_status()
+            return resp.content
 
     # Backwards compatibility helper for existing code during transition
     async def save_image(self, file: UploadFile, subfolder: str = "wardrobe") -> Tuple[str, Path]:

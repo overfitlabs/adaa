@@ -21,6 +21,7 @@ from app.api import (
     routes_requests,
     routes_users,
     routes_notifications,
+    routes_chat,
 )
 
 
@@ -33,6 +34,7 @@ async def lifespan(app: FastAPI):
     (settings.storage_path / "tryon").mkdir(parents=True, exist_ok=True)
     (settings.storage_path / "inspirations").mkdir(parents=True, exist_ok=True)
     (settings.storage_path / "extracted").mkdir(parents=True, exist_ok=True)
+    (settings.storage_path / "models").mkdir(parents=True, exist_ok=True)
     yield
     # Shutdown
 
@@ -72,6 +74,7 @@ app.include_router(routes_communities.router)
 app.include_router(routes_requests.router)
 app.include_router(routes_users.router)
 app.include_router(routes_notifications.router)
+app.include_router(routes_chat.router)
 
 
 @app.get("/")

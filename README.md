@@ -134,7 +134,7 @@ Comprehensive technical documentation is maintained in the `docs/` directory:
 | **Authentication** | Supabase Auth (PKCE / JWT) | Cryptographic identity verification via asymmetric JWKS |
 | **Multimodal Vision** | Google Gemini 2.5 Flash | Garment attribute deconstruction and classification |
 | **Virtual Try-On** | Perfect Corp YouCam S2S API | Photorealistic digital garment simulation |
-| **Media Delivery** | Cloudinary / Local Protected | Authenticated uploads and time-limited signed delivery URLs |
+| **Media Delivery** | Cloudinary / Local Protected | Authenticated uploads and HMAC-signed URLs; see [Cloudinary Image Privacy](docs/deployment.md#cloudinary-image-privacy-current-approach-and-limitations) |
 | **Production Hosting** | Render (API) & Vercel (Web) | Cloud application hosting with automatic health checks |
 
 ---

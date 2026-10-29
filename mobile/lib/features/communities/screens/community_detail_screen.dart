@@ -366,6 +366,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
       ),
       floatingActionButton: isApproved
           ? FloatingActionButton(
+              heroTag: 'community_detail_fab',
               backgroundColor: AppColors.forest,
               foregroundColor: Colors.white,
               child: const Icon(Icons.share_sharp),
