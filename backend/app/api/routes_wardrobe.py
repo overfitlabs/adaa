@@ -73,12 +73,58 @@ def _model_to_response(item: WardrobeItem) -> WardrobeItemResponse:
 @router.post("/detect-item")
 async def detect_wardrobe_item_from_photo(
     file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: Optional[AuthenticatedUser] = Depends(get_optional_current_user),
 ):
     """
     Analyzes a photo of a single wardrobe garment to pre-fill metadata
     (category, colors, material, pattern, fit) before saving.
+    When USE_MEDIAFLOWS is enabled, routes through the MediaFlows pipeline with Gemini fallback.
     Cleans up any temporary staging files immediately to prevent orphaned disk assets.
     """
+    if settings.USE_MEDIAFLOWS:
+        from app.api.routes_analysis import analyze_outfit_image, _execute_direct_gemini_fallback
+        from app.models import OutfitAnalysisRecord
+        import asyncio
+        import time
+
+        analysis_res = await analyze_outfit_image(file=file, db=db, current_user=current_user)
+        if getattr(analysis_res, "status", "completed") in ("pending", "processing"):
+            scan_id = analysis_res.analysis_id
+            start_wait = time.time()
+            while time.time() - start_wait < settings.MEDIAFLOWS_TIMEOUT_SECONDS:
+                await asyncio.sleep(1.0)
+                db.expire_all()
+                rec = db.query(OutfitAnalysisRecord).filter(OutfitAnalysisRecord.id == scan_id).first()
+                if rec and rec.status == "completed":
+                    items_list = json.loads(rec.items_json) if rec.items_json else []
+                    primary_item = items_list[0] if items_list else None
+                    return {
+                        "detected_item": primary_item,
+                        "detected_vibe": rec.vibe,
+                    }
+                elif rec and rec.status == "failed":
+                    break
+
+            # Fallback if webhook timed out or failed
+            rec = db.query(OutfitAnalysisRecord).filter(OutfitAnalysisRecord.id == scan_id).first()
+            if rec and rec.status != "completed":
+                try:
+                    await _execute_direct_gemini_fallback(rec, db)
+                    items_list = json.loads(rec.items_json) if rec.items_json else []
+                    return {
+                        "detected_item": items_list[0] if items_list else None,
+                        "detected_vibe": rec.vibe,
+                    }
+                except Exception as fb_err:
+                    logger.warning("MediaFlows fallback failed in detect-item: %s", str(fb_err))
+
+        primary_item = analysis_res.items[0] if analysis_res.items else None
+        return {
+            "detected_item": primary_item.model_dump() if hasattr(primary_item, "model_dump") else primary_item,
+            "detected_vibe": analysis_res.vibe_or_style,
+        }
+
     raw_bytes = await file.read()
     clean_bytes, ext, _, _ = image_storage_service.validate_and_sanitize_image(file, raw_bytes)
 

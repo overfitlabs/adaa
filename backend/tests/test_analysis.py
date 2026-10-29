@@ -1046,3 +1046,95 @@ def test_crops_and_regular_uploads_do_not_inject_signed_url_into_context(sample_
                         mock_upload.assert_called_once()
                         upload_kwargs = mock_upload.call_args.kwargs
                         assert "context" not in upload_kwargs or "signed_url" not in upload_kwargs.get("context", {})
+
+
+def test_end_to_end_mediaflows_request_to_webhook_to_status_path(client, db_session, sample_image_bytes):
+    """
+    End-to-end integration test verifying:
+    1. /api/analysis/analyze-image initiates scan, returns processing status.
+    2. /api/analysis/mediaflows-webhook processes Gemini results and marks scan completed.
+    3. /api/analysis/scans/{scan_id} returns the completed analysis with detected items.
+    """
+    from app.config import settings
+
+    files = {"file": ("outfit_e2e.jpg", io.BytesIO(sample_image_bytes), "image/jpeg")}
+
+    with patch.object(settings, "USE_MEDIAFLOWS", True):
+        # 1. Initiate analysis
+        res_init = client.post("/api/analysis/analyze-image", files=files)
+        assert res_init.status_code == 200
+        init_data = res_init.json()
+        assert init_data["status"] == "processing"
+        scan_id = init_data["analysis_id"]
+
+        # Check pending scan status
+        res_pending = client.get(f"/api/analysis/scans/{scan_id}")
+        assert res_pending.status_code == 200
+        assert res_pending.json()["status"] == "processing"
+
+        # 2. Webhook delivers results
+        gemini_result = {
+            "summary": "Tailored linen blazer look",
+            "vibe": "Summer Smart Casual",
+            "items": [
+                {
+                    "category": "jackets",
+                    "sub_category": "Blazer",
+                    "name": "Oatmeal Linen Blazer",
+                    "primary_color": "Beige",
+                    "confidence": 0.95,
+                    "box_2d": [100, 100, 600, 600],
+                }
+            ],
+        }
+        with patch.object(settings, "MEDIAFLOWS_WEBHOOK_SECRET", "mf-secret-e2e"):
+            res_wh = client.post(
+                "/api/analysis/mediaflows-webhook",
+                json={
+                    "scan_id": scan_id,
+                    "gemini_output": json.dumps(gemini_result),
+                },
+                headers={"X-MediaFlows-Secret": "mf-secret-e2e"},
+            )
+            assert res_wh.status_code == 200
+            assert res_wh.json()["status"] == "completed"
+
+        # 3. Client polls status and gets completed analysis
+        res_done = client.get(f"/api/analysis/scans/{scan_id}")
+        assert res_done.status_code == 200
+        done_data = res_done.json()
+        assert done_data["status"] == "completed"
+        assert done_data["result"]["summary"] == "Tailored linen blazer look"
+        assert len(done_data["result"]["items"]) == 1
+        assert done_data["result"]["items"][0]["name"] == "Oatmeal Linen Blazer"
+
+
+def test_wardrobe_detect_item_with_mediaflows_disabled_uses_direct_gemini(client, sample_image_bytes):
+    """
+    Verifies /api/wardrobe/detect-item preserves direct synchronous Gemini path when USE_MEDIAFLOWS=False.
+    """
+    from app.config import settings
+    from app.schemas import DetectedFashionItem, StyleAttributes
+
+    sample_item = DetectedFashionItem(
+        id="det-1",
+        category="tops",
+        name="Linen Shirt",
+        primary_color="White",
+        attributes=StyleAttributes(material="linen"),
+    )
+    files = {"file": ("item.jpg", io.BytesIO(sample_image_bytes), "image/jpeg")}
+
+    with patch.object(settings, "USE_MEDIAFLOWS", False):
+        with patch("app.api.routes_wardrobe.get_vision_provider") as mock_vision:
+            mock_provider = MagicMock()
+            mock_provider.analyze_outfit_image = AsyncMock(
+                return_value=("Linen shirt look", "Casual", [sample_item])
+            )
+            mock_vision.return_value = mock_provider
+
+            res = client.post("/api/wardrobe/detect-item", files=files)
+            assert res.status_code == 200
+            data = res.json()
+            assert data["detected_item"]["name"] == "Linen Shirt"
+            assert data["detected_vibe"] == "Casual"

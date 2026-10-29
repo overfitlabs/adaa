@@ -237,31 +237,61 @@ class ApiClient {
   static Future<Map<String, dynamic>> detectWardrobeItemFromPhoto(
     XFile imageFile,
   ) async {
-    final uri = Uri.parse(ApiEndpoints.detectWardrobeItem);
-    final request = http.MultipartRequest('POST', uri);
-    final bytes = await imageFile.readAsBytes();
-    final ext = imageFile.name.split('.').last.toLowerCase();
-    final mimeType = ext == 'png' ? 'image/png' : 'image/jpeg';
+    try {
+      final analysis = await analyzeOutfitImage(imageFile);
+      final primaryItem = analysis.items.isNotEmpty ? analysis.items.first : null;
+      return {
+        'detected_item': primaryItem != null
+            ? {
+                'id': primaryItem.id,
+                'category': primaryItem.category,
+                'sub_category': primaryItem.subCategory,
+                'name': primaryItem.name,
+                'primary_color': primaryItem.primaryColor,
+                'secondary_color': primaryItem.secondaryColor,
+                'confidence': primaryItem.confidence,
+                'attributes': {
+                  'pattern': primaryItem.attributes.pattern,
+                  'material': primaryItem.attributes.material,
+                  'fit': primaryItem.attributes.fit,
+                  'formality': primaryItem.attributes.formality,
+                  'season': primaryItem.attributes.season,
+                  'neckline_or_collar': primaryItem.attributes.necklineOrCollar,
+                },
+                'box_2d': primaryItem.box2d,
+                'extracted_image_url': primaryItem.extractedImageUrl,
+                'extracted_image_path': primaryItem.extractedImagePath,
+              }
+            : null,
+        'detected_vibe': analysis.vibeOrStyle,
+      };
+    } catch (_) {
+      final uri = Uri.parse(ApiEndpoints.detectWardrobeItem);
+      final request = http.MultipartRequest('POST', uri);
+      final bytes = await imageFile.readAsBytes();
+      final ext = imageFile.name.split('.').last.toLowerCase();
+      final mimeType = ext == 'png' ? 'image/png' : 'image/jpeg';
 
-    request.files.add(
-      http.MultipartFile.fromBytes(
-        'file',
-        bytes,
-        filename: imageFile.name,
-        contentType: MediaType.parse(mimeType),
-      ),
-    );
+      request.files.add(
+        http.MultipartFile.fromBytes(
+          'file',
+          bytes,
+          filename: imageFile.name.isNotEmpty ? imageFile.name : 'upload.jpg',
+          contentType: MediaType.parse(mimeType),
+        ),
+      );
 
-    if (authToken != null && authToken!.trim().isNotEmpty) {
-      request.headers['Authorization'] = 'Bearer ${authToken!.trim()}';
+      if (authToken != null && authToken!.trim().isNotEmpty) {
+        request.headers['Authorization'] = 'Bearer ${authToken!.trim()}';
+      }
+
+      final streamed = await request.send().timeout(_timeout);
+      final res = await http.Response.fromStream(streamed);
+      if (res.statusCode == 200) {
+        return jsonDecode(utf8.decode(res.bodyBytes));
+      }
+      throw ApiException(_extractError(res.body), res.statusCode);
     }
-
-    final streamed = await request.send().timeout(_timeout);
-    final res = await http.Response.fromStream(streamed);
-    if (res.statusCode == 200) {
-      return jsonDecode(utf8.decode(res.bodyBytes));
-    }
-    throw ApiException(_extractError(res.body), res.statusCode);
   }
 
   static Future<WardrobeItem> createWardrobeItem({
