@@ -95,6 +95,7 @@ class TryOnTaskRecord(Base):
     expires_at = Column(DateTime, nullable=True, index=True)
     is_friend_tryon = Column(Boolean, nullable=False, default=False, server_default="0")
     used_saved_model = Column(Boolean, nullable=False, default=False, server_default="0")
+    inspiration_analysis_id = Column(String(36), nullable=True, index=True)
 
 
 class UserTryOnModel(Base):

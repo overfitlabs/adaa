@@ -349,6 +349,7 @@ class _AnalysisDetailScreenState extends State<AnalysisDetailScreen> {
                           context,
                           MaterialPageRoute(
                             builder: (_) => TryOnScreen(
+                              attachedAnalysis: analysis,
                               prefilledInspirationUrl: analysis.imageUrl,
                             ),
                           ),

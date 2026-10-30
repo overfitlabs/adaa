@@ -240,6 +240,7 @@ class TryOnTaskResponse(BaseModel):
     can_retry: bool = False
     is_friend_tryon: bool = False
     used_saved_model: bool = False
+    inspiration_analysis_id: Optional[str] = None
 
 
 class TryOnHistoryResponse(BaseModel):

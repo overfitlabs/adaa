@@ -13,6 +13,7 @@ class TryOnTask {
   final String? garmentCategory;
   final bool isFriendTryon;
   final bool usedSavedModel;
+  final String? inspirationAnalysisId;
 
   TryOnTask({
     required this.taskId,
@@ -29,6 +30,7 @@ class TryOnTask {
     this.garmentCategory,
     this.isFriendTryon = false,
     this.usedSavedModel = false,
+    this.inspirationAnalysisId,
   });
 
   factory TryOnTask.fromJson(Map<String, dynamic> json) {
@@ -47,6 +49,7 @@ class TryOnTask {
       garmentCategory: json['garment_category'],
       isFriendTryon: json['is_friend_tryon'] ?? false,
       usedSavedModel: json['used_saved_model'] ?? false,
+      inspirationAnalysisId: json['inspiration_analysis_id'],
     );
   }
 

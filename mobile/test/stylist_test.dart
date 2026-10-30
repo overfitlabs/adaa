@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:wardrobelens/core/auth/session_manager.dart';
 import 'package:wardrobelens/core/models/recommended_outfit.dart';
 import 'package:wardrobelens/core/models/wardrobe_item.dart';
+import 'package:wardrobelens/core/widgets/adaa_wordmark.dart';
 import 'package:wardrobelens/features/styling/screens/recommendations_screen.dart';
 import 'package:wardrobelens/state/analysis_provider.dart';
 import 'package:wardrobelens/state/auth_provider.dart';
@@ -171,7 +172,7 @@ void main() {
       );
       await tester.pump();
 
-      expect(find.text('adaa stylist'), findsOneWidget);
+      expect(find.byType(AdaaWordmark), findsOneWidget);
       expect(find.text('AI Outfit Generator'), findsOneWidget);
       expect(find.text('OCCASION'), findsOneWidget);
       expect(find.text('Everyday'), findsOneWidget);
@@ -317,6 +318,77 @@ void main() {
       expect(stylist.selectedVibe, isNull);
       expect(stylist.outfits, isEmpty);
       expect(stylist.generationResponse, isNull);
+    });
+
+    testWidgets('renders square garment cards in recommendations without any layout overflow', (tester) async {
+      final item1 = _sampleItem(
+        id: 'i1',
+        name: 'White Graphic Print T-shirt',
+        category: 'tops',
+        color: 'White',
+      );
+      final item2 = _sampleItem(
+        id: 'i2',
+        name: 'Regular denim blue jeans',
+        category: 'bottoms',
+        color: 'Blue',
+      );
+      final item3 = _sampleItem(
+        id: 'i3',
+        name: 'oxidized mirror necklace',
+        category: 'accessories',
+        color: 'Silver',
+      );
+
+      final outfit = RecommendedOutfit(
+        id: 'rec-look-1',
+        name: 'Essential Clean Silhouette',
+        occasion: 'Everyday',
+        vibe: 'Minimalist',
+        compatibilityScore: 0.98,
+        explanation: 'Pairs your White Graphic Print T-shirt with Regular denim blue jeans.',
+        stylingTips: ['Try a subtle french tuck', 'Opt for clean footwear'],
+        itemIds: ['i1', 'i2', 'i3'],
+        items: [item1, item2, item3],
+        isSaved: false,
+      );
+
+      stylist.setOutfitsForTesting([outfit]);
+
+      tester.view.physicalSize = const Size(400, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      await tester.pumpWidget(
+        createTestStylistApp(
+          stylistProvider: stylist,
+          outfitsProvider: outfits,
+          child: const RecommendationsScreen(autoGenerate: false),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // No overflow exceptions should have occurred
+      expect(tester.takeException(), isNull);
+
+      // Verify the look title and match percentage
+      expect(find.text('Essential Clean Silhouette'), findsOneWidget);
+      expect(find.text('98%'), findsOneWidget);
+
+      // Verify all 3 garment thumbnails render with their labels
+      expect(find.text('White Graphic Print T-shirt'), findsOneWidget);
+      expect(find.text('Regular denim blue jeans'), findsOneWidget);
+      expect(find.text('oxidized mirror necklace'), findsOneWidget);
+      expect(find.text('TOPS'), findsOneWidget);
+      expect(find.text('BOTTOMS'), findsOneWidget);
+      expect(find.text('ACCESSORIES'), findsOneWidget);
+
+      // Verify AspectRatio 1.0 is used for square images
+      final aspectRatios = tester.widgetList<AspectRatio>(find.byType(AspectRatio));
+      expect(aspectRatios.any((ar) => ar.aspectRatio == 1.0), isTrue);
     });
   });
 }

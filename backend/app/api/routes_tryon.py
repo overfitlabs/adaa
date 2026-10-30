@@ -1,5 +1,6 @@
 import base64
 import io
+import json
 import logging
 import urllib.parse
 from datetime import datetime, timedelta
@@ -12,7 +13,7 @@ import httpx
 
 from app.config import settings
 from app.database import get_db
-from app.models import TryOnTaskRecord, WardrobeItem, UserTryOnModel
+from app.models import TryOnTaskRecord, WardrobeItem, UserTryOnModel, OutfitAnalysisRecord
 from app.schemas import TryOnTaskResponse, TryOnHistoryResponse, UserTryOnModelResponse
 from app.services.image_storage import image_storage_service
 from app.services.tryon_provider import (
@@ -81,6 +82,7 @@ def _task_to_response(task: TryOnTaskRecord) -> TryOnTaskResponse:
         can_retry=can_retry,
         is_friend_tryon=bool(getattr(task, "is_friend_tryon", False)),
         used_saved_model=bool(getattr(task, "used_saved_model", False)),
+        inspiration_analysis_id=getattr(task, "inspiration_analysis_id", None),
     )
 
 
@@ -158,11 +160,19 @@ def cleanup_expired_tryon_tasks(db: Session) -> int:
                 if not is_default:
                     image_storage_service.delete(user_asset, storage_provider=task.storage_provider)
 
-            # Delete garment image if it was uploaded for tryon (not a shared wardrobe item)
-            if task.garment_image_path and "wardrobe/" not in task.garment_image_path:
-                garment_asset = task.garment_image_public_id or task.garment_image_path
-                if garment_asset:
-                    image_storage_service.delete(garment_asset, storage_provider=task.storage_provider)
+            # Delete garment image if it was uploaded specifically for tryon (not a shared wardrobe item or inspiration)
+            if task.garment_image_path and "wardrobe/" not in task.garment_image_path and "inspirations/" not in task.garment_image_path:
+                is_analysis_asset = db.query(OutfitAnalysisRecord).filter(
+                    or_(
+                        OutfitAnalysisRecord.image_path == task.garment_image_path,
+                        OutfitAnalysisRecord.cloudinary_public_id == task.garment_image_path,
+                        OutfitAnalysisRecord.items_json.like(f"%{task.garment_image_path}%"),
+                    )
+                ).first() is not None
+                if not is_analysis_asset:
+                    garment_asset = task.garment_image_public_id or task.garment_image_path
+                    if garment_asset:
+                        image_storage_service.delete(garment_asset, storage_provider=task.storage_provider)
 
             if task.result_image_public_id:
                 image_storage_service.delete(task.result_image_public_id, storage_provider=task.storage_provider)
@@ -304,6 +314,9 @@ async def create_tryon_task(
     is_friend_tryon: bool = Form(False, description="Flag indicating one-off try-on for a friend"),
     friend_consent_acknowledged: bool = Form(False, description="User acknowledges consent to use friend photo"),
     save_as_default_model: bool = Form(False, description="Optionally save uploaded user_image as default model"),
+    inspiration_analysis_id: Optional[str] = Form(None, description="Existing outfit analysis record ID to reuse as inspiration"),
+    inspiration_item_id: Optional[str] = Form(None, description="ID of a specific detected garment within the analysis"),
+    inspiration_image_url: Optional[str] = Form(None, description="Direct URL of the inspiration image or crop"),
     db: Session = Depends(get_db),
     current_user: Optional[AuthenticatedUser] = Depends(get_optional_current_user),
 ):
@@ -311,12 +324,12 @@ async def create_tryon_task(
 
     # Validate garment_category against known allowlist
     clean_cat = (garment_category or "").strip().lower()
-    if clean_cat not in VALID_GARMENT_CATEGORIES and clean_cat not in ["top", "tops", "bottom", "bottoms", "outerwear", "jacket"]:
+    if clean_cat not in VALID_GARMENT_CATEGORIES and clean_cat not in ["top", "tops", "bottom", "bottoms", "outerwear", "jacket", "auto", ""]:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Invalid garment_category '{garment_category}'. Allowed: {sorted(list(VALID_GARMENT_CATEGORIES))}",
         )
-    norm_category = normalize_garment_category(clean_cat)
+    norm_category = normalize_garment_category(clean_cat) if clean_cat and clean_cat != "auto" else "upper_body"
 
     # 1. Resolve and prepare user image bytes
     used_model = False
@@ -421,6 +434,7 @@ async def create_tryon_task(
     garment_rel = None
     garment_clean_bytes = None
     garment_item = None
+    garment_pub_id = None
 
     if garment_image:
         garment_raw = await garment_image.read()
@@ -436,6 +450,8 @@ async def create_tryon_task(
             pre_sanitized=(garment_clean_bytes, garment_ext, g_w, g_h),
         )
         garment_rel = garment_meta.public_id
+        if garment_meta.storage_provider == "cloudinary":
+            garment_pub_id = garment_meta.public_id
     elif wardrobe_item_id:
         garment_item = db.query(WardrobeItem).filter(WardrobeItem.id == wardrobe_item_id).first()
         if not garment_item:
@@ -447,6 +463,8 @@ async def create_tryon_task(
                 raise HTTPException(status_code=404, detail="Selected wardrobe item not found.")
 
         garment_rel = garment_item.image_path
+        if getattr(garment_item, "storage_provider", None) == "cloudinary":
+            garment_pub_id = garment_item.cloudinary_public_id
         # Retrieve garment bytes safely from local disk or Cloudinary
         try:
             garment_clean_bytes = await image_storage_service.get_image_bytes(
@@ -456,10 +474,73 @@ async def create_tryon_task(
         except Exception as e:
             logger.error("Failed to read garment bytes for item %s: %s", wardrobe_item_id, str(e))
             raise HTTPException(status_code=404, detail="Selected wardrobe item image could not be loaded.")
+    elif inspiration_analysis_id:
+        analysis = db.query(OutfitAnalysisRecord).filter(OutfitAnalysisRecord.id == inspiration_analysis_id).first()
+        if not analysis:
+            raise HTTPException(status_code=404, detail="Attached inspiration analysis not found.")
+
+        if analysis.user_id is not None:
+            if current_user is None or current_user.id != analysis.user_id:
+                raise HTTPException(status_code=404, detail="Attached inspiration analysis not found.")
+
+        target_path = None
+        target_category = None
+        if inspiration_item_id:
+            try:
+                raw_items = json.loads(analysis.items_json) if analysis.items_json else []
+                for it in raw_items:
+                    if str(it.get("id")) == str(inspiration_item_id):
+                        target_path = it.get("extracted_image_path")
+                        target_category = it.get("category")
+                        break
+            except Exception as e:
+                logger.warning("Could not parse items_json for analysis %s: %s", inspiration_analysis_id, e)
+
+        # Fallback to analysis full image if no crop or piece not found
+        if not target_path:
+            target_path = analysis.cloudinary_public_id or analysis.image_path
+
+        garment_rel = target_path
+        if analysis.storage_provider == "cloudinary":
+            garment_pub_id = target_path
+
+        try:
+            garment_clean_bytes = await image_storage_service.get_image_bytes(
+                target_path,
+                storage_provider=analysis.storage_provider,
+            )
+        except Exception as e:
+            logger.error("Failed to load inspiration bytes for %s: %s", target_path, str(e))
+            raise HTTPException(status_code=404, detail="Inspiration asset image could not be loaded.")
+
+        if target_category and clean_cat in ("", "auto", "upper body"):
+            norm_category = normalize_garment_category(target_category)
+    elif inspiration_image_url:
+        if inspiration_image_url.startswith("/storage/"):
+            rel = inspiration_image_url.replace("/storage/", "").lstrip("/")
+            garment_rel = rel
+            garment_clean_bytes = await image_storage_service.get_image_bytes(rel, storage_provider="local")
+        else:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                resp = await client.get(inspiration_image_url)
+                resp.raise_for_status()
+                garment_clean_bytes = resp.content
+            # Re-verify image
+            with Image.open(io.BytesIO(garment_clean_bytes)) as img:
+                img.verify()
+            g_meta = await image_storage_service.upload(
+                user_id=user_id,
+                subfolder="tryon",
+                pre_sanitized=(garment_clean_bytes, "jpg", 256, 256),
+            )
+            garment_rel = g_meta.public_id
+            garment_meta = g_meta
+            if g_meta.storage_provider == "cloudinary":
+                garment_pub_id = g_meta.public_id
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Either a garment image file or a wardrobe_item_id must be provided.",
+            detail="Either a garment image file, a wardrobe_item_id, or an attached inspiration must be provided.",
         )
 
     # 3. Call tryon provider passing in-memory clean bytes
@@ -488,7 +569,6 @@ async def create_tryon_task(
 
     # 4. Save record with 7-day retention expiry
     expires_at = datetime.utcnow() + timedelta(days=settings.TRYON_RETENTION_DAYS)
-    garment_pub_id = None
     if garment_meta and garment_meta.storage_provider == "cloudinary":
         garment_pub_id = garment_meta.public_id
     elif garment_item and getattr(garment_item, "storage_provider", None) == "cloudinary":
@@ -506,6 +586,7 @@ async def create_tryon_task(
         garment_image_public_id=garment_pub_id,
         is_friend_tryon=is_friend,
         used_saved_model=used_model,
+        inspiration_analysis_id=inspiration_analysis_id,
         expires_at=expires_at,
     )
 

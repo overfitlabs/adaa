@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
+import 'package:wardrobelens/core/models/garment_item.dart';
+import 'package:wardrobelens/core/models/outfit_analysis.dart';
 import 'package:wardrobelens/core/models/tryon_task.dart';
 import 'package:wardrobelens/core/models/wardrobe_item.dart';
 import 'package:wardrobelens/features/tryon/screens/tryon_screen.dart';
@@ -18,14 +20,19 @@ Widget createTestTryOnApp({
   required TryOnProvider tryOnProvider,
   required WardrobeProvider wardrobeProvider,
   required OutfitsProvider outfitsProvider,
+  AnalysisProvider? analysisProvider,
+  OutfitAnalysisResponse? attachedAnalysis,
   String? prefilledInspirationUrl,
   String? prefilledWardrobeItemId,
+  List<DetectedFashionItem>? prefilledDetectedItems,
 }) {
   return MultiProvider(
     providers: [
       ChangeNotifierProvider<AuthProvider>(create: (_) => AuthProvider()),
       ChangeNotifierProvider<WardrobeProvider>.value(value: wardrobeProvider),
-      ChangeNotifierProvider<AnalysisProvider>(create: (_) => AnalysisProvider()),
+      ChangeNotifierProvider<AnalysisProvider>.value(
+        value: analysisProvider ?? AnalysisProvider(),
+      ),
       ChangeNotifierProvider<TryOnProvider>.value(value: tryOnProvider),
       ChangeNotifierProvider<CommunityProvider>(create: (_) => CommunityProvider()),
       ChangeNotifierProvider<ProfileProvider>(create: (_) => ProfileProvider()),
@@ -35,8 +42,10 @@ Widget createTestTryOnApp({
     ],
     child: MaterialApp(
       home: TryOnScreen(
+        attachedAnalysis: attachedAnalysis,
         prefilledInspirationUrl: prefilledInspirationUrl,
         prefilledWardrobeItemId: prefilledWardrobeItemId,
+        prefilledDetectedItems: prefilledDetectedItems,
       ),
     ),
   );
@@ -433,6 +442,193 @@ void main() {
 
       expect(find.text('1. Your Silhouette'), findsOneWidget);
       expect(find.text('My Default Model'), findsOneWidget);
+    });
+  });
+
+  group('Context-Aware Attached Inspiration Tests', () {
+    late TryOnProvider tryOn;
+    late WardrobeProvider wardrobe;
+    late OutfitsProvider outfits;
+
+    setUp(() {
+      tryOn = TryOnProvider();
+      wardrobe = WardrobeProvider();
+      outfits = OutfitsProvider();
+
+      // Configure default silhouette model
+      tryOn.setDefaultModelForTesting(
+        UserTryOnModel(
+          hasModel: true,
+          modelId: 'mod-test-1',
+          imageUrl: 'https://example.com/silhouette.jpg',
+        ),
+      );
+    });
+
+    final sampleAnalysis = OutfitAnalysisResponse(
+      analysisId: 'analysis-999',
+      imageUrl: 'https://example.com/editorial_look.jpg',
+      summary: 'Tailored Chic',
+      vibeOrStyle: 'Modern Formal',
+      detectedGarmentCount: 2,
+      createdAt: DateTime.now(),
+      items: [
+        DetectedFashionItem(
+          id: 'item-crop-blazer',
+          name: 'Structured Velvet Blazer',
+          category: 'outerwear',
+          primaryColor: 'forest green',
+          attributes: StyleAttributes(material: 'velvet', fit: 'structured'),
+          extractedImageUrl: 'https://example.com/crops/blazer.jpg',
+          extractedImagePath: 'inspirations/blazer.jpg',
+        ),
+        DetectedFashionItem(
+          id: 'item-crop-trousers',
+          name: 'Pleated Wool Trousers',
+          category: 'bottoms',
+          primaryColor: 'charcoal',
+          attributes: StyleAttributes(material: 'wool', fit: 'pleated'),
+          extractedImageUrl: 'https://example.com/crops/trousers.jpg',
+          extractedImagePath: 'inspirations/trousers.jpg',
+        ),
+      ],
+    );
+
+    testWidgets('Existing attached inspiration does not trigger a redundant inspiration selection', (tester) async {
+      await tester.pumpWidget(
+        createTestTryOnApp(
+          tryOnProvider: tryOn,
+          wardrobeProvider: wardrobe,
+          outfitsProvider: outfits,
+          attachedAnalysis: sampleAnalysis,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Banner shows inspiration attached
+      expect(find.text('Inspiration Scan Attached'), findsOneWidget);
+      // Redundant upload prompt is hidden
+      expect(find.text('Attach Outfit Inspiration'), findsNothing);
+      // "Inspiration Look" mode chip is selected
+      expect(find.text('Inspiration Look'), findsOneWidget);
+    });
+
+    testWidgets('Existing analysis with multiple garment crops displays those garments as square selection cards', (tester) async {
+      await tester.pumpWidget(
+        createTestTryOnApp(
+          tryOnProvider: tryOn,
+          wardrobeProvider: wardrobe,
+          outfitsProvider: outfits,
+          attachedAnalysis: sampleAnalysis,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Renders header with detected pieces count
+      expect(find.text('Select Inspiration Piece (2 detected)'), findsOneWidget);
+      expect(find.text('Complete Look'), findsOneWidget);
+      expect(find.text('Structured Velvet Blazer'), findsOneWidget);
+      expect(find.text('Pleated Wool Trousers'), findsOneWidget);
+
+      // Auto-selected first piece is blazer -> category is Jackets / Outer
+      expect(find.text('Jackets / Outer'), findsOneWidget);
+
+      // Tap on Pleated Wool Trousers
+      await tester.ensureVisible(find.text('Pleated Wool Trousers'));
+      await tester.tap(find.text('Pleated Wool Trousers'));
+      await tester.pumpAndSettle();
+
+      // Category auto-updates to Pants / Lower
+      expect(find.text('Pants / Lower'), findsOneWidget);
+    });
+
+    testWidgets('Existing analysis without garment crops can still be used as inspiration', (tester) async {
+      final noCropsAnalysis = OutfitAnalysisResponse(
+        analysisId: 'analysis-no-crops',
+        imageUrl: 'https://example.com/full_look.jpg',
+        summary: 'Minimalist Jumpsuit',
+        vibeOrStyle: 'Minimalist',
+        detectedGarmentCount: 0,
+        createdAt: DateTime.now(),
+        items: [],
+      );
+
+      await tester.pumpWidget(
+        createTestTryOnApp(
+          tryOnProvider: tryOn,
+          wardrobeProvider: wardrobe,
+          outfitsProvider: outfits,
+          attachedAnalysis: noCropsAnalysis,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Inspiration Scan Attached'), findsOneWidget);
+      expect(find.text('Full Outfit Reference'), findsOneWidget);
+      expect(find.text('GENERATE VIRTUAL TRY-ON'), findsOneWidget);
+    });
+
+    testWidgets('Standalone Try-On still requests inspiration when none is attached', (tester) async {
+      await tester.pumpWidget(
+        createTestTryOnApp(
+          tryOnProvider: tryOn,
+          wardrobeProvider: wardrobe,
+          outfitsProvider: outfits,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Standalone prompt is present
+      expect(find.text('Attach Outfit Inspiration'), findsOneWidget);
+      // Attached banner is NOT present
+      expect(find.text('Inspiration Scan Attached'), findsNothing);
+      // Default mode is wardrobe
+      expect(find.text('From My Wardrobe'), findsOneWidget);
+    });
+
+    testWidgets('Personal wardrobe mode still requires an appropriate wardrobe garment', (tester) async {
+      await tester.pumpWidget(
+        createTestTryOnApp(
+          tryOnProvider: tryOn,
+          wardrobeProvider: wardrobe,
+          outfitsProvider: outfits,
+          attachedAnalysis: sampleAnalysis,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Switch to personal wardrobe mode
+      await tester.ensureVisible(find.text('From My Wardrobe'));
+      await tester.tap(find.text('From My Wardrobe'));
+      await tester.pumpAndSettle();
+
+      // Try generating without selecting a wardrobe item
+      await tester.ensureVisible(find.text('GENERATE VIRTUAL TRY-ON'));
+      await tester.tap(find.text('GENERATE VIRTUAL TRY-ON'));
+      await tester.pumpAndSettle();
+
+      // Validation snackbar triggers
+      expect(find.text('Please select a garment from your wardrobe.'), findsOneWidget);
+    });
+
+    testWidgets('Complete inspiration outfit mode can use detected inspiration garments without requiring a wardrobe selection', (tester) async {
+      await tester.pumpWidget(
+        createTestTryOnApp(
+          tryOnProvider: tryOn,
+          wardrobeProvider: wardrobe,
+          outfitsProvider: outfits,
+          attachedAnalysis: sampleAnalysis,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // In Inspiration Look mode, tap Generate
+      await tester.ensureVisible(find.text('GENERATE VIRTUAL TRY-ON'));
+      await tester.tap(find.text('GENERATE VIRTUAL TRY-ON'));
+      await tester.pump();
+
+      // Does NOT show "Please select a garment from your wardrobe" error!
+      expect(find.text('Please select a garment from your wardrobe.'), findsNothing);
     });
   });
 }

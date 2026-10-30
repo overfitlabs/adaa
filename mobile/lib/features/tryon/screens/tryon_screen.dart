@@ -5,23 +5,38 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/models/garment_item.dart';
+import '../../../core/models/outfit_analysis.dart';
 import '../../../core/models/tryon_task.dart';
 import '../../../core/models/wardrobe_item.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/adaa_wordmark.dart';
 import '../../../core/widgets/private_image_view.dart';
+import '../../../state/analysis_provider.dart';
 import '../../../state/outfits_provider.dart';
 import '../../../state/tryon_provider.dart';
 import '../../../state/wardrobe_provider.dart';
 
+enum TryOnMode {
+  inspirationLook,
+  myWardrobe,
+  uploadPhoto,
+}
+
 class TryOnScreen extends StatefulWidget {
+  final OutfitAnalysisResponse? attachedAnalysis;
+  final String? attachedAnalysisId;
   final String? prefilledInspirationUrl;
   final String? prefilledWardrobeItemId;
+  final List<DetectedFashionItem>? prefilledDetectedItems;
 
   const TryOnScreen({
     super.key,
+    this.attachedAnalysis,
+    this.attachedAnalysisId,
     this.prefilledInspirationUrl,
     this.prefilledWardrobeItemId,
+    this.prefilledDetectedItems,
   });
 
   @override
@@ -42,9 +57,17 @@ class _TryOnScreenState extends State<TryOnScreen> {
   String? _selectedWardrobeItemId;
   WardrobeItem? _selectedWardrobeItem;
   String _selectedCategory = 'upper body';
-  bool _useWardrobeItem = true;
   bool _isSavingOutfit = false;
   int _selectedTab = 0; // 0: Studio, 1: History
+
+  OutfitAnalysisResponse? _attachedAnalysis;
+  String? _inspirationUrl;
+  String? _inspirationAnalysisId;
+  List<DetectedFashionItem> _detectedItems = [];
+  DetectedFashionItem? _selectedInspirationItem;
+  bool _useFullInspirationOutfit = false;
+  TryOnMode _tryOnMode = TryOnMode.myWardrobe;
+  bool _hasInspiration = false;
 
   final List<Map<String, String>> _categories = [
     {'label': 'Tops / Upper', 'value': 'upper body'},
@@ -67,36 +90,104 @@ class _TryOnScreenState extends State<TryOnScreen> {
     });
   }
 
+  void _setCategoryFromText(String catRaw) {
+    final cat = catRaw.toLowerCase();
+    if (cat.contains('outer') ||
+        cat.contains('jacket') ||
+        cat.contains('coat') ||
+        cat.contains('blazer')) {
+      _selectedCategory = 'outer';
+    } else if (cat.contains('bottom') ||
+        cat.contains('pant') ||
+        cat.contains('jean') ||
+        cat.contains('trouser') ||
+        cat.contains('skirt') ||
+        cat.contains('short')) {
+      _selectedCategory = 'lower body';
+    } else if (cat.contains('dress') ||
+        cat.contains('suit') ||
+        cat.contains('jumpsuit') ||
+        cat.contains('gown')) {
+      _selectedCategory = 'dress';
+    } else if (cat.contains('shoe') ||
+        cat.contains('boot') ||
+        cat.contains('sneaker') ||
+        cat.contains('footwear')) {
+      _selectedCategory = 'shoes';
+    } else {
+      _selectedCategory = 'upper body';
+    }
+  }
+
   void _applyPrefills() {
+    // 1. Resolve attached inspiration if present
+    if (widget.attachedAnalysis != null) {
+      _attachedAnalysis = widget.attachedAnalysis;
+      _inspirationUrl = widget.attachedAnalysis!.imageUrl;
+      _inspirationAnalysisId = widget.attachedAnalysis!.analysisId;
+      _detectedItems = List.from(widget.attachedAnalysis!.items);
+      _hasInspiration = true;
+    } else if (widget.prefilledInspirationUrl != null ||
+        widget.attachedAnalysisId != null) {
+      _inspirationUrl = widget.prefilledInspirationUrl;
+      _inspirationAnalysisId = widget.attachedAnalysisId;
+      _hasInspiration = true;
+
+      final analysisProv = context.read<AnalysisProvider>();
+      final match = analysisProv.history.where((a) =>
+          (widget.attachedAnalysisId != null &&
+              a.analysisId == widget.attachedAnalysisId) ||
+          (widget.prefilledInspirationUrl != null &&
+              a.imageUrl == widget.prefilledInspirationUrl)).firstOrNull ??
+          (analysisProv.currentAnalysis != null &&
+                  ((widget.attachedAnalysisId != null &&
+                          analysisProv.currentAnalysis!.analysisId ==
+                              widget.attachedAnalysisId) ||
+                      (widget.prefilledInspirationUrl != null &&
+                          analysisProv.currentAnalysis!.imageUrl ==
+                              widget.prefilledInspirationUrl))
+              ? analysisProv.currentAnalysis
+              : null);
+
+      if (match != null) {
+        _attachedAnalysis = match;
+        _inspirationAnalysisId ??= match.analysisId;
+        _inspirationUrl ??= match.imageUrl;
+        _detectedItems = List.from(match.items);
+      } else if (widget.prefilledDetectedItems != null) {
+        _detectedItems = List.from(widget.prefilledDetectedItems!);
+      }
+    }
+
+    // 2. Resolve wardrobe prefill or initial mode
     if (widget.prefilledWardrobeItemId != null) {
       final wardrobe = context.read<WardrobeProvider>();
       final match = wardrobe.items
           .where((i) => i.id == widget.prefilledWardrobeItemId)
           .firstOrNull;
       setState(() {
-        _useWardrobeItem = true;
+        _tryOnMode = TryOnMode.myWardrobe;
         _selectedWardrobeItemId = widget.prefilledWardrobeItemId;
         _selectedWardrobeItem = match;
         if (match != null) {
-          final cat = match.category.toLowerCase();
-          if (cat.contains('outer') ||
-              cat.contains('jacket') ||
-              cat.contains('coat')) {
-            _selectedCategory = 'outer';
-          } else if (cat.contains('bottom') ||
-              cat.contains('pant') ||
-              cat.contains('jean')) {
-            _selectedCategory = 'lower body';
-          } else if (cat.contains('dress') || cat.contains('suit')) {
-            _selectedCategory = 'dress';
-          } else if (cat.contains('shoe') ||
-              cat.contains('boot') ||
-              cat.contains('sneaker')) {
-            _selectedCategory = 'shoes';
-          } else {
-            _selectedCategory = 'upper body';
-          }
+          _setCategoryFromText(match.category);
         }
+      });
+    } else if (_hasInspiration) {
+      setState(() {
+        _tryOnMode = TryOnMode.inspirationLook;
+        if (_detectedItems.isNotEmpty) {
+          _selectedInspirationItem = _detectedItems.first;
+          _useFullInspirationOutfit = false;
+          _setCategoryFromText(_selectedInspirationItem!.category);
+        } else {
+          _selectedInspirationItem = null;
+          _useFullInspirationOutfit = true;
+        }
+      });
+    } else {
+      setState(() {
+        _tryOnMode = TryOnMode.myWardrobe;
       });
     }
   }
@@ -143,6 +234,163 @@ class _TryOnScreenState extends State<TryOnScreen> {
         );
       }
     }
+  }
+
+  void _openInspirationPicker(AnalysisProvider analysisProv) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: _background,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Choose Inspiration Look',
+                      style: TextStyle(
+                        fontFamily: 'Playfair Display',
+                        fontSize: 20,
+                        fontWeight: FontWeight.w600,
+                        color: _primary,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded),
+                      onPressed: () => Navigator.pop(ctx),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: _surfaceLow,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.photo_library_outlined, color: _primary),
+                  ),
+                  title: const Text('Upload Inspiration Photo', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  subtitle: const Text('Upload reference style from camera or gallery', style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+                  onTap: () async {
+                    Navigator.pop(ctx);
+                    final picked = await _picker.pickImage(
+                      source: ImageSource.gallery,
+                      maxWidth: 1600,
+                      maxHeight: 2000,
+                      imageQuality: 88,
+                    );
+                    if (picked != null) {
+                      setState(() {
+                        _attachedAnalysis = null;
+                        _inspirationAnalysisId = null;
+                        _inspirationUrl = picked.path;
+                        _detectedItems.clear();
+                        _selectedInspirationItem = null;
+                        _useFullInspirationOutfit = true;
+                        _hasInspiration = true;
+                        _tryOnMode = TryOnMode.inspirationLook;
+                      });
+                    }
+                  },
+                ),
+                const Divider(height: 20, color: AppColors.borderLight),
+                const Text('Recent Analysis Scans', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textSecondary)),
+                const SizedBox(height: 8),
+                if (analysisProv.history.isEmpty && analysisProv.currentAnalysis == null)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 24),
+                    child: Center(child: Text('No previous outfit analyses found.', style: TextStyle(color: AppColors.textMuted, fontSize: 12))),
+                  )
+                else
+                  SizedBox(
+                    height: 160,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: analysisProv.history.length,
+                      separatorBuilder: (context, index) => const SizedBox(width: 12),
+                      itemBuilder: (context, idx) {
+                        final item = analysisProv.history[idx];
+                        return GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _attachedAnalysis = item;
+                              _inspirationAnalysisId = item.analysisId;
+                              _inspirationUrl = item.imageUrl;
+                              _detectedItems = List.from(item.items);
+                              _hasInspiration = true;
+                              _tryOnMode = TryOnMode.inspirationLook;
+                              if (_detectedItems.isNotEmpty) {
+                                _selectedInspirationItem = _detectedItems.first;
+                                _useFullInspirationOutfit = false;
+                                _setCategoryFromText(_selectedInspirationItem!.category);
+                              } else {
+                                _selectedInspirationItem = null;
+                                _useFullInspirationOutfit = true;
+                              }
+                            });
+                            Navigator.pop(ctx);
+                          },
+                          child: Container(
+                            width: 120,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: AppColors.borderLight),
+                            ),
+                            clipBehavior: Clip.antiAlias,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                AspectRatio(
+                                  aspectRatio: 1.0,
+                                  child: PrivateImageView(
+                                    imageUrl: item.imageUrl,
+                                    fit: BoxFit.contain,
+                                    backgroundColor: AppColors.surfaceContainerLow,
+                                  ),
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.all(6),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        item.vibeOrStyle.isNotEmpty ? item.vibeOrStyle : 'Outfit',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
+                                      ),
+                                      Text(
+                                        '${item.items.length} items',
+                                        style: const TextStyle(fontSize: 10, color: AppColors.textMuted),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   void _openWardrobePicker(List<WardrobeItem> items) {
@@ -319,32 +567,78 @@ class _TryOnScreenState extends State<TryOnScreen> {
       return;
     }
 
-    if (_useWardrobeItem && _selectedWardrobeItemId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select a garment from your wardrobe.'),
-        ),
+    if (_tryOnMode == TryOnMode.inspirationLook) {
+      if (_inspirationUrl == null && _attachedAnalysis == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please attach an inspiration outfit.')),
+        );
+        return;
+      }
+
+      final cropUrl = _selectedInspirationItem?.extractedImageUrl;
+      final itemId = _selectedInspirationItem?.id;
+
+      await tryOnProvider.startTryOn(
+        userImage: _userImage,
+        garmentImage: null,
+        wardrobeItemId: null,
+        inspirationAnalysisId: _inspirationAnalysisId,
+        inspirationItemId: itemId,
+        inspirationImageUrl: _useFullInspirationOutfit ? _inspirationUrl : (cropUrl ?? _inspirationUrl),
+        garmentCategory: _selectedCategory,
+        useSavedModel: useSavedModel,
+        isFriendTryon: isFriend,
+        friendConsentAcknowledged: tryOnProvider.friendConsentAcknowledged,
+        saveAsDefaultModel: tryOnProvider.saveAsDefaultModel,
       );
       return;
     }
 
-    if (!_useWardrobeItem && _garmentImage == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please upload a garment image.')),
+    if (_tryOnMode == TryOnMode.myWardrobe) {
+      if (_selectedWardrobeItemId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please select a garment from your wardrobe.'),
+          ),
+        );
+        return;
+      }
+
+      await tryOnProvider.startTryOn(
+        userImage: _userImage,
+        garmentImage: null,
+        wardrobeItemId: _selectedWardrobeItemId,
+        inspirationAnalysisId: _inspirationAnalysisId,
+        garmentCategory: _selectedCategory,
+        useSavedModel: useSavedModel,
+        isFriendTryon: isFriend,
+        friendConsentAcknowledged: tryOnProvider.friendConsentAcknowledged,
+        saveAsDefaultModel: tryOnProvider.saveAsDefaultModel,
       );
       return;
     }
 
-    await tryOnProvider.startTryOn(
-      userImage: _userImage,
-      garmentImage: _useWardrobeItem ? null : _garmentImage,
-      wardrobeItemId: _useWardrobeItem ? _selectedWardrobeItemId : null,
-      garmentCategory: _selectedCategory,
-      useSavedModel: useSavedModel,
-      isFriendTryon: isFriend,
-      friendConsentAcknowledged: tryOnProvider.friendConsentAcknowledged,
-      saveAsDefaultModel: tryOnProvider.saveAsDefaultModel,
-    );
+    if (_tryOnMode == TryOnMode.uploadPhoto) {
+      if (_garmentImage == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please upload a garment image.')),
+        );
+        return;
+      }
+
+      await tryOnProvider.startTryOn(
+        userImage: _userImage,
+        garmentImage: _garmentImage,
+        wardrobeItemId: null,
+        inspirationAnalysisId: _inspirationAnalysisId,
+        garmentCategory: _selectedCategory,
+        useSavedModel: useSavedModel,
+        isFriendTryon: isFriend,
+        friendConsentAcknowledged: tryOnProvider.friendConsentAcknowledged,
+        saveAsDefaultModel: tryOnProvider.saveAsDefaultModel,
+      );
+      return;
+    }
   }
 
   Future<void> _saveAsOutfit(TryOnTask task) async {
@@ -353,9 +647,11 @@ class _TryOnScreenState extends State<TryOnScreen> {
     setState(() => _isSavingOutfit = true);
     final outfits = context.read<OutfitsProvider>();
 
-    final garmentName = _selectedWardrobeItem?.name ?? 'Styling Garment';
+    final garmentName = _tryOnMode == TryOnMode.inspirationLook
+        ? (_selectedInspirationItem?.name ?? (_useFullInspirationOutfit ? 'Complete Inspiration Look' : 'Inspiration Garment'))
+        : (_selectedWardrobeItem?.name ?? 'Styling Garment');
     final outfitName = 'Try-On: $garmentName';
-    final itemIds = _selectedWardrobeItemId != null
+    final itemIds = (_tryOnMode == TryOnMode.myWardrobe && _selectedWardrobeItemId != null)
         ? [_selectedWardrobeItemId!]
         : <String>[];
 
@@ -365,6 +661,7 @@ class _TryOnScreenState extends State<TryOnScreen> {
       notes:
           'Generated via adaa Virtual Try-On fitting studio.\nSilhouette fitting with $garmentName.',
       itemIds: itemIds,
+      inspirationAnalysisId: _inspirationAnalysisId,
     );
 
     setState(() => _isSavingOutfit = false);
@@ -1168,7 +1465,7 @@ class _TryOnScreenState extends State<TryOnScreen> {
       ),
       builder: (ctx) {
         return SafeArea(
-          child: Padding(
+          child: SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -1228,19 +1525,22 @@ class _TryOnScreenState extends State<TryOnScreen> {
                 ),
                 const SizedBox(height: 16),
                 // Full image preview
-                AspectRatio(
-                  aspectRatio: 1.0,
-                  child: Container(
-                    width: double.infinity,
-                    clipBehavior: Clip.antiAlias,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(20),
-                      border:
-                          Border.all(color: Colors.black.withValues(alpha: 0.08)),
-                    ),
-                    child: PrivateImageView(
-                      imageUrl: item.resultImageUrl ?? item.garmentImageUrl,
-                      fit: BoxFit.cover,
+                Container(
+                  constraints: const BoxConstraints(maxHeight: 240),
+                  child: AspectRatio(
+                    aspectRatio: 1.0,
+                    child: Container(
+                      width: double.infinity,
+                      clipBehavior: Clip.antiAlias,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(20),
+                        border:
+                            Border.all(color: Colors.black.withValues(alpha: 0.08)),
+                      ),
+                      child: PrivateImageView(
+                        imageUrl: item.resultImageUrl ?? item.garmentImageUrl,
+                        fit: BoxFit.cover,
+                      ),
                     ),
                   ),
                 ),
@@ -1346,56 +1646,160 @@ class _TryOnScreenState extends State<TryOnScreen> {
     return '$m ${dt.day}, $hour:$min $ampm';
   }
 
-  Widget _buildInputForm(WardrobeProvider wardrobe, TryOnProvider tryOn) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (widget.prefilledInspirationUrl != null)
-          Container(
-            margin: const EdgeInsets.only(bottom: 16),
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: _surfaceLow,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: _gold.withValues(alpha: 0.3)),
+  Widget _buildAttachedInspirationBanner(AnalysisProvider analysisProv) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: _surfaceLow,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _gold.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: SizedBox(
+              width: 52,
+              height: 52,
+              child: PrivateImageView(
+                imageUrl: _inspirationUrl,
+                fit: BoxFit.contain,
+                backgroundColor: AppColors.surfaceContainerLow,
+              ),
             ),
-            child: Row(
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: PrivateImageView(
-                    imageUrl: widget.prefilledInspirationUrl,
-                    width: 48,
-                    height: 48,
-                    fit: BoxFit.cover,
-                  ),
+                const Row(
+                  children: [
+                    Icon(Icons.verified, size: 14, color: _gold),
+                    SizedBox(width: 4),
+                    Text(
+                      'Inspiration Scan Attached',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                        color: _primary,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 12),
-                const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Inspiration Scan Attached',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 13,
-                          color: _primary,
-                        ),
-                      ),
-                      Text(
-                        'Using inspiration context for fitting calibration.',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: AppColors.textMuted,
-                        ),
-                      ),
-                    ],
+                const SizedBox(height: 2),
+                Text(
+                  _attachedAnalysis?.vibeOrStyle != null
+                      ? '${_attachedAnalysis!.vibeOrStyle} • ${_detectedItems.isNotEmpty ? "${_detectedItems.length} items extracted" : "Full look"}'
+                      : 'Using inspiration context for fitting calibration.',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: AppColors.textMuted,
                   ),
                 ),
               ],
             ),
           ),
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert, size: 20, color: _secondary),
+            onSelected: (val) {
+              if (val == 'change') {
+                _openInspirationPicker(analysisProv);
+              } else if (val == 'remove') {
+                setState(() {
+                  _hasInspiration = false;
+                  _attachedAnalysis = null;
+                  _inspirationAnalysisId = null;
+                  _inspirationUrl = null;
+                  _detectedItems.clear();
+                  _selectedInspirationItem = null;
+                  _useFullInspirationOutfit = false;
+                  _tryOnMode = TryOnMode.myWardrobe;
+                });
+              }
+            },
+            itemBuilder: (ctx) => [
+              const PopupMenuItem(
+                value: 'change',
+                child: Row(
+                  children: [
+                    Icon(Icons.swap_horiz, size: 18),
+                    SizedBox(width: 8),
+                    Text('Change Look'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'remove',
+                child: Row(
+                  children: [
+                    Icon(Icons.close, size: 18, color: Colors.red),
+                    SizedBox(width: 8),
+                    Text('Remove Inspiration', style: TextStyle(color: Colors.red)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStandaloneInspirationPrompt(AnalysisProvider analysisProv) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.borderLight),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: _surfaceLow,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(Icons.auto_awesome, size: 18, color: _gold),
+          ),
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Attach Outfit Inspiration',
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: _primary),
+                ),
+                Text(
+                  'Calibrate fit or recreate an existing look',
+                  style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+                ),
+              ],
+            ),
+          ),
+          TextButton(
+            onPressed: () => _openInspirationPicker(analysisProv),
+            child: const Text('Add', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: _secondary)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInputForm(WardrobeProvider wardrobe, TryOnProvider tryOn) {
+    final analysisProv = context.watch<AnalysisProvider>();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (_hasInspiration)
+          _buildAttachedInspirationBanner(analysisProv)
+        else
+          _buildStandaloneInspirationPrompt(analysisProv),
 
         if (tryOn.error != null)
           Container(
@@ -1681,38 +2085,351 @@ class _TryOnScreenState extends State<TryOnScreen> {
         const SizedBox(height: 8),
         Row(
           children: [
+            if (_hasInspiration) ...[
+              ChoiceChip(
+                label: const Text('Inspiration Look'),
+                selected: _tryOnMode == TryOnMode.inspirationLook,
+                selectedColor: _primary,
+                labelStyle: TextStyle(
+                  color: _tryOnMode == TryOnMode.inspirationLook ? Colors.white : _primary,
+                  fontWeight: FontWeight.w500,
+                  fontSize: 12,
+                ),
+                onSelected: (val) {
+                  if (val) {
+                    setState(() {
+                      _tryOnMode = TryOnMode.inspirationLook;
+                      if (_selectedInspirationItem != null) {
+                        _setCategoryFromText(_selectedInspirationItem!.category);
+                      }
+                    });
+                  }
+                },
+              ),
+              const SizedBox(width: 8),
+            ],
             ChoiceChip(
               label: const Text('From My Wardrobe'),
-              selected: _useWardrobeItem,
+              selected: _tryOnMode == TryOnMode.myWardrobe,
               selectedColor: _primary,
               labelStyle: TextStyle(
-                color: _useWardrobeItem ? Colors.white : _primary,
+                color: _tryOnMode == TryOnMode.myWardrobe ? Colors.white : _primary,
                 fontWeight: FontWeight.w500,
                 fontSize: 12,
               ),
               onSelected: (val) {
-                if (val) setState(() => _useWardrobeItem = true);
+                if (val) {
+                  setState(() {
+                    _tryOnMode = TryOnMode.myWardrobe;
+                    if (_selectedWardrobeItem != null) {
+                      _setCategoryFromText(_selectedWardrobeItem!.category);
+                    }
+                  });
+                }
               },
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 8),
             ChoiceChip(
               label: const Text('Upload Photo'),
-              selected: !_useWardrobeItem,
+              selected: _tryOnMode == TryOnMode.uploadPhoto,
               selectedColor: _primary,
               labelStyle: TextStyle(
-                color: !_useWardrobeItem ? Colors.white : _primary,
+                color: _tryOnMode == TryOnMode.uploadPhoto ? Colors.white : _primary,
                 fontWeight: FontWeight.w500,
                 fontSize: 12,
               ),
               onSelected: (val) {
-                if (val) setState(() => _useWardrobeItem = false);
+                if (val) {
+                  setState(() {
+                    _tryOnMode = TryOnMode.uploadPhoto;
+                  });
+                }
               },
             ),
           ],
         ),
         const SizedBox(height: 12),
 
-        if (_useWardrobeItem) ...[
+        if (_tryOnMode == TryOnMode.inspirationLook) ...[
+          if (_detectedItems.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Select Inspiration Piece (${_detectedItems.length} detected)',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: _secondary,
+                    ),
+                  ),
+                  if (_useFullInspirationOutfit)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: _gold.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Text(
+                        'Full Look Active',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: _primary,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            SizedBox(
+              height: 164,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: _detectedItems.length + 1,
+                separatorBuilder: (context, index) => const SizedBox(width: 10),
+                itemBuilder: (ctx, idx) {
+                  if (idx == 0) {
+                    final isSelected = _useFullInspirationOutfit;
+                    return GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _useFullInspirationOutfit = true;
+                          _selectedInspirationItem = null;
+                        });
+                      },
+                      child: Container(
+                        width: 106,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: isSelected ? _gold : AppColors.borderLight,
+                            width: isSelected ? 2.5 : 1,
+                          ),
+                        ),
+                        clipBehavior: Clip.antiAlias,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            AspectRatio(
+                              aspectRatio: 1.0,
+                              child: Stack(
+                                fit: StackFit.expand,
+                                children: [
+                                  PrivateImageView(
+                                    imageUrl: _inspirationUrl,
+                                    fit: BoxFit.contain,
+                                    backgroundColor: AppColors.surfaceContainerLow,
+                                  ),
+                                  if (isSelected)
+                                    Positioned(
+                                      top: 6,
+                                      right: 6,
+                                      child: Container(
+                                        padding: const EdgeInsets.all(3),
+                                        decoration: const BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: _gold,
+                                        ),
+                                        child: const Icon(
+                                          Icons.check,
+                                          size: 12,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                            const Expanded(
+                              child: Padding(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 4,
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      'Complete Look',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    SizedBox(height: 1),
+                                    Text(
+                                      'FULL OUTFIT',
+                                      style: TextStyle(
+                                        fontSize: 9,
+                                        color: AppColors.textMuted,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+
+                  final item = _detectedItems[idx - 1];
+                  final isSelected = !_useFullInspirationOutfit &&
+                      _selectedInspirationItem?.id == item.id;
+                  final imageUrl = item.extractedImageUrl ?? _inspirationUrl;
+
+                  return GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _selectedInspirationItem = item;
+                        _useFullInspirationOutfit = false;
+                        _setCategoryFromText(item.category);
+                      });
+                    },
+                    child: Container(
+                      width: 106,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: isSelected ? _gold : AppColors.borderLight,
+                          width: isSelected ? 2.5 : 1,
+                        ),
+                      ),
+                      clipBehavior: Clip.antiAlias,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          AspectRatio(
+                            aspectRatio: 1.0,
+                            child: Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                PrivateImageView(
+                                  imageUrl: imageUrl,
+                                  fit: BoxFit.contain,
+                                  backgroundColor:
+                                      AppColors.surfaceContainerLow,
+                                ),
+                                if (isSelected)
+                                  Positioned(
+                                    top: 6,
+                                    right: 6,
+                                    child: Container(
+                                      padding: const EdgeInsets.all(3),
+                                      decoration: const BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: _gold,
+                                      ),
+                                      child: const Icon(
+                                        Icons.check,
+                                        size: 12,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 4,
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    item.name,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 1),
+                                  Text(
+                                    item.category.toUpperCase(),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontSize: 9,
+                                      color: AppColors.textSecondary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ] else ...[
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: _surfaceLow,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: _gold.withValues(alpha: 0.5)),
+              ),
+              child: Row(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: SizedBox(
+                      width: 60,
+                      height: 60,
+                      child: PrivateImageView(
+                        imageUrl: _inspirationUrl,
+                        fit: BoxFit.contain,
+                        backgroundColor: AppColors.surfaceContainerLow,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Full Outfit Reference',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                            color: _primary,
+                          ),
+                        ),
+                        SizedBox(height: 2),
+                        Text(
+                          'Recreating complete look on silhouette (no separate garment crops required).',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: AppColors.textMuted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ] else if (_tryOnMode == TryOnMode.myWardrobe) ...[
           if (_selectedWardrobeItem != null)
             Container(
               padding: const EdgeInsets.all(12),

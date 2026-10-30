@@ -578,6 +578,9 @@ class ApiClient {
     XFile? userImage,
     XFile? garmentImage,
     String? wardrobeItemId,
+    String? inspirationAnalysisId,
+    String? inspirationItemId,
+    String? inspirationImageUrl,
     String garmentCategory = 'upper body',
     bool useSavedModel = false,
     bool isFriendTryon = false,
@@ -613,6 +616,16 @@ class ApiClient {
       );
     } else if (wardrobeItemId != null) {
       request.fields['wardrobe_item_id'] = wardrobeItemId;
+    }
+
+    if (inspirationAnalysisId != null && inspirationAnalysisId.trim().isNotEmpty) {
+      request.fields['inspiration_analysis_id'] = inspirationAnalysisId.trim();
+    }
+    if (inspirationItemId != null && inspirationItemId.trim().isNotEmpty) {
+      request.fields['inspiration_item_id'] = inspirationItemId.trim();
+    }
+    if (inspirationImageUrl != null && inspirationImageUrl.trim().isNotEmpty) {
+      request.fields['inspiration_image_url'] = inspirationImageUrl.trim();
     }
 
     request.fields['garment_category'] = garmentCategory;

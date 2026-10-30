@@ -98,6 +98,7 @@ REQUIRED_COLUMNS = {
         ("expires_at", "DATETIME"),
         ("is_friend_tryon", "BOOLEAN DEFAULT 0"),
         ("used_saved_model", "BOOLEAN DEFAULT 0"),
+        ("inspiration_analysis_id", "VARCHAR(36)"),
     ],
     "communities": [
         ("status", "VARCHAR(30) DEFAULT 'active'"),
