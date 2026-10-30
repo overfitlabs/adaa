@@ -349,7 +349,7 @@ class _AdaaChatScreenState extends State<AdaaChatScreen>
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
       children: [
         Center(
-          child: Container(
+          child: SizedBox(
             width: 64,
             height: 64,
             child: Image.asset('assets/branding/app_icon_no_bg.png'),

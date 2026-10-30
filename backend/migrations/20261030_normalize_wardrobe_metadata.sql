@@ -1,4 +1,4 @@
--- Migration: Safe Idempotent Normalization for ADAA Wardrobe Metadata
+-- Migration: Safe Idempotent Normalization for adaa Wardrobe Metadata
 -- Purpose: Canonicalizes category, primary_color, pattern, material, fit, and season in wardrobe_items
 -- Compatibility: PostgreSQL / Supabase
 -- Execution: Non-destructive, preserves unknown legacy values in a safe fallback column or existing notes if needed.
@@ -10,7 +10,7 @@ CREATE INDEX IF NOT EXISTS ix_wardrobe_items_category ON wardrobe_items (categor
 CREATE INDEX IF NOT EXISTS ix_wardrobe_items_primary_color ON wardrobe_items (primary_color);
 CREATE INDEX IF NOT EXISTS ix_wardrobe_items_user_id ON wardrobe_items (user_id);
 
--- 2. Canonicalize category aliases to standard ADAA categories
+-- 2. Canonicalize category aliases to standard adaa categories
 UPDATE wardrobe_items
 SET category = CASE
     WHEN LOWER(TRIM(category)) IN ('top', 'shirt', 'shirts', 't-shirt', 'tshirt', 'tee', 'blouse', 'blouses', 'sweater', 'sweaters', 'knitwear', 'hoodie', 'hoodies', 'sweatshirt', 'sweatshirts', 'tank', 'tank top', 'polo') THEN 'tops'

@@ -95,7 +95,7 @@ async def _extract_garment_crops(
     """
     Extracts individual garment crops using Pillow bounding boxes and uploads them.
     Guarantees:
-    - Each garment is centered on a consistent 1:1 square canvas (600x600) with ADAA neutral background (#FAF8F5).
+    - Each garment is centered on a consistent 1:1 square canvas (600x600) with adaa neutral background (#FAF8F5).
     - Proportions are preserved with balanced padding; garments are never stretched, sheared, or distorted.
     - Derived assets use deterministic IDs based on source asset to prevent duplicate Cloudinary uploads across retries.
     - Stored under subfolder='extracted' WITHOUT the 'adaa-scan-pending' tag to prevent recursive triggers.
@@ -140,7 +140,7 @@ async def _extract_garment_crops(
                     half_h = max(10, src_h // 2)
                     crop_img = pil_source.crop((0, 0, src_w, half_h))
 
-            # Standardize garment image to a square 600x600 canvas with neutral ADAA background
+            # Standardize garment image to a square 600x600 canvas with neutral adaa background
             square_img = standardize_to_square(
                 crop_img,
                 target_size=600,
@@ -203,7 +203,7 @@ def _fetch_image_bytes_for_record(record: OutfitAnalysisRecord) -> Optional[byte
                 storage_provider="cloudinary",
                 ttl_seconds=300,
             )
-            req = urllib.request.Request(delivery_url, headers={"User-Agent": "ADAA-Backend/1.0"})
+            req = urllib.request.Request(delivery_url, headers={"User-Agent": "adaa-Backend/1.0"})
             with urllib.request.urlopen(req, timeout=15) as resp:
                 return resp.read()
     except Exception as e:

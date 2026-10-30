@@ -445,8 +445,9 @@ class _ItemReviewScreenState extends State<ItemReviewScreen> {
                         setState(() {
                           _intent = ItemReviewIntent.findPiece;
                           _selectedIds.clear();
-                          if (_items.isNotEmpty)
+                          if (_items.isNotEmpty) {
                             _selectedIds.add(_items.first.id);
+                          }
                         });
                       },
                       borderRadius: BorderRadius.circular(8),

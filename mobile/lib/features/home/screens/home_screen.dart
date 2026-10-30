@@ -741,10 +741,6 @@ class _HomeScreenState extends State<HomeScreen> {
             _buildAskAdaaCard(),
             const SizedBox(height: 16),
 
-            // Wardrobe Capsule Summary Card
-            // _buildCapsuleCard(wardrobe),
-            // const SizedBox(height: 18),
-
             // Quick Action Tiles (2x2 Grid)
             _buildQuickTilesGrid(outfits),
             const SizedBox(height: 24),
@@ -1032,88 +1028,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildCapsuleCard(WardrobeProvider wardrobe) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
-        boxShadow: [AppColors.subtleShadow],
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: const BoxDecoration(
-              color: AppColors.sageContainer,
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.checkroom,
-              color: AppColors.forest,
-              size: 22,
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      'Wardrobe Capsule',
-                      style: AppTypography.titleMedium.copyWith(
-                        color: AppColors.forest,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  wardrobe.items.isNotEmpty
-                      ? '${wardrobe.items.length} digitized pieces ready to mix'
-                      : 'Snap pieces to deconstruct & catalog your collection',
-                  style: AppTypography.bodySmall.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          TextButton(
-            onPressed: () => setState(() => _currentTabIndex = 2),
-            style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              minimumSize: Size.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Open',
-                  style: AppTypography.labelMedium.copyWith(
-                    color: AppColors.forest,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const Icon(
-                  Icons.chevron_right,
-                  size: 16,
-                  color: AppColors.forest,
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }

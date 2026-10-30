@@ -10,7 +10,7 @@ import '../screens/add_wardrobe_item_screen.dart';
 import '../screens/wardrobe_detail_screen.dart';
 
 /// Modal draggable bottom sheet for browsing or selecting wardrobe items
-/// while keeping the underlying screen (e.g. Ask ADAA Chat) and scroll position intact.
+/// while keeping the underlying screen (e.g. Ask adaa Chat) and scroll position intact.
 class WardrobeBottomSheet extends StatefulWidget {
   final ValueChanged<WardrobeItem>? onItemSelected;
   final String title;
@@ -31,10 +31,8 @@ class WardrobeBottomSheet extends StatefulWidget {
       isScrollControlled: true,
       useSafeArea: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => WardrobeBottomSheet(
-        onItemSelected: onItemSelected,
-        title: title,
-      ),
+      builder: (ctx) =>
+          WardrobeBottomSheet(onItemSelected: onItemSelected, title: title),
     );
   }
 
@@ -66,7 +64,8 @@ class _WardrobeBottomSheetState extends State<WardrobeBottomSheet> {
   List<WardrobeItem> _filterItems(List<WardrobeItem> allItems) {
     final query = _searchController.text.trim().toLowerCase();
     return allItems.where((item) {
-      final matchesCategory = _selectedCategory == 'all' ||
+      final matchesCategory =
+          _selectedCategory == 'all' ||
           (item.category.toLowerCase() == _selectedCategory.toLowerCase());
       if (!matchesCategory) return false;
 
@@ -125,7 +124,10 @@ class _WardrobeBottomSheetState extends State<WardrobeBottomSheet> {
 
               // Header Row
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 8,
+                ),
                 child: Row(
                   children: [
                     Expanded(
@@ -167,7 +169,10 @@ class _WardrobeBottomSheetState extends State<WardrobeBottomSheet> {
 
               // Search Bar
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 4,
+                ),
                 child: TextField(
                   controller: _searchController,
                   onChanged: (_) => setState(() {}),
@@ -177,7 +182,11 @@ class _WardrobeBottomSheetState extends State<WardrobeBottomSheet> {
                       color: AppColors.textMuted,
                       fontSize: 13,
                     ),
-                    prefixIcon: const Icon(Icons.search, size: 20, color: AppColors.textMuted),
+                    prefixIcon: const Icon(
+                      Icons.search,
+                      size: 20,
+                      color: AppColors.textMuted,
+                    ),
                     suffixIcon: _searchController.text.isNotEmpty
                         ? IconButton(
                             icon: const Icon(Icons.clear, size: 18),
@@ -212,7 +221,11 @@ class _WardrobeBottomSheetState extends State<WardrobeBottomSheet> {
               // Category Selector
               _buildCategorySelector(prov),
 
-              const Divider(height: 12, thickness: 0.8, color: AppColors.border),
+              const Divider(
+                height: 12,
+                thickness: 0.8,
+                color: AppColors.border,
+              ),
 
               // Main Body (Loading / Error / Empty / Grid)
               Expanded(
@@ -231,7 +244,14 @@ class _WardrobeBottomSheetState extends State<WardrobeBottomSheet> {
   }
 
   Widget _buildCategorySelector(WardrobeProvider prov) {
-    final categories = ['all', 'tops', 'bottoms', 'outerwear', 'footwear', 'accessories'];
+    final categories = [
+      'all',
+      'tops',
+      'bottoms',
+      'outerwear',
+      'footwear',
+      'accessories',
+    ];
 
     return SizedBox(
       height: 38,
@@ -300,7 +320,11 @@ class _WardrobeBottomSheetState extends State<WardrobeBottomSheet> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.error_outline, size: 36, color: Color(0xFF9B1C1C)),
+              const Icon(
+                Icons.error_outline,
+                size: 36,
+                color: Color(0xFF9B1C1C),
+              ),
               const SizedBox(height: 12),
               Text(
                 prov.error!,
@@ -310,8 +334,15 @@ class _WardrobeBottomSheetState extends State<WardrobeBottomSheet> {
               const SizedBox(height: 16),
               OutlinedButton.icon(
                 onPressed: () => prov.loadWardrobe(),
-                icon: const Icon(Icons.refresh, size: 16, color: AppColors.forest),
-                label: const Text('Try Again', style: TextStyle(color: AppColors.forest)),
+                icon: const Icon(
+                  Icons.refresh,
+                  size: 16,
+                  color: AppColors.forest,
+                ),
+                label: const Text(
+                  'Try Again',
+                  style: TextStyle(color: AppColors.forest),
+                ),
               ),
             ],
           ),
@@ -320,7 +351,8 @@ class _WardrobeBottomSheetState extends State<WardrobeBottomSheet> {
     }
 
     if (items.isEmpty) {
-      final isFiltered = _searchController.text.isNotEmpty || _selectedCategory != 'all';
+      final isFiltered =
+          _searchController.text.isNotEmpty || _selectedCategory != 'all';
       return Center(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 32),
@@ -349,7 +381,10 @@ class _WardrobeBottomSheetState extends State<WardrobeBottomSheet> {
                     ? 'Try adjusting your search query or category filters.'
                     : 'Add items using the scanner to style personalized outfits.',
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textSecondary,
+                ),
               ),
               if (!isFiltered) ...[
                 const SizedBox(height: 16),
@@ -358,7 +393,9 @@ class _WardrobeBottomSheetState extends State<WardrobeBottomSheet> {
                     Navigator.of(context).pop();
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const AddWardrobeItemScreen()),
+                      MaterialPageRoute(
+                        builder: (_) => const AddWardrobeItemScreen(),
+                      ),
                     );
                   },
                   icon: const Icon(Icons.camera_alt_outlined, size: 16),
@@ -404,9 +441,7 @@ class _WardrobeBottomSheetState extends State<WardrobeBottomSheet> {
         } else {
           Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (_) => WardrobeDetailScreen(item: item),
-            ),
+            MaterialPageRoute(builder: (_) => WardrobeDetailScreen(item: item)),
           );
         }
       },
@@ -447,7 +482,10 @@ class _WardrobeBottomSheetState extends State<WardrobeBottomSheet> {
                     top: 6,
                     right: 6,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.black.withValues(alpha: 0.65),
                         borderRadius: BorderRadius.circular(8),

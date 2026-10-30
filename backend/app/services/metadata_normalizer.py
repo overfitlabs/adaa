@@ -1,5 +1,5 @@
 """
-Canonical metadata definitions and normalization service for ADAA garments.
+Canonical metadata definitions and normalization service for adaa garments.
 Provides consistent canonical values, capitalization, and whitespace handling
 for structured garment attributes (category, colors, pattern, material, fit, season, formality).
 
@@ -456,7 +456,7 @@ def _clean_str(val: Optional[str]) -> Optional[str]:
 
 def normalize_category(category: Optional[str]) -> str:
     """
-    Normalizes a category string to a canonical ADAA category.
+    Normalizes a category string to a canonical adaa category.
     Defaults to 'other' if unrecognized.
     """
     s = _clean_str(category)

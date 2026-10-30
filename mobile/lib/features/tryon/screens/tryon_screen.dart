@@ -1,3 +1,5 @@
+// ignore_for_file: unused_field
+
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -337,7 +339,11 @@ class _TryOnScreenState extends State<TryOnScreen> {
                   builder: (context) {
                     final analyses = <OutfitAnalysisResponse>[
                       if (analysisProv.currentAnalysis != null &&
-                          !analysisProv.history.any((h) => h.analysisId == analysisProv.currentAnalysis!.analysisId))
+                          !analysisProv.history.any(
+                            (h) =>
+                                h.analysisId ==
+                                analysisProv.currentAnalysis!.analysisId,
+                          ))
                         analysisProv.currentAnalysis!,
                       ...analysisProv.history,
                     ];
@@ -348,7 +354,10 @@ class _TryOnScreenState extends State<TryOnScreen> {
                         child: Center(
                           child: Text(
                             'No previous outfit analyses found.',
-                            style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+                            style: TextStyle(
+                              color: AppColors.textMuted,
+                              fontSize: 12,
+                            ),
                           ),
                         ),
                       );
@@ -359,7 +368,8 @@ class _TryOnScreenState extends State<TryOnScreen> {
                       child: ListView.separated(
                         scrollDirection: Axis.horizontal,
                         itemCount: analyses.length,
-                        separatorBuilder: (context, index) => const SizedBox(width: 12),
+                        separatorBuilder: (context, index) =>
+                            const SizedBox(width: 12),
                         itemBuilder: (context, idx) {
                           final item = analyses[idx];
                           return GestureDetector(
@@ -372,9 +382,12 @@ class _TryOnScreenState extends State<TryOnScreen> {
                                 _hasInspiration = true;
                                 _tryOnMode = TryOnMode.inspirationLook;
                                 if (_detectedItems.isNotEmpty) {
-                                  _selectedInspirationItem = _detectedItems.first;
+                                  _selectedInspirationItem =
+                                      _detectedItems.first;
                                   _useFullInspirationOutfit = false;
-                                  _setCategoryFromText(_selectedInspirationItem!.category);
+                                  _setCategoryFromText(
+                                    _selectedInspirationItem!.category,
+                                  );
                                 } else {
                                   _selectedInspirationItem = null;
                                   _useFullInspirationOutfit = true;
@@ -387,7 +400,9 @@ class _TryOnScreenState extends State<TryOnScreen> {
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 borderRadius: BorderRadius.circular(14),
-                                border: Border.all(color: AppColors.borderLight),
+                                border: Border.all(
+                                  color: AppColors.borderLight,
+                                ),
                               ),
                               clipBehavior: Clip.antiAlias,
                               child: Column(
@@ -398,7 +413,8 @@ class _TryOnScreenState extends State<TryOnScreen> {
                                     child: PrivateImageView(
                                       imageUrl: item.imageUrl,
                                       fit: BoxFit.contain,
-                                      backgroundColor: AppColors.surfaceContainerLow,
+                                      backgroundColor:
+                                          AppColors.surfaceContainerLow,
                                     ),
                                   ),
                                   Expanded(
@@ -417,18 +433,25 @@ class _TryOnScreenState extends State<TryOnScreen> {
                                                 maxWidth: constraints.maxWidth,
                                               ),
                                               child: Column(
-                                                crossAxisAlignment: CrossAxisAlignment.start,
-                                                mainAxisAlignment: MainAxisAlignment.center,
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
                                                 mainAxisSize: MainAxisSize.min,
                                                 children: [
                                                   Text(
-                                                    item.vibeOrStyle.isNotEmpty ? item.vibeOrStyle : 'Outfit',
+                                                    item.vibeOrStyle.isNotEmpty
+                                                        ? item.vibeOrStyle
+                                                        : 'Outfit',
                                                     maxLines: 1,
-                                                    overflow: TextOverflow.ellipsis,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
                                                     style: const TextStyle(
-                                                      fontWeight: FontWeight.bold,
+                                                      fontWeight:
+                                                          FontWeight.bold,
                                                       fontSize: 11,
-                                                      color: AppColors.textPrimary,
+                                                      color:
+                                                          AppColors.textPrimary,
                                                     ),
                                                   ),
                                                   const SizedBox(height: 2),
@@ -437,7 +460,8 @@ class _TryOnScreenState extends State<TryOnScreen> {
                                                         ? '${item.items.length} pieces'
                                                         : 'Full look',
                                                     style: const TextStyle(
-                                                      color: AppColors.textSecondary,
+                                                      color: AppColors
+                                                          .textSecondary,
                                                       fontSize: 10,
                                                     ),
                                                   ),
@@ -653,7 +677,6 @@ class _TryOnScreenState extends State<TryOnScreen> {
       }
 
       final cropUrl = _selectedInspirationItem?.extractedImageUrl;
-      final cropPath = _selectedInspirationItem?.extractedImagePath;
       final itemId = _selectedInspirationItem?.id;
 
       await tryOnProvider.startTryOn(
@@ -1040,16 +1063,21 @@ class _TryOnScreenState extends State<TryOnScreen> {
                           Icon(
                             Icons.auto_fix_high_rounded,
                             size: 15,
-                            color: _selectedTab == 0 ? _primary : AppColors.textMuted,
+                            color: _selectedTab == 0
+                                ? _primary
+                                : AppColors.textMuted,
                           ),
                           const SizedBox(width: 6),
                           Text(
                             'Try On Studio',
                             style: TextStyle(
                               fontSize: 12,
-                              fontWeight:
-                                  _selectedTab == 0 ? FontWeight.w700 : FontWeight.w500,
-                              color: _selectedTab == 0 ? _primary : AppColors.textMuted,
+                              fontWeight: _selectedTab == 0
+                                  ? FontWeight.w700
+                                  : FontWeight.w500,
+                              color: _selectedTab == 0
+                                  ? _primary
+                                  : AppColors.textMuted,
                               letterSpacing: 0.2,
                             ),
                           ),
@@ -1099,26 +1127,35 @@ class _TryOnScreenState extends State<TryOnScreen> {
                           Icon(
                             Icons.history_rounded,
                             size: 15,
-                            color: _selectedTab == 1 ? _primary : AppColors.textMuted,
+                            color: _selectedTab == 1
+                                ? _primary
+                                : AppColors.textMuted,
                           ),
                           const SizedBox(width: 6),
                           Text(
                             'Fitting History',
                             style: TextStyle(
                               fontSize: 12,
-                              fontWeight:
-                                  _selectedTab == 1 ? FontWeight.w700 : FontWeight.w500,
-                              color: _selectedTab == 1 ? _primary : AppColors.textMuted,
+                              fontWeight: _selectedTab == 1
+                                  ? FontWeight.w700
+                                  : FontWeight.w500,
+                              color: _selectedTab == 1
+                                  ? _primary
+                                  : AppColors.textMuted,
                               letterSpacing: 0.2,
                             ),
                           ),
                           if (count > 0) ...[
                             const SizedBox(width: 6),
                             Container(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
                               decoration: BoxDecoration(
-                                color: _selectedTab == 1 ? _primary : Colors.black12,
+                                color: _selectedTab == 1
+                                    ? _primary
+                                    : Colors.black12,
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Text(
@@ -2032,14 +2069,21 @@ class _TryOnScreenState extends State<TryOnScreen> {
                               fit: BoxFit.contain,
                               backgroundColor: _surfaceLow,
                               errorWidget: const Center(
-                                child: Icon(Icons.person, size: 48, color: _secondary),
+                                child: Icon(
+                                  Icons.person,
+                                  size: 48,
+                                  color: _secondary,
+                                ),
                               ),
                             ),
                           Positioned(
                             top: 12,
                             left: 12,
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
                               decoration: BoxDecoration(
                                 color: _primary.withValues(alpha: 0.88),
                                 borderRadius: BorderRadius.circular(12),
@@ -2054,11 +2098,19 @@ class _TryOnScreenState extends State<TryOnScreen> {
                               child: const Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.verified, size: 12, color: Colors.white),
+                                  Icon(
+                                    Icons.verified,
+                                    size: 12,
+                                    color: Colors.white,
+                                  ),
                                   SizedBox(width: 4),
                                   Text(
                                     'My Default Model',
-                                    style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -2071,14 +2123,18 @@ class _TryOnScreenState extends State<TryOnScreen> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 ElevatedButton.icon(
-                                  onPressed: () => _pickUserImage(ImageSource.gallery),
+                                  onPressed: () =>
+                                      _pickUserImage(ImageSource.gallery),
                                   icon: const Icon(Icons.edit, size: 14),
                                   label: const Text('Change'),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.white,
                                     foregroundColor: _primary,
                                     elevation: 2,
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 6,
+                                    ),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(10),
                                     ),
@@ -2091,11 +2147,28 @@ class _TryOnScreenState extends State<TryOnScreen> {
                                     final confirmed = await showDialog<bool>(
                                       context: context,
                                       builder: (ctx) => AlertDialog(
-                                        title: const Text('Remove Default Model?'),
-                                        content: const Text('You will need to upload a silhouette photo for fittings.'),
+                                        title: const Text(
+                                          'Remove Default Model?',
+                                        ),
+                                        content: const Text(
+                                          'You will need to upload a silhouette photo for fittings.',
+                                        ),
                                         actions: [
-                                          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-                                          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Remove', style: TextStyle(color: Colors.red))),
+                                          TextButton(
+                                            onPressed: () =>
+                                                Navigator.pop(ctx, false),
+                                            child: const Text('Cancel'),
+                                          ),
+                                          TextButton(
+                                            onPressed: () =>
+                                                Navigator.pop(ctx, true),
+                                            child: const Text(
+                                              'Remove',
+                                              style: TextStyle(
+                                                color: Colors.red,
+                                              ),
+                                            ),
+                                          ),
                                         ],
                                       ),
                                     );
@@ -2103,8 +2176,13 @@ class _TryOnScreenState extends State<TryOnScreen> {
                                       await provider.deleteDefaultModel();
                                     }
                                   },
-                                  icon: const Icon(Icons.delete_outline, color: Colors.white),
-                                  style: IconButton.styleFrom(backgroundColor: Colors.black45),
+                                  icon: const Icon(
+                                    Icons.delete_outline,
+                                    color: Colors.white,
+                                  ),
+                                  style: IconButton.styleFrom(
+                                    backgroundColor: Colors.black45,
+                                  ),
                                 ),
                               ],
                             ),
@@ -2121,18 +2199,21 @@ class _TryOnScreenState extends State<TryOnScreen> {
                       decoration: BoxDecoration(
                         color: _surfaceLow,
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: _secondary,
-                          width: 1.5,
-                        ),
+                        border: Border.all(color: _secondary, width: 1.5),
                       ),
                       clipBehavior: Clip.antiAlias,
                       child: Stack(
                         fit: StackFit.expand,
                         children: [
                           kIsWeb
-                              ? Image.network(_userImage!.path, fit: BoxFit.contain)
-                              : Image.file(File(_userImage!.path), fit: BoxFit.contain),
+                              ? Image.network(
+                                  _userImage!.path,
+                                  fit: BoxFit.contain,
+                                )
+                              : Image.file(
+                                  File(_userImage!.path),
+                                  fit: BoxFit.contain,
+                                ),
                           Positioned(
                             top: 12,
                             right: 12,
@@ -2146,7 +2227,8 @@ class _TryOnScreenState extends State<TryOnScreen> {
                                   size: 16,
                                   color: Colors.white,
                                 ),
-                                onPressed: () => setState(() => _userImage = null),
+                                onPressed: () =>
+                                    setState(() => _userImage = null),
                               ),
                             ),
                           ),
@@ -2154,14 +2236,18 @@ class _TryOnScreenState extends State<TryOnScreen> {
                             bottom: 12,
                             right: 12,
                             child: ElevatedButton.icon(
-                              onPressed: () => _pickUserImage(ImageSource.gallery),
+                              onPressed: () =>
+                                  _pickUserImage(ImageSource.gallery),
                               icon: const Icon(Icons.edit, size: 14),
                               label: const Text('Change'),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.white,
                                 foregroundColor: _primary,
                                 elevation: 2,
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 6,
+                                ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(10),
                                 ),
@@ -2179,10 +2265,7 @@ class _TryOnScreenState extends State<TryOnScreen> {
                     decoration: BoxDecoration(
                       color: _surfaceLow,
                       borderRadius: BorderRadius.circular(18),
-                      border: Border.all(
-                        color: Colors.black12,
-                        width: 1,
-                      ),
+                      border: Border.all(color: Colors.black12, width: 1),
                     ),
                     clipBehavior: Clip.antiAlias,
                     child: Center(
@@ -2191,7 +2274,10 @@ class _TryOnScreenState extends State<TryOnScreen> {
                         children: [
                           ElevatedButton.icon(
                             onPressed: () => _pickUserImage(ImageSource.camera),
-                            icon: const Icon(Icons.camera_alt_outlined, size: 16),
+                            icon: const Icon(
+                              Icons.camera_alt_outlined,
+                              size: 16,
+                            ),
                             label: const Text('Camera'),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.white,
@@ -2202,7 +2288,8 @@ class _TryOnScreenState extends State<TryOnScreen> {
                           ),
                           const SizedBox(width: 12),
                           ElevatedButton.icon(
-                            onPressed: () => _pickUserImage(ImageSource.gallery),
+                            onPressed: () =>
+                                _pickUserImage(ImageSource.gallery),
                             icon: const Icon(
                               Icons.photo_library_outlined,
                               size: 16,
@@ -2389,6 +2476,7 @@ class _TryOnScreenState extends State<TryOnScreen> {
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 itemCount: _detectedItems.length + 1,
+                // ignore: unnecessary_underscores
                 separatorBuilder: (_, __) => const SizedBox(width: 10),
                 itemBuilder: (ctx, idx) {
                   if (idx == 0) {
@@ -2708,10 +2796,7 @@ class _TryOnScreenState extends State<TryOnScreen> {
                 decoration: BoxDecoration(
                   color: _surfaceLow,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: _secondary,
-                    width: 1.5,
-                  ),
+                  border: Border.all(color: _secondary, width: 1.5),
                 ),
                 clipBehavior: Clip.antiAlias,
                 child: Stack(
@@ -2739,8 +2824,7 @@ class _TryOnScreenState extends State<TryOnScreen> {
                             size: 14,
                             color: Colors.white,
                           ),
-                          onPressed: () =>
-                              setState(() => _garmentImage = null),
+                          onPressed: () => setState(() => _garmentImage = null),
                         ),
                       ),
                     ),
@@ -2755,47 +2839,40 @@ class _TryOnScreenState extends State<TryOnScreen> {
               decoration: BoxDecoration(
                 color: _surfaceLow,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: Colors.black12,
-                ),
+                border: Border.all(color: Colors.black12),
               ),
               clipBehavior: Clip.antiAlias,
               child: Center(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        ElevatedButton.icon(
-                          onPressed: () =>
-                              _pickGarmentImage(ImageSource.camera),
-                          icon: const Icon(Icons.camera_alt_outlined, size: 16),
-                          label: const Text('Camera'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            foregroundColor: _primary,
-                            elevation: 0,
-                            side: const BorderSide(color: Colors.black12),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        ElevatedButton.icon(
-                          onPressed: () =>
-                              _pickGarmentImage(ImageSource.gallery),
-                          icon: const Icon(
-                            Icons.photo_library_outlined,
-                            size: 16,
-                          ),
-                          label: const Text('Gallery'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            foregroundColor: _primary,
-                            elevation: 0,
-                            side: const BorderSide(color: Colors.black12),
-                          ),
-                        ),
-                      ],
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: () => _pickGarmentImage(ImageSource.camera),
+                      icon: const Icon(Icons.camera_alt_outlined, size: 16),
+                      label: const Text('Camera'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: _primary,
+                        elevation: 0,
+                        side: const BorderSide(color: Colors.black12),
+                      ),
                     ),
-                  ),
-          ),
+                    const SizedBox(width: 12),
+                    ElevatedButton.icon(
+                      onPressed: () => _pickGarmentImage(ImageSource.gallery),
+                      icon: const Icon(Icons.photo_library_outlined, size: 16),
+                      label: const Text('Gallery'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: _primary,
+                        elevation: 0,
+                        side: const BorderSide(color: Colors.black12),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
         ],
 
         const SizedBox(height: 24),
