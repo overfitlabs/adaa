@@ -132,4 +132,10 @@ class AnalysisProvider extends ChangeNotifier {
     _lastAnalyzedFile = null;
     notifyListeners();
   }
+
+  @visibleForTesting
+  void setHistoryForTesting(List<OutfitAnalysisResponse> history) {
+    _history = List.from(history);
+    notifyListeners();
+  }
 }

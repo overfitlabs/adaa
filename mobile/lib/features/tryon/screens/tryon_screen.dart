@@ -17,11 +17,7 @@ import '../../../state/outfits_provider.dart';
 import '../../../state/tryon_provider.dart';
 import '../../../state/wardrobe_provider.dart';
 
-enum TryOnMode {
-  inspirationLook,
-  myWardrobe,
-  uploadPhoto,
-}
+enum TryOnMode { inspirationLook, myWardrobe, uploadPhoto }
 
 class TryOnScreen extends StatefulWidget {
   final OutfitAnalysisResponse? attachedAnalysis;
@@ -57,6 +53,7 @@ class _TryOnScreenState extends State<TryOnScreen> {
   String? _selectedWardrobeItemId;
   WardrobeItem? _selectedWardrobeItem;
   String _selectedCategory = 'upper body';
+  bool _useWardrobeItem = true;
   bool _isSavingOutfit = false;
   int _selectedTab = 0; // 0: Studio, 1: History
 
@@ -134,11 +131,16 @@ class _TryOnScreenState extends State<TryOnScreen> {
       _hasInspiration = true;
 
       final analysisProv = context.read<AnalysisProvider>();
-      final match = analysisProv.history.where((a) =>
-          (widget.attachedAnalysisId != null &&
-              a.analysisId == widget.attachedAnalysisId) ||
-          (widget.prefilledInspirationUrl != null &&
-              a.imageUrl == widget.prefilledInspirationUrl)).firstOrNull ??
+      final match =
+          analysisProv.history
+              .where(
+                (a) =>
+                    (widget.attachedAnalysisId != null &&
+                        a.analysisId == widget.attachedAnalysisId) ||
+                    (widget.prefilledInspirationUrl != null &&
+                        a.imageUrl == widget.prefilledInspirationUrl),
+              )
+              .firstOrNull ??
           (analysisProv.currentAnalysis != null &&
                   ((widget.attachedAnalysisId != null &&
                           analysisProv.currentAnalysis!.analysisId ==
@@ -167,6 +169,7 @@ class _TryOnScreenState extends State<TryOnScreen> {
           .firstOrNull;
       setState(() {
         _tryOnMode = TryOnMode.myWardrobe;
+        _useWardrobeItem = true;
         _selectedWardrobeItemId = widget.prefilledWardrobeItemId;
         _selectedWardrobeItem = match;
         if (match != null) {
@@ -176,6 +179,7 @@ class _TryOnScreenState extends State<TryOnScreen> {
     } else if (_hasInspiration) {
       setState(() {
         _tryOnMode = TryOnMode.inspirationLook;
+        _useWardrobeItem = false;
         if (_detectedItems.isNotEmpty) {
           _selectedInspirationItem = _detectedItems.first;
           _useFullInspirationOutfit = false;
@@ -188,6 +192,7 @@ class _TryOnScreenState extends State<TryOnScreen> {
     } else {
       setState(() {
         _tryOnMode = TryOnMode.myWardrobe;
+        _useWardrobeItem = true;
       });
     }
   }
@@ -255,13 +260,17 @@ class _TryOnScreenState extends State<TryOnScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      'Choose Inspiration Look',
-                      style: TextStyle(
-                        fontFamily: 'Playfair Display',
-                        fontSize: 20,
-                        fontWeight: FontWeight.w600,
-                        color: _primary,
+                    const Expanded(
+                      child: Text(
+                        'Choose Inspiration Look',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontFamily: 'Playfair Display',
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
+                          color: _primary,
+                        ),
                       ),
                     ),
                     IconButton(
@@ -278,10 +287,19 @@ class _TryOnScreenState extends State<TryOnScreen> {
                       color: _surfaceLow,
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(Icons.photo_library_outlined, color: _primary),
+                    child: const Icon(
+                      Icons.photo_library_outlined,
+                      color: _primary,
+                    ),
                   ),
-                  title: const Text('Upload Inspiration Photo', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                  subtitle: const Text('Upload reference style from camera or gallery', style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+                  title: const Text(
+                    'Upload Inspiration Photo',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  ),
+                  subtitle: const Text(
+                    'Upload reference style from camera or gallery',
+                    style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+                  ),
                   onTap: () async {
                     Navigator.pop(ctx);
                     final picked = await _picker.pickImage(
@@ -300,91 +318,146 @@ class _TryOnScreenState extends State<TryOnScreen> {
                         _useFullInspirationOutfit = true;
                         _hasInspiration = true;
                         _tryOnMode = TryOnMode.inspirationLook;
+                        _useWardrobeItem = false;
                       });
                     }
                   },
                 ),
                 const Divider(height: 20, color: AppColors.borderLight),
-                const Text('Recent Analysis Scans', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppColors.textSecondary)),
-                const SizedBox(height: 8),
-                if (analysisProv.history.isEmpty && analysisProv.currentAnalysis == null)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 24),
-                    child: Center(child: Text('No previous outfit analyses found.', style: TextStyle(color: AppColors.textMuted, fontSize: 12))),
-                  )
-                else
-                  SizedBox(
-                    height: 160,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: analysisProv.history.length,
-                      separatorBuilder: (context, index) => const SizedBox(width: 12),
-                      itemBuilder: (context, idx) {
-                        final item = analysisProv.history[idx];
-                        return GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _attachedAnalysis = item;
-                              _inspirationAnalysisId = item.analysisId;
-                              _inspirationUrl = item.imageUrl;
-                              _detectedItems = List.from(item.items);
-                              _hasInspiration = true;
-                              _tryOnMode = TryOnMode.inspirationLook;
-                              if (_detectedItems.isNotEmpty) {
-                                _selectedInspirationItem = _detectedItems.first;
-                                _useFullInspirationOutfit = false;
-                                _setCategoryFromText(_selectedInspirationItem!.category);
-                              } else {
-                                _selectedInspirationItem = null;
-                                _useFullInspirationOutfit = true;
-                              }
-                            });
-                            Navigator.pop(ctx);
-                          },
-                          child: Container(
-                            width: 120,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(14),
-                              border: Border.all(color: AppColors.borderLight),
-                            ),
-                            clipBehavior: Clip.antiAlias,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                AspectRatio(
-                                  aspectRatio: 1.0,
-                                  child: PrivateImageView(
-                                    imageUrl: item.imageUrl,
-                                    fit: BoxFit.contain,
-                                    backgroundColor: AppColors.surfaceContainerLow,
-                                  ),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.all(6),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        item.vibeOrStyle.isNotEmpty ? item.vibeOrStyle : 'Outfit',
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
-                                      ),
-                                      Text(
-                                        '${item.items.length} items',
-                                        style: const TextStyle(fontSize: 10, color: AppColors.textMuted),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
+                const Text(
+                  'Recent Analysis Scans',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
                   ),
+                ),
+                const SizedBox(height: 8),
+                Builder(
+                  builder: (context) {
+                    final analyses = <OutfitAnalysisResponse>[
+                      if (analysisProv.currentAnalysis != null &&
+                          !analysisProv.history.any((h) => h.analysisId == analysisProv.currentAnalysis!.analysisId))
+                        analysisProv.currentAnalysis!,
+                      ...analysisProv.history,
+                    ];
+
+                    if (analyses.isEmpty) {
+                      return const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 24),
+                        child: Center(
+                          child: Text(
+                            'No previous outfit analyses found.',
+                            style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+                          ),
+                        ),
+                      );
+                    }
+
+                    return SizedBox(
+                      height: 184,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: analyses.length,
+                        separatorBuilder: (context, index) => const SizedBox(width: 12),
+                        itemBuilder: (context, idx) {
+                          final item = analyses[idx];
+                          return GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _attachedAnalysis = item;
+                                _inspirationAnalysisId = item.analysisId;
+                                _inspirationUrl = item.imageUrl;
+                                _detectedItems = List.from(item.items);
+                                _hasInspiration = true;
+                                _tryOnMode = TryOnMode.inspirationLook;
+                                if (_detectedItems.isNotEmpty) {
+                                  _selectedInspirationItem = _detectedItems.first;
+                                  _useFullInspirationOutfit = false;
+                                  _setCategoryFromText(_selectedInspirationItem!.category);
+                                } else {
+                                  _selectedInspirationItem = null;
+                                  _useFullInspirationOutfit = true;
+                                }
+                              });
+                              Navigator.pop(ctx);
+                            },
+                            child: Container(
+                              width: 116,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(color: AppColors.borderLight),
+                              ),
+                              clipBehavior: Clip.antiAlias,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  AspectRatio(
+                                    aspectRatio: 1.0,
+                                    child: PrivateImageView(
+                                      imageUrl: item.imageUrl,
+                                      fit: BoxFit.contain,
+                                      backgroundColor: AppColors.surfaceContainerLow,
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
+                                      child: LayoutBuilder(
+                                        builder: (context, constraints) {
+                                          return FittedBox(
+                                            fit: BoxFit.scaleDown,
+                                            alignment: Alignment.centerLeft,
+                                            child: ConstrainedBox(
+                                              constraints: BoxConstraints(
+                                                maxWidth: constraints.maxWidth,
+                                              ),
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                mainAxisAlignment: MainAxisAlignment.center,
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Text(
+                                                    item.vibeOrStyle.isNotEmpty ? item.vibeOrStyle : 'Outfit',
+                                                    maxLines: 1,
+                                                    overflow: TextOverflow.ellipsis,
+                                                    style: const TextStyle(
+                                                      fontWeight: FontWeight.bold,
+                                                      fontSize: 11,
+                                                      color: AppColors.textPrimary,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(height: 2),
+                                                  Text(
+                                                    item.items.isNotEmpty
+                                                        ? '${item.items.length} pieces'
+                                                        : 'Full look',
+                                                    style: const TextStyle(
+                                                      color: AppColors.textSecondary,
+                                                      fontSize: 10,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    );
+                  },
+                ),
               ],
             ),
           ),
@@ -548,13 +621,17 @@ class _TryOnScreenState extends State<TryOnScreen> {
     if (isFriend) {
       if (_userImage == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please upload a photo of your friend.')),
+          const SnackBar(
+            content: Text('Please upload a photo of your friend.'),
+          ),
         );
         return;
       }
       if (!tryOnProvider.friendConsentAcknowledged) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please confirm consent before styling a friend.')),
+          const SnackBar(
+            content: Text('Please confirm consent before styling a friend.'),
+          ),
         );
         return;
       }
@@ -576,6 +653,7 @@ class _TryOnScreenState extends State<TryOnScreen> {
       }
 
       final cropUrl = _selectedInspirationItem?.extractedImageUrl;
+      final cropPath = _selectedInspirationItem?.extractedImagePath;
       final itemId = _selectedInspirationItem?.id;
 
       await tryOnProvider.startTryOn(
@@ -584,7 +662,9 @@ class _TryOnScreenState extends State<TryOnScreen> {
         wardrobeItemId: null,
         inspirationAnalysisId: _inspirationAnalysisId,
         inspirationItemId: itemId,
-        inspirationImageUrl: _useFullInspirationOutfit ? _inspirationUrl : (cropUrl ?? _inspirationUrl),
+        inspirationImageUrl: _useFullInspirationOutfit
+            ? _inspirationUrl
+            : (cropUrl ?? _inspirationUrl),
         garmentCategory: _selectedCategory,
         useSavedModel: useSavedModel,
         isFriendTryon: isFriend,
@@ -648,10 +728,14 @@ class _TryOnScreenState extends State<TryOnScreen> {
     final outfits = context.read<OutfitsProvider>();
 
     final garmentName = _tryOnMode == TryOnMode.inspirationLook
-        ? (_selectedInspirationItem?.name ?? (_useFullInspirationOutfit ? 'Complete Inspiration Look' : 'Inspiration Garment'))
+        ? (_selectedInspirationItem?.name ??
+              (_useFullInspirationOutfit
+                  ? 'Complete Inspiration Look'
+                  : 'Inspiration Garment'))
         : (_selectedWardrobeItem?.name ?? 'Styling Garment');
     final outfitName = 'Try-On: $garmentName';
-    final itemIds = (_tryOnMode == TryOnMode.myWardrobe && _selectedWardrobeItemId != null)
+    final itemIds =
+        (_tryOnMode == TryOnMode.myWardrobe && _selectedWardrobeItemId != null)
         ? [_selectedWardrobeItemId!]
         : <String>[];
 
@@ -946,26 +1030,32 @@ class _TryOnScreenState extends State<TryOnScreen> {
                       : null,
                 ),
                 child: Center(
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.auto_fix_high_rounded,
-                        size: 15,
-                        color: _selectedTab == 0 ? _primary : AppColors.textMuted,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.auto_fix_high_rounded,
+                            size: 15,
+                            color: _selectedTab == 0 ? _primary : AppColors.textMuted,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Try On Studio',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight:
+                                  _selectedTab == 0 ? FontWeight.w700 : FontWeight.w500,
+                              color: _selectedTab == 0 ? _primary : AppColors.textMuted,
+                              letterSpacing: 0.2,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Try On Studio',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight:
-                              _selectedTab == 0 ? FontWeight.w700 : FontWeight.w500,
-                          color: _selectedTab == 0 ? _primary : AppColors.textMuted,
-                          letterSpacing: 0.2,
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
               ),
@@ -999,47 +1089,53 @@ class _TryOnScreenState extends State<TryOnScreen> {
                       : null,
                 ),
                 child: Center(
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.history_rounded,
-                        size: 15,
-                        color: _selectedTab == 1 ? _primary : AppColors.textMuted,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Fitting History',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight:
-                              _selectedTab == 1 ? FontWeight.w700 : FontWeight.w500,
-                          color: _selectedTab == 1 ? _primary : AppColors.textMuted,
-                          letterSpacing: 0.2,
-                        ),
-                      ),
-                      if (count > 0) ...[
-                        const SizedBox(width: 6),
-                        Container(
-                          padding:
-                              const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: _selectedTab == 1 ? _primary : Colors.black12,
-                            borderRadius: BorderRadius.circular(10),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.history_rounded,
+                            size: 15,
+                            color: _selectedTab == 1 ? _primary : AppColors.textMuted,
                           ),
-                          child: Text(
-                            '$count',
+                          const SizedBox(width: 6),
+                          Text(
+                            'Fitting History',
                             style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
-                              color: _selectedTab == 1
-                                  ? Colors.white
-                                  : AppColors.textMuted,
+                              fontSize: 12,
+                              fontWeight:
+                                  _selectedTab == 1 ? FontWeight.w700 : FontWeight.w500,
+                              color: _selectedTab == 1 ? _primary : AppColors.textMuted,
+                              letterSpacing: 0.2,
                             ),
                           ),
-                        ),
-                      ],
-                    ],
+                          if (count > 0) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: _selectedTab == 1 ? _primary : Colors.black12,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                '$count',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: _selectedTab == 1
+                                      ? Colors.white
+                                      : AppColors.textMuted,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -1108,10 +1204,7 @@ class _TryOnScreenState extends State<TryOnScreen> {
 
     if (tryOn.history.isEmpty) {
       return Column(
-        children: [
-          _buildRetentionBanner(),
-          _buildHistoryEmptyState(tryOn),
-        ],
+        children: [_buildRetentionBanner(), _buildHistoryEmptyState(tryOn)],
       );
     }
 
@@ -1146,14 +1239,17 @@ class _TryOnScreenState extends State<TryOnScreen> {
             child: Center(
               child: OutlinedButton(
                 key: const Key('tryon_load_more_btn'),
-                onPressed:
-                    tryOn.isLoadingMore ? null : () => tryOn.loadMoreHistory(),
+                onPressed: tryOn.isLoadingMore
+                    ? null
+                    : () => tryOn.loadMoreHistory(),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: _primary,
                   side: const BorderSide(color: Colors.black26),
                   shape: const StadiumBorder(),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
                 ),
                 child: tryOn.isLoadingMore
                     ? const SizedBox(
@@ -1167,7 +1263,9 @@ class _TryOnScreenState extends State<TryOnScreen> {
                     : const Text(
                         'Load More Previous Fittings',
                         style: TextStyle(
-                            fontSize: 12, fontWeight: FontWeight.w600),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
               ),
             ),
@@ -1231,8 +1329,7 @@ class _TryOnScreenState extends State<TryOnScreen> {
               backgroundColor: const Color(0xFF1E382B),
               foregroundColor: Colors.white,
               shape: const StadiumBorder(),
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             ),
             child: const Text('Start a Virtual Fitting'),
           ),
@@ -1251,8 +1348,11 @@ class _TryOnScreenState extends State<TryOnScreen> {
       ),
       child: Column(
         children: [
-          const Icon(Icons.error_outline_rounded,
-              size: 36, color: Colors.redAccent),
+          const Icon(
+            Icons.error_outline_rounded,
+            size: 36,
+            color: Colors.redAccent,
+          ),
           const SizedBox(height: 12),
           Text(
             tryOn.historyError ?? 'Failed to load fitting history',
@@ -1302,8 +1402,9 @@ class _TryOnScreenState extends State<TryOnScreen> {
                 fit: StackFit.expand,
                 children: [
                   PrivateImageView(
-                    imageUrl:
-                        hasResult ? item.resultImageUrl : item.garmentImageUrl,
+                    imageUrl: hasResult
+                        ? item.resultImageUrl
+                        : item.garmentImageUrl,
                     fit: BoxFit.cover,
                   ),
                   if (!hasResult)
@@ -1352,7 +1453,9 @@ class _TryOnScreenState extends State<TryOnScreen> {
                     children: [
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 5, vertical: 2),
+                          horizontal: 5,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: _gold.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(4),
@@ -1398,10 +1501,7 @@ class _TryOnScreenState extends State<TryOnScreen> {
     );
   }
 
-  Future<void> _confirmDelete(
-    TryOnTask item,
-    TryOnProvider tryOn,
-  ) async {
+  Future<void> _confirmDelete(TryOnTask item, TryOnProvider tryOn) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -1417,8 +1517,11 @@ class _TryOnScreenState extends State<TryOnScreen> {
         ),
         content: const Text(
           'Are you sure you want to permanently remove this virtual fitting result? This cannot be undone.',
-          style:
-              TextStyle(fontSize: 13, color: AppColors.textMuted, height: 1.4),
+          style: TextStyle(
+            fontSize: 13,
+            color: AppColors.textMuted,
+            height: 1.4,
+          ),
         ),
         actions: [
           TextButton(
@@ -1443,8 +1546,9 @@ class _TryOnScreenState extends State<TryOnScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content:
-              Text(success ? 'Fitting removed.' : 'Failed to delete fitting.'),
+          content: Text(
+            success ? 'Fitting removed.' : 'Failed to delete fitting.',
+          ),
           backgroundColor: success ? AppColors.forest : Colors.redAccent,
         ),
       );
@@ -1534,8 +1638,9 @@ class _TryOnScreenState extends State<TryOnScreen> {
                       clipBehavior: Clip.antiAlias,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(20),
-                        border:
-                            Border.all(color: Colors.black.withValues(alpha: 0.08)),
+                        border: Border.all(
+                          color: Colors.black.withValues(alpha: 0.08),
+                        ),
                       ),
                       child: PrivateImageView(
                         imageUrl: item.resultImageUrl ?? item.garmentImageUrl,
@@ -1554,7 +1659,9 @@ class _TryOnScreenState extends State<TryOnScreen> {
                           ? 'Retained until ${_formatDate(item.expiresAt!)}'
                           : 'Ephemeral 7-day retention policy',
                       style: const TextStyle(
-                          fontSize: 11, color: AppColors.textMuted),
+                        fontSize: 11,
+                        color: AppColors.textMuted,
+                      ),
                     ),
                   ],
                 ),
@@ -1603,8 +1710,10 @@ class _TryOnScreenState extends State<TryOnScreen> {
                                 _saveAsOutfit(item);
                               }
                             : null,
-                        icon:
-                            const Icon(Icons.bookmark_border_rounded, size: 17),
+                        icon: const Icon(
+                          Icons.bookmark_border_rounded,
+                          size: 17,
+                        ),
                         label: const Text('Save Look'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF1E382B),
@@ -1637,7 +1746,7 @@ class _TryOnScreenState extends State<TryOnScreen> {
       'Sep',
       'Oct',
       'Nov',
-      'Dec'
+      'Dec',
     ];
     final m = months[dt.month - 1];
     final hour = dt.hour > 12 ? dt.hour - 12 : (dt.hour == 0 ? 12 : dt.hour);
@@ -1716,6 +1825,7 @@ class _TryOnScreenState extends State<TryOnScreen> {
                   _selectedInspirationItem = null;
                   _useFullInspirationOutfit = false;
                   _tryOnMode = TryOnMode.myWardrobe;
+                  _useWardrobeItem = true;
                 });
               }
             },
@@ -1736,7 +1846,10 @@ class _TryOnScreenState extends State<TryOnScreen> {
                   children: [
                     Icon(Icons.close, size: 18, color: Colors.red),
                     SizedBox(width: 8),
-                    Text('Remove Inspiration', style: TextStyle(color: Colors.red)),
+                    Text(
+                      'Remove Inspiration',
+                      style: TextStyle(color: Colors.red),
+                    ),
                   ],
                 ),
               ),
@@ -1773,7 +1886,11 @@ class _TryOnScreenState extends State<TryOnScreen> {
               children: [
                 Text(
                   'Attach Outfit Inspiration',
-                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: _primary),
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                    color: _primary,
+                  ),
                 ),
                 Text(
                   'Calibrate fit or recreate an existing look',
@@ -1784,7 +1901,14 @@ class _TryOnScreenState extends State<TryOnScreen> {
           ),
           TextButton(
             onPressed: () => _openInspirationPicker(analysisProv),
-            child: const Text('Add', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: _secondary)),
+            child: const Text(
+              'Add',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: _secondary,
+              ),
+            ),
           ),
         ],
       ),
@@ -1837,11 +1961,16 @@ class _TryOnScreenState extends State<TryOnScreen> {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 8,
+                  runSpacing: 4,
                   children: [
                     Text(
-                      isFriend ? '1. Friend\'s Silhouette' : '1. Your Silhouette',
+                      isFriend
+                          ? '1. Friend\'s Silhouette'
+                          : '1. Your Silhouette',
                       style: const TextStyle(
                         fontFamily: 'Playfair Display',
                         fontSize: 18,
@@ -1875,94 +2004,172 @@ class _TryOnScreenState extends State<TryOnScreen> {
                   isFriend
                       ? 'One-off fitting for a friend. Requires their photo & consent.'
                       : (hasModel && _userImage == null
-                          ? 'Using your saved default try-on model for 1-click fittings.'
-                          : 'Full or half-body photo with clean lighting and neutral pose.'),
-                  style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+                            ? 'Using your saved default try-on model for 1-click fittings.'
+                            : 'Full or half-body photo with clean lighting and neutral pose.'),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textMuted,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 if (!isFriend && hasModel && _userImage == null)
-                  Container(
-                    width: double.infinity,
-                    height: 180,
-                    decoration: BoxDecoration(
-                      color: _surfaceLow,
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: _secondary, width: 1.5),
-                    ),
-                    clipBehavior: Clip.antiAlias,
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        if (provider.defaultModel?.imageUrl != null)
-                          Image.network(
-                            provider.defaultModel!.imageUrl!,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) => const Center(
-                              child: Icon(Icons.person, size: 48, color: _secondary),
+                  AspectRatio(
+                    aspectRatio: 1.0,
+                    child: Container(
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: _surfaceLow,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: _secondary, width: 1.5),
+                      ),
+                      clipBehavior: Clip.antiAlias,
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          if (provider.defaultModel?.imageUrl != null)
+                            PrivateImageView(
+                              imageUrl: provider.defaultModel!.imageUrl!,
+                              fit: BoxFit.contain,
+                              backgroundColor: _surfaceLow,
+                              errorWidget: const Center(
+                                child: Icon(Icons.person, size: 48, color: _secondary),
+                              ),
+                            ),
+                          Positioned(
+                            top: 12,
+                            left: 12,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: _primary.withValues(alpha: 0.88),
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.08),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.verified, size: 12, color: Colors.white),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    'My Default Model',
+                                    style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                        Positioned(
-                          top: 10,
-                          left: 10,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: _primary.withValues(alpha: 0.85),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: const Row(
+                          Positioned(
+                            bottom: 12,
+                            right: 12,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.verified, size: 12, color: Colors.white),
-                                SizedBox(width: 4),
-                                Text(
-                                  'My Default Model',
-                                  style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
+                                ElevatedButton.icon(
+                                  onPressed: () => _pickUserImage(ImageSource.gallery),
+                                  icon: const Icon(Icons.edit, size: 14),
+                                  label: const Text('Change'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.white,
+                                    foregroundColor: _primary,
+                                    elevation: 2,
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                IconButton(
+                                  tooltip: 'Remove Default Model',
+                                  onPressed: () async {
+                                    final confirmed = await showDialog<bool>(
+                                      context: context,
+                                      builder: (ctx) => AlertDialog(
+                                        title: const Text('Remove Default Model?'),
+                                        content: const Text('You will need to upload a silhouette photo for fittings.'),
+                                        actions: [
+                                          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+                                          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Remove', style: TextStyle(color: Colors.red))),
+                                        ],
+                                      ),
+                                    );
+                                    if (confirmed == true) {
+                                      await provider.deleteDefaultModel();
+                                    }
+                                  },
+                                  icon: const Icon(Icons.delete_outline, color: Colors.white),
+                                  style: IconButton.styleFrom(backgroundColor: Colors.black45),
                                 ),
                               ],
                             ),
                           ),
+                        ],
+                      ),
+                    ),
+                  )
+                else if (_userImage != null)
+                  AspectRatio(
+                    aspectRatio: 1.0,
+                    child: Container(
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: _surfaceLow,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: _secondary,
+                          width: 1.5,
                         ),
-                        Positioned(
-                          bottom: 10,
-                          right: 10,
-                          child: Row(
-                            children: [
-                              ElevatedButton.icon(
-                                onPressed: () => _pickUserImage(ImageSource.gallery),
-                                icon: const Icon(Icons.edit, size: 14),
-                                label: const Text('Change'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.white,
-                                  foregroundColor: _primary,
-                                  elevation: 2,
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      ),
+                      clipBehavior: Clip.antiAlias,
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          kIsWeb
+                              ? Image.network(_userImage!.path, fit: BoxFit.contain)
+                              : Image.file(File(_userImage!.path), fit: BoxFit.contain),
+                          Positioned(
+                            top: 12,
+                            right: 12,
+                            child: CircleAvatar(
+                              backgroundColor: Colors.black54,
+                              radius: 16,
+                              child: IconButton(
+                                padding: EdgeInsets.zero,
+                                icon: const Icon(
+                                  Icons.close_rounded,
+                                  size: 16,
+                                  color: Colors.white,
+                                ),
+                                onPressed: () => setState(() => _userImage = null),
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            bottom: 12,
+                            right: 12,
+                            child: ElevatedButton.icon(
+                              onPressed: () => _pickUserImage(ImageSource.gallery),
+                              icon: const Icon(Icons.edit, size: 14),
+                              label: const Text('Change'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                foregroundColor: _primary,
+                                elevation: 2,
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
                                 ),
                               ),
-                              const SizedBox(width: 8),
-                              IconButton(
-                                onPressed: () async {
-                                  final confirmed = await showDialog<bool>(
-                                    context: context,
-                                    builder: (ctx) => AlertDialog(
-                                      title: const Text('Remove Default Model?'),
-                                      content: const Text('You will need to upload a silhouette photo for fittings.'),
-                                      actions: [
-                                        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-                                        TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Remove', style: TextStyle(color: Colors.red))),
-                                      ],
-                                    ),
-                                  );
-                                  if (confirmed == true) {
-                                    await provider.deleteDefaultModel();
-                                  }
-                                },
-                                icon: const Icon(Icons.delete_outline, color: Colors.white),
-                                style: IconButton.styleFrom(backgroundColor: Colors.black45),
-                              ),
-                            ],
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   )
                 else
@@ -1973,70 +2180,44 @@ class _TryOnScreenState extends State<TryOnScreen> {
                       color: _surfaceLow,
                       borderRadius: BorderRadius.circular(18),
                       border: Border.all(
-                        color: _userImage != null ? _secondary : Colors.black12,
-                        width: _userImage != null ? 1.5 : 1,
+                        color: Colors.black12,
+                        width: 1,
                       ),
                     ),
                     clipBehavior: Clip.antiAlias,
-                    child: _userImage != null
-                        ? Stack(
-                            fit: StackFit.expand,
-                            children: [
-                              kIsWeb
-                                  ? Image.network(_userImage!.path, fit: BoxFit.cover)
-                                  : Image.file(File(_userImage!.path), fit: BoxFit.cover),
-                              Positioned(
-                                top: 10,
-                                right: 10,
-                                child: CircleAvatar(
-                                  backgroundColor: Colors.black54,
-                                  radius: 16,
-                                  child: IconButton(
-                                    padding: EdgeInsets.zero,
-                                    icon: const Icon(
-                                      Icons.close_rounded,
-                                      size: 16,
-                                      color: Colors.white,
-                                    ),
-                                    onPressed: () => setState(() => _userImage = null),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          )
-                        : Center(
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                ElevatedButton.icon(
-                                  onPressed: () => _pickUserImage(ImageSource.camera),
-                                  icon: const Icon(Icons.camera_alt_outlined, size: 16),
-                                  label: const Text('Camera'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.white,
-                                    foregroundColor: _primary,
-                                    elevation: 0,
-                                    side: const BorderSide(color: Colors.black12),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                ElevatedButton.icon(
-                                  onPressed: () => _pickUserImage(ImageSource.gallery),
-                                  icon: const Icon(
-                                    Icons.photo_library_outlined,
-                                    size: 16,
-                                  ),
-                                  label: const Text('Gallery'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.white,
-                                    foregroundColor: _primary,
-                                    elevation: 0,
-                                    side: const BorderSide(color: Colors.black12),
-                                  ),
-                                ),
-                              ],
+                    child: Center(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          ElevatedButton.icon(
+                            onPressed: () => _pickUserImage(ImageSource.camera),
+                            icon: const Icon(Icons.camera_alt_outlined, size: 16),
+                            label: const Text('Camera'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: _primary,
+                              elevation: 0,
+                              side: const BorderSide(color: Colors.black12),
                             ),
                           ),
+                          const SizedBox(width: 12),
+                          ElevatedButton.icon(
+                            onPressed: () => _pickUserImage(ImageSource.gallery),
+                            icon: const Icon(
+                              Icons.photo_library_outlined,
+                              size: 16,
+                            ),
+                            label: const Text('Gallery'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: _primary,
+                              elevation: 0,
+                              side: const BorderSide(color: Colors.black12),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 if (isFriend) ...[
                   const SizedBox(height: 8),
@@ -2047,7 +2228,10 @@ class _TryOnScreenState extends State<TryOnScreen> {
                     dense: true,
                     title: const Text(
                       'I have permission to use this photo for styling advice.',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                     controlAffinity: ListTileControlAffinity.leading,
                     activeColor: _secondary,
@@ -2061,7 +2245,10 @@ class _TryOnScreenState extends State<TryOnScreen> {
                     dense: true,
                     title: const Text(
                       'Save as My Default Model for 1-click fittings',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
                 ],
@@ -2083,15 +2270,19 @@ class _TryOnScreenState extends State<TryOnScreen> {
           ),
         ),
         const SizedBox(height: 8),
-        Row(
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
           children: [
-            if (_hasInspiration) ...[
+            if (_hasInspiration)
               ChoiceChip(
                 label: const Text('Inspiration Look'),
                 selected: _tryOnMode == TryOnMode.inspirationLook,
                 selectedColor: _primary,
                 labelStyle: TextStyle(
-                  color: _tryOnMode == TryOnMode.inspirationLook ? Colors.white : _primary,
+                  color: _tryOnMode == TryOnMode.inspirationLook
+                      ? Colors.white
+                      : _primary,
                   fontWeight: FontWeight.w500,
                   fontSize: 12,
                 ),
@@ -2099,21 +2290,24 @@ class _TryOnScreenState extends State<TryOnScreen> {
                   if (val) {
                     setState(() {
                       _tryOnMode = TryOnMode.inspirationLook;
+                      _useWardrobeItem = false;
                       if (_selectedInspirationItem != null) {
-                        _setCategoryFromText(_selectedInspirationItem!.category);
+                        _setCategoryFromText(
+                          _selectedInspirationItem!.category,
+                        );
                       }
                     });
                   }
                 },
               ),
-              const SizedBox(width: 8),
-            ],
             ChoiceChip(
               label: const Text('From My Wardrobe'),
               selected: _tryOnMode == TryOnMode.myWardrobe,
               selectedColor: _primary,
               labelStyle: TextStyle(
-                color: _tryOnMode == TryOnMode.myWardrobe ? Colors.white : _primary,
+                color: _tryOnMode == TryOnMode.myWardrobe
+                    ? Colors.white
+                    : _primary,
                 fontWeight: FontWeight.w500,
                 fontSize: 12,
               ),
@@ -2121,6 +2315,7 @@ class _TryOnScreenState extends State<TryOnScreen> {
                 if (val) {
                   setState(() {
                     _tryOnMode = TryOnMode.myWardrobe;
+                    _useWardrobeItem = true;
                     if (_selectedWardrobeItem != null) {
                       _setCategoryFromText(_selectedWardrobeItem!.category);
                     }
@@ -2128,13 +2323,14 @@ class _TryOnScreenState extends State<TryOnScreen> {
                 }
               },
             ),
-            const SizedBox(width: 8),
             ChoiceChip(
               label: const Text('Upload Photo'),
               selected: _tryOnMode == TryOnMode.uploadPhoto,
               selectedColor: _primary,
               labelStyle: TextStyle(
-                color: _tryOnMode == TryOnMode.uploadPhoto ? Colors.white : _primary,
+                color: _tryOnMode == TryOnMode.uploadPhoto
+                    ? Colors.white
+                    : _primary,
                 fontWeight: FontWeight.w500,
                 fontSize: 12,
               ),
@@ -2142,6 +2338,7 @@ class _TryOnScreenState extends State<TryOnScreen> {
                 if (val) {
                   setState(() {
                     _tryOnMode = TryOnMode.uploadPhoto;
+                    _useWardrobeItem = false;
                   });
                 }
               },
@@ -2167,7 +2364,10 @@ class _TryOnScreenState extends State<TryOnScreen> {
                   ),
                   if (_useFullInspirationOutfit)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: _gold.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(6),
@@ -2189,7 +2389,7 @@ class _TryOnScreenState extends State<TryOnScreen> {
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 itemCount: _detectedItems.length + 1,
-                separatorBuilder: (context, index) => const SizedBox(width: 10),
+                separatorBuilder: (_, __) => const SizedBox(width: 10),
                 itemBuilder: (ctx, idx) {
                   if (idx == 0) {
                     final isSelected = _useFullInspirationOutfit;
@@ -2222,7 +2422,8 @@ class _TryOnScreenState extends State<TryOnScreen> {
                                   PrivateImageView(
                                     imageUrl: _inspirationUrl,
                                     fit: BoxFit.contain,
-                                    backgroundColor: AppColors.surfaceContainerLow,
+                                    backgroundColor:
+                                        AppColors.surfaceContainerLow,
                                   ),
                                   if (isSelected)
                                     Positioned(
@@ -2282,7 +2483,8 @@ class _TryOnScreenState extends State<TryOnScreen> {
                   }
 
                   final item = _detectedItems[idx - 1];
-                  final isSelected = !_useFullInspirationOutfit &&
+                  final isSelected =
+                      !_useFullInspirationOutfit &&
                       _selectedInspirationItem?.id == item.id;
                   final imageUrl = item.extractedImageUrl ?? _inspirationUrl;
 
@@ -2446,7 +2648,8 @@ class _TryOnScreenState extends State<TryOnScreen> {
                       imageUrl: _selectedWardrobeItem!.imageUrl,
                       width: 56,
                       height: 56,
-                      fit: BoxFit.cover,
+                      fit: BoxFit.contain,
+                      backgroundColor: AppColors.surfaceContainerLow,
                     ),
                   ),
                   const SizedBox(width: 14),
@@ -2497,51 +2700,67 @@ class _TryOnScreenState extends State<TryOnScreen> {
               ),
             ),
         ] else ...[
-          Container(
-            width: double.infinity,
-            height: 140,
-            decoration: BoxDecoration(
-              color: _surfaceLow,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: _garmentImage != null ? _secondary : Colors.black12,
-              ),
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: _garmentImage != null
-                ? Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      kIsWeb
-                          ? Image.network(
-                              _garmentImage!.path,
-                              fit: BoxFit.cover,
-                            )
-                          : Image.file(
-                              File(_garmentImage!.path),
-                              fit: BoxFit.cover,
-                            ),
-                      Positioned(
-                        top: 8,
-                        right: 8,
-                        child: CircleAvatar(
-                          backgroundColor: Colors.black54,
-                          radius: 14,
-                          child: IconButton(
-                            padding: EdgeInsets.zero,
-                            icon: const Icon(
-                              Icons.close_rounded,
-                              size: 14,
-                              color: Colors.white,
-                            ),
-                            onPressed: () =>
-                                setState(() => _garmentImage = null),
+          if (_garmentImage != null)
+            AspectRatio(
+              aspectRatio: 1.0,
+              child: Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: _surfaceLow,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: _secondary,
+                    width: 1.5,
+                  ),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    kIsWeb
+                        ? Image.network(
+                            _garmentImage!.path,
+                            fit: BoxFit.contain,
+                          )
+                        : Image.file(
+                            File(_garmentImage!.path),
+                            fit: BoxFit.contain,
                           ),
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: CircleAvatar(
+                        backgroundColor: Colors.black54,
+                        radius: 14,
+                        child: IconButton(
+                          padding: EdgeInsets.zero,
+                          icon: const Icon(
+                            Icons.close_rounded,
+                            size: 14,
+                            color: Colors.white,
+                          ),
+                          onPressed: () =>
+                              setState(() => _garmentImage = null),
                         ),
                       ),
-                    ],
-                  )
-                : Center(
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            Container(
+              width: double.infinity,
+              height: 140,
+              decoration: BoxDecoration(
+                color: _surfaceLow,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: Colors.black12,
+                ),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: Center(
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -2637,20 +2856,23 @@ class _TryOnScreenState extends State<TryOnScreen> {
                       color: Colors.white,
                     ),
                   )
-                : const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.auto_awesome, size: 18, color: _gold),
-                      SizedBox(width: 8),
-                      Text(
-                        'GENERATE VIRTUAL TRY-ON',
-                        style: TextStyle(
-                          fontSize: 13,
-                          letterSpacing: 1.2,
-                          fontWeight: FontWeight.w700,
+                : const FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.auto_awesome, size: 18, color: _gold),
+                        SizedBox(width: 8),
+                        Text(
+                          'GENERATE VIRTUAL TRY-ON',
+                          style: TextStyle(
+                            fontSize: 13,
+                            letterSpacing: 1.2,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
           ),
         ),

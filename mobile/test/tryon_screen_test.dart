@@ -5,6 +5,7 @@ import 'package:wardrobelens/core/models/garment_item.dart';
 import 'package:wardrobelens/core/models/outfit_analysis.dart';
 import 'package:wardrobelens/core/models/tryon_task.dart';
 import 'package:wardrobelens/core/models/wardrobe_item.dart';
+import 'package:wardrobelens/core/widgets/private_image_view.dart';
 import 'package:wardrobelens/features/tryon/screens/tryon_screen.dart';
 import 'package:wardrobelens/state/analysis_provider.dart';
 import 'package:wardrobelens/state/auth_provider.dart';
@@ -443,6 +444,45 @@ void main() {
       expect(find.text('1. Your Silhouette'), findsOneWidget);
       expect(find.text('My Default Model'), findsOneWidget);
     });
+
+    testWidgets('Saved default model renders as a square card using BoxFit.contain without cropping', (tester) async {
+      tryOn.setDefaultModelForTesting(
+        UserTryOnModel(
+          hasModel: true,
+          modelId: 'mod-square-1',
+          imageUrl: 'https://example.com/model-portrait-fullbody.jpg',
+        ),
+      );
+
+      tester.view.physicalSize = const Size(400, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      await tester.pumpWidget(
+        createTestTryOnApp(
+          tryOnProvider: tryOn,
+          wardrobeProvider: wardrobe,
+          outfitsProvider: outfits,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('My Default Model'), findsOneWidget);
+      expect(find.text('Change'), findsOneWidget);
+
+      // Verify that square AspectRatio 1.0 is used for the model silhouette
+      final aspectRatios = tester.widgetList<AspectRatio>(find.byType(AspectRatio));
+      expect(aspectRatios.any((ar) => ar.aspectRatio == 1.0), isTrue);
+
+      // Verify PrivateImageView uses BoxFit.contain to prevent head/feet cropping
+      final privateImages = tester.widgetList<PrivateImageView>(find.byType(PrivateImageView));
+      final modelImage = privateImages.firstWhere((img) => img.imageUrl == 'https://example.com/model-portrait-fullbody.jpg');
+      expect(modelImage.fit, BoxFit.contain);
+    });
   });
 
   group('Context-Aware Attached Inspiration Tests', () {
@@ -629,6 +669,63 @@ void main() {
 
       // Does NOT show "Please select a garment from your wardrobe" error!
       expect(find.text('Please select a garment from your wardrobe.'), findsNothing);
+    });
+
+    testWidgets('Choose Inspiration Look bottom sheet renders recent scans in square cards without any layout overflow', (tester) async {
+      final analysisProv = AnalysisProvider();
+      analysisProv.setHistoryForTesting([
+        sampleAnalysis,
+        OutfitAnalysisResponse(
+          analysisId: 'scan-festive-2',
+          imageUrl: 'https://example.com/green_lehenga.jpg',
+          summary: 'Ethnic chic lehenga set',
+          vibeOrStyle: 'Festive Ethnic',
+          detectedGarmentCount: 2,
+          createdAt: DateTime.now(),
+          items: [
+            sampleAnalysis.items[0],
+            sampleAnalysis.items[1],
+          ],
+        ),
+      ]);
+
+      tester.view.physicalSize = const Size(400, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      await tester.pumpWidget(
+        createTestTryOnApp(
+          tryOnProvider: tryOn,
+          wardrobeProvider: wardrobe,
+          outfitsProvider: outfits,
+          analysisProvider: analysisProv,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Open inspiration picker
+      await tester.tap(find.text('Add'));
+      await tester.pumpAndSettle();
+
+      // Ensure no overflow exception in the bottom sheet
+      expect(tester.takeException(), isNull);
+
+      // Verify the bottom sheet elements
+      expect(find.text('Choose Inspiration Look'), findsOneWidget);
+      expect(find.text('Upload Inspiration Photo'), findsOneWidget);
+      expect(find.text('Recent Analysis Scans'), findsOneWidget);
+
+      // Verify recent scans appear
+      expect(find.text('Modern Formal'), findsOneWidget);
+      expect(find.text('Festive Ethnic'), findsOneWidget);
+      expect(find.text('2 pieces'), findsNWidgets(2));
+
+      // Verify square aspect ratio is used for cards
+      final aspectRatios = tester.widgetList<AspectRatio>(find.byType(AspectRatio));
+      expect(aspectRatios.any((ar) => ar.aspectRatio == 1.0), isTrue);
     });
   });
 }
