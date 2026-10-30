@@ -7,11 +7,15 @@ import '../../../state/analysis_provider.dart';
 import '../../../state/outfits_provider.dart';
 import '../../../core/widgets/private_image_view.dart';
 import '../../outfits/screens/outfits_screen.dart';
+import '../../../core/widgets/adaa_wordmark.dart';
 
 class MatchingResultScreen extends StatelessWidget {
   const MatchingResultScreen({super.key});
 
-  void _saveMatchedOutfitDialog(BuildContext context, OutfitMatchResponse matchResult) {
+  void _saveMatchedOutfitDialog(
+    BuildContext context,
+    OutfitMatchResponse matchResult,
+  ) {
     final matchedItemIds = matchResult.itemMatches
         .where((m) => m.bestMatch != null)
         .map((m) => m.bestMatch!.wardrobeItem.id)
@@ -30,14 +34,18 @@ class MatchingResultScreen extends StatelessWidget {
     final nameController = TextEditingController(text: 'Matched Capsule Look');
     final occasionController = TextEditingController(text: 'Smart Casual');
     final notesController = TextEditingController(
-      text: 'Matched from outfit analysis. Completeness: ${matchResult.completenessPercentage}%',
+      text:
+          'Matched from outfit analysis. Completeness: ${matchResult.completenessPercentage}%',
     );
 
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Save Outfit to Collection', style: TextStyle(fontWeight: FontWeight.w700)),
+        title: const Text(
+          'Save Outfit to Collection',
+          style: TextStyle(fontWeight: FontWeight.w700),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -48,7 +56,9 @@ class MatchingResultScreen extends StatelessWidget {
             const SizedBox(height: 12),
             TextField(
               controller: occasionController,
-              decoration: const InputDecoration(labelText: 'Occasion / Setting'),
+              decoration: const InputDecoration(
+                labelText: 'Occasion / Setting',
+              ),
             ),
             const SizedBox(height: 12),
             TextField(
@@ -61,7 +71,10 @@ class MatchingResultScreen extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -77,7 +90,9 @@ class MatchingResultScreen extends StatelessWidget {
               if (success && context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text('Look successfully saved to your collection!'),
+                    content: Text(
+                      'Look successfully saved to your collection!',
+                    ),
                     backgroundColor: AppColors.exactMatch,
                   ),
                 );
@@ -107,8 +122,36 @@ class MatchingResultScreen extends StatelessWidget {
     }
 
     return Scaffold(
+      backgroundColor: AppColors.canvas,
       appBar: AppBar(
-        title: const Text('Closet Match Results'),
+        backgroundColor: AppColors.surface,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        toolbarHeight: 68,
+        automaticallyImplyLeading: false,
+        leadingWidth: 56,
+        leading: Padding(
+          padding: const EdgeInsets.all(10),
+          child: IconButton(
+            tooltip: 'Go back',
+            icon: const Icon(
+              Icons.arrow_back_ios_new,
+              size: 20,
+              color: AppColors.forest,
+            ),
+            onPressed: () => Navigator.of(context).maybePop(),
+          ),
+        ),
+        title: const AdaaWordmark(
+          size: AdaaWordmarkSize.medium,
+          color: AppColors.espresso,
+          withDotAccent: true,
+          showSubtitle: true,
+          subtitle: 'style intelligence & closet',
+        ),
+        centerTitle: true,
+        titleSpacing: 0,
         actions: [
           IconButton(
             tooltip: 'Save Look',
@@ -118,10 +161,33 @@ class MatchingResultScreen extends StatelessWidget {
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        padding: EdgeInsetsGeometry.fromLTRB(20, 0, 20, 0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Padding(
+              padding: EdgeInsetsGeometry.fromLTRB(0, 0, 0, 0),
+              child: const Text(
+                'Closet Matches',
+                style: TextStyle(
+                  fontFamily: 'Playfair Display',
+                  fontSize: 32,
+                  height: 1.2,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.forest,
+                ),
+              ),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              "Don't worry, it's not called copying, it's called style inspiration",
+              style: TextStyle(
+                fontSize: 14,
+                height: 1.5,
+                color: AppColors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 24),
             // Completeness Banner
             _buildCompletenessBanner(matchResult),
 
@@ -173,8 +239,8 @@ class MatchingResultScreen extends StatelessWidget {
     final color = pct >= 80
         ? AppColors.exactMatch
         : pct >= 40
-            ? AppColors.approxMatch
-            : AppColors.missing;
+        ? AppColors.approxMatch
+        : AppColors.missing;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -217,8 +283,8 @@ class MatchingResultScreen extends StatelessWidget {
                   pct >= 80
                       ? 'Closet Replicable'
                       : pct >= 40
-                          ? 'Partial Match'
-                          : 'Pieces Missing',
+                      ? 'Partial Match'
+                      : 'Pieces Missing',
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
@@ -228,7 +294,10 @@ class MatchingResultScreen extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   '${match.matchedCount} of ${match.totalOutfitItems} pieces matched in your wardrobe.',
-                  style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
               ],
             ),
@@ -246,14 +315,14 @@ class MatchingResultScreen extends StatelessWidget {
     final statusColor = isExact
         ? AppColors.exactMatch
         : isApprox
-            ? AppColors.approxMatch
-            : AppColors.missing;
+        ? AppColors.approxMatch
+        : AppColors.missing;
 
     final statusLabel = isExact
         ? 'EXACT MATCH'
         : isApprox
-            ? 'APPROXIMATE'
-            : 'MISSING PIECE';
+        ? 'APPROXIMATE'
+        : 'MISSING PIECE';
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -283,13 +352,19 @@ class MatchingResultScreen extends StatelessWidget {
                     ),
                     Text(
                       '${match.targetItem.primaryColor} • ${match.targetItem.category.toUpperCase()}',
-                      style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                   ],
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: statusColor.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(8),
@@ -322,12 +397,19 @@ class MatchingResultScreen extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.info_outline, size: 18, color: AppColors.textSecondary),
+                  const Icon(
+                    Icons.info_outline,
+                    size: 18,
+                    color: AppColors.textSecondary,
+                  ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       'No matching ${match.targetItem.category} in ${match.targetItem.primaryColor} found in your wardrobe.',
-                      style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                   ),
                 ],
@@ -347,7 +429,10 @@ class MatchingResultScreen extends StatelessWidget {
                       width: 54,
                       height: 54,
                       color: AppColors.accentSoft,
-                      child: const Icon(Icons.checkroom, color: AppColors.textMuted),
+                      child: const Icon(
+                        Icons.checkroom,
+                        color: AppColors.textMuted,
+                      ),
                     ),
                   ),
                 ),
@@ -382,13 +467,19 @@ class MatchingResultScreen extends StatelessWidget {
                       const SizedBox(height: 2),
                       Text(
                         'Your closet item (${match.bestMatch!.wardrobeItem.primaryColor})',
-                        style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: AppColors.textSecondary,
+                        ),
                       ),
                       if (match.bestMatch!.matchReasons.isNotEmpty) ...[
                         const SizedBox(height: 4),
                         Text(
                           match.bestMatch!.matchReasons.join(' • '),
-                          style: const TextStyle(fontSize: 10, color: AppColors.textMuted),
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: AppColors.textMuted,
+                          ),
                         ),
                       ],
                     ],
@@ -405,7 +496,11 @@ class MatchingResultScreen extends StatelessWidget {
                 childrenPadding: const EdgeInsets.only(top: 8),
                 title: Text(
                   '${match.alternatives.length} other closet alternative(s)',
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
                 children: match.alternatives.map((alt) {
                   return Padding(
@@ -431,12 +526,18 @@ class MatchingResultScreen extends StatelessWidget {
                         Expanded(
                           child: Text(
                             alt.wardrobeItem.name,
-                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                         ),
                         Text(
                           '${(alt.overallScore * 100).toInt()}%',
-                          style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: AppColors.textSecondary,
+                          ),
                         ),
                       ],
                     ),

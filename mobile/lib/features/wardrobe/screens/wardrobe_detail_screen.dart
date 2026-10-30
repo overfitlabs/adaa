@@ -513,60 +513,62 @@ class _WardrobeDetailScreenState extends State<WardrobeDetailScreen> {
                       ),
                     ),
                   ),
-                if (_isReplacingPhoto)
-                  Positioned.fill(
-                    child: Container(
-                      color: Colors.black45,
-                      child: const Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            CircularProgressIndicator(color: Colors.white),
-                            SizedBox(height: 12),
-                            Text(
-                              'Uploading new photo...',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600,
+                  if (_isReplacingPhoto)
+                    Positioned.fill(
+                      child: Container(
+                        color: Colors.black45,
+                        child: const Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              CircularProgressIndicator(color: Colors.white),
+                              SizedBox(height: 12),
+                              Text(
+                                'Uploading new photo...',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  Positioned(
+                    bottom: 12,
+                    right: 12,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.surface.withValues(
+                          alpha: 0.9,
+                        ),
+                        foregroundColor: AppColors.textPrimary,
+                        elevation: 2,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                      ),
+                      onPressed: _isReplacingPhoto
+                          ? null
+                          : () => _showPhotoOptions(currentItem),
+                      icon: const Icon(Icons.camera_alt_outlined, size: 16),
+                      label: const Text(
+                        'Change Photo',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
                   ),
-                Positioned(
-                  bottom: 12,
-                  right: 12,
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.surface.withValues(alpha: 0.9),
-                      foregroundColor: AppColors.textPrimary,
-                      elevation: 2,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                    ),
-                    onPressed: _isReplacingPhoto
-                        ? null
-                        : () => _showPhotoOptions(currentItem),
-                    icon: const Icon(Icons.camera_alt_outlined, size: 16),
-                    label: const Text(
-                      'Change Photo',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
 
             Padding(
               padding: const EdgeInsets.all(20),
@@ -851,7 +853,7 @@ class _WardrobeDetailScreenState extends State<WardrobeDetailScreen> {
                         );
                       },
                       icon: const Icon(Icons.face_retouching_natural_outlined),
-                      label: const Text('Try On This Garment with YouCam AI'),
+                      label: const Text('Try this on'),
                     ),
                   ),
                 ],

@@ -124,7 +124,8 @@ class _HomeScreenState extends State<HomeScreen> {
       final items = rawItems
           .map((e) => DetectedFashionItem.fromJson(e as Map<String, dynamic>))
           .toList();
-      final sourceUrl = data['detected_item']?['extracted_image_url'] as String? ??
+      final sourceUrl =
+          data['detected_item']?['extracted_image_url'] as String? ??
           (items.isNotEmpty ? items.first.extractedImageUrl : null);
 
       if (items.isEmpty && mounted) {
@@ -158,7 +159,10 @@ class _HomeScreenState extends State<HomeScreen> {
         Navigator.of(context, rootNavigator: true).pop();
       }
       if (mounted) {
-        _showAnalysisErrorDialog('Detection error: $e', intent: ItemReviewIntent.addToCloset);
+        _showAnalysisErrorDialog(
+          'Detection error: $e',
+          intent: ItemReviewIntent.addToCloset,
+        );
       }
     } finally {
       if (mounted && !dialogPopped) {
@@ -738,8 +742,8 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 16),
 
             // Wardrobe Capsule Summary Card
-            _buildCapsuleCard(wardrobe),
-            const SizedBox(height: 18),
+            // _buildCapsuleCard(wardrobe),
+            // const SizedBox(height: 18),
 
             // Quick Action Tiles (2x2 Grid)
             _buildQuickTilesGrid(outfits),
@@ -1649,7 +1653,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(height: 14),
           Text(
-            'Decode Any Outfit.\nMatch Your Closet.',
+            'Decode Any Outfit. Match Your Closet.',
             style: AppTypography.displayLarge.copyWith(
               color: Colors.white,
               fontSize: 24,
@@ -1729,24 +1733,24 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(height: 6),
 
           // General Upload Entry Point
-          Center(
-            child: TextButton.icon(
-              onPressed: () => _showImageSourceModal(intent: null),
-              icon: const Icon(
-                Icons.arrow_upward_rounded,
-                size: 14,
-                color: AppColors.sandSoft,
-              ),
-              label: const Text(
-                'Upload Outfit Photo',
-                style: TextStyle(
-                  color: AppColors.sandSoft,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ),
+          // Center(
+          //   child: TextButton.icon(
+          //     onPressed: () => _showImageSourceModal(intent: null),
+          //     icon: const Icon(
+          //       Icons.arrow_upward_rounded,
+          //       size: 14,
+          //       color: AppColors.sandSoft,
+          //     ),
+          //     label: const Text(
+          //       'Upload Outfit Photo',
+          //       style: TextStyle(
+          //         color: AppColors.sandSoft,
+          //         fontSize: 11,
+          //         fontWeight: FontWeight.w600,
+          //       ),
+          //     ),
+          //   ),
+          // ),
         ],
       ),
     );
@@ -2008,39 +2012,40 @@ class _HomeScreenState extends State<HomeScreen> {
                                   child: PrivateImageView(
                                     imageUrl: garment.imageUrl,
                                     fit: BoxFit.contain,
-                                    backgroundColor: AppColors.surfaceContainerLow,
+                                    backgroundColor:
+                                        AppColors.surfaceContainerLow,
                                   ),
                                 ),
-                              Positioned(
-                                top: 6,
-                                left: 6,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 6,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.espresso.withValues(
-                                      alpha: 0.8,
+                                Positioned(
+                                  top: 6,
+                                  left: 6,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
                                     ),
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: Text(
-                                    shared.communityName,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.w600,
+                                    decoration: BoxDecoration(
+                                      color: AppColors.espresso.withValues(
+                                        alpha: 0.8,
+                                      ),
+                                      borderRadius: BorderRadius.circular(4),
                                     ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
+                                    child: Text(
+                                      shared.communityName,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
-                      ),
                         Expanded(
                           child: Padding(
                             padding: const EdgeInsets.all(8.0),
@@ -2161,7 +2166,10 @@ class _AnalyzingDialog extends StatelessWidget {
             Text(
               subtitle,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+              style: const TextStyle(
+                fontSize: 12,
+                color: AppColors.textSecondary,
+              ),
             ),
           ],
         ),

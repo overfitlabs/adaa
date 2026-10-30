@@ -257,33 +257,12 @@ class _AdaaChatScreenState extends State<AdaaChatScreen>
               onPressed: _handleSafeBack,
             ),
           ),
-          title: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const AdaaWordmark(
-                size: AdaaWordmarkSize.medium,
-                color: AppColors.espresso,
-                withDotAccent: true,
-                showSubtitle: false,
-              ),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: AppColors.forest.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: const Text(
-                  'STYLIST',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.8,
-                    color: AppColors.forest,
-                  ),
-                ),
-              ),
-            ],
+          title: const AdaaWordmark(
+            size: AdaaWordmarkSize.medium,
+            color: AppColors.espresso,
+            withDotAccent: true,
+            showSubtitle: true,
+            subtitle: 'style intelligence & closet',
           ),
           centerTitle: true,
           titleSpacing: 0,
@@ -373,16 +352,7 @@ class _AdaaChatScreenState extends State<AdaaChatScreen>
           child: Container(
             width: 64,
             height: 64,
-            decoration: BoxDecoration(
-              color: AppColors.sageContainer,
-              shape: BoxShape.circle,
-              border: Border.all(color: AppColors.border),
-            ),
-            child: const Icon(
-              Icons.auto_awesome,
-              color: AppColors.forest,
-              size: 28,
-            ),
+            child: Image.asset('assets/branding/app_icon_no_bg.png'),
           ),
         ),
         const SizedBox(height: 16),
@@ -754,7 +724,8 @@ class _AdaaChatScreenState extends State<AdaaChatScreen>
                                   child: PrivateImageView(
                                     imageUrl: item.imageUrl,
                                     fit: BoxFit.contain,
-                                    backgroundColor: AppColors.surfaceContainerLow,
+                                    backgroundColor:
+                                        AppColors.surfaceContainerLow,
                                     errorWidget: Container(
                                       color: AppColors.accentSoft,
                                       child: const Icon(

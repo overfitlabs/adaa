@@ -746,12 +746,15 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
                               child: Stack(
                                 fit: StackFit.expand,
                                 children: [
-                                  Container(color: AppColors.surfaceContainerLow),
+                                  Container(
+                                    color: AppColors.surfaceContainerLow,
+                                  ),
                                   Center(
                                     child: PrivateImageView(
                                       imageUrl: item.imageUrl,
                                       fit: BoxFit.contain,
-                                      backgroundColor: AppColors.surfaceContainerLow,
+                                      backgroundColor:
+                                          AppColors.surfaceContainerLow,
                                       borderRadius: const BorderRadius.vertical(
                                         top: Radius.circular(14),
                                       ),

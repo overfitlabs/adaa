@@ -461,7 +461,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _settingsRow(
               icon: Icons.badge_outlined,
               title: 'Edit Profile',
-              subtitle: (userProfile?.fitPreferences != null && userProfile!.fitPreferences.hasAnyPreferences)
+              subtitle:
+                  (userProfile?.fitPreferences != null &&
+                      userProfile!.fitPreferences.hasAnyPreferences)
                   ? 'Tops: ${userProfile.fitPreferences.topsSize ?? "-"} • Bottoms: ${userProfile.fitPreferences.bottomsSize ?? "-"} • Fit: ${userProfile.fitPreferences.preferredFit ?? "-"}'
                   : 'Personal info, sizes & aesthetics',
               onTap: () async {
@@ -490,7 +492,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _settingsRow(
               icon: Icons.description_outlined,
               title: 'Terms of Service',
-              onTap: () {},
+              onTap: () {
+                ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'We are just building, maybe next time you will see a long page of terms and conditions. ',
+                    ),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              },
             ),
           ]),
           const SizedBox(height: 22),
