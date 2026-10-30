@@ -475,91 +475,99 @@ class _WardrobeDetailScreenState extends State<WardrobeDetailScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Hero Garment Image with Replace Photo Overlay
-            Stack(
-              children: [
-                PrivateImageView(
-                  imageUrl: currentItem.imageUrl,
-                  width: double.infinity,
-                  height: 360,
-                  fit: BoxFit.cover,
-                  onRefreshUrl: () async {
-                    await prov.refreshItem(currentItem.id);
-                  },
-                  placeholder: Container(
-                    height: 360,
-                    color: AppColors.surfaceContainerLow,
-                    child: const Center(
-                      child: Icon(
-                        Icons.checkroom,
-                        size: 50,
-                        color: AppColors.textMuted,
+            AspectRatio(
+              aspectRatio: 1.0,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Container(color: AppColors.surfaceContainerLow),
+                  Center(
+                    child: PrivateImageView(
+                      imageUrl: currentItem.imageUrl,
+                      width: double.infinity,
+                      height: double.infinity,
+                      fit: BoxFit.contain,
+                      backgroundColor: AppColors.surfaceContainerLow,
+                      onRefreshUrl: () async {
+                        await prov.refreshItem(currentItem.id);
+                      },
+                      placeholder: Container(
+                        color: AppColors.surfaceContainerLow,
+                        child: const Center(
+                          child: Icon(
+                            Icons.checkroom,
+                            size: 50,
+                            color: AppColors.textMuted,
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
-                  errorWidget: Container(
-                    height: 360,
-                    color: AppColors.surfaceContainerLow,
-                    child: const Center(
-                      child: Icon(
-                        Icons.checkroom,
-                        size: 50,
-                        color: AppColors.textMuted,
-                      ),
-                    ),
-                  ),
-                ),
-                if (_isReplacingPhoto)
-                  Positioned.fill(
-                    child: Container(
-                      color: Colors.black45,
-                      child: const Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            CircularProgressIndicator(color: Colors.white),
-                            SizedBox(height: 12),
-                            Text(
-                              'Uploading new photo...',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
+                      errorWidget: Container(
+                        color: AppColors.surfaceContainerLow,
+                        child: const Center(
+                          child: Icon(
+                            Icons.checkroom,
+                            size: 50,
+                            color: AppColors.textMuted,
+                          ),
                         ),
                       ),
                     ),
                   ),
-                Positioned(
-                  bottom: 12,
-                  right: 12,
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.surface.withValues(alpha: 0.9),
-                      foregroundColor: AppColors.textPrimary,
-                      elevation: 2,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
+                  if (_isReplacingPhoto)
+                    Positioned.fill(
+                      child: Container(
+                        color: Colors.black45,
+                        child: const Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              CircularProgressIndicator(color: Colors.white),
+                              SizedBox(height: 12),
+                              Text(
+                                'Uploading new photo...',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
-                    onPressed: _isReplacingPhoto
-                        ? null
-                        : () => _showPhotoOptions(currentItem),
-                    icon: const Icon(Icons.camera_alt_outlined, size: 16),
-                    label: const Text(
-                      'Change Photo',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
+                  Positioned(
+                    bottom: 12,
+                    right: 12,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.surface.withValues(
+                          alpha: 0.9,
+                        ),
+                        foregroundColor: AppColors.textPrimary,
+                        elevation: 2,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                      ),
+                      onPressed: _isReplacingPhoto
+                          ? null
+                          : () => _showPhotoOptions(currentItem),
+                      icon: const Icon(Icons.camera_alt_outlined, size: 16),
+                      label: const Text(
+                        'Change Photo',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
 
             Padding(
@@ -845,7 +853,7 @@ class _WardrobeDetailScreenState extends State<WardrobeDetailScreen> {
                         );
                       },
                       icon: const Icon(Icons.face_retouching_natural_outlined),
-                      label: const Text('Try On This Garment with YouCam AI'),
+                      label: const Text('Try this on'),
                     ),
                   ),
                 ],

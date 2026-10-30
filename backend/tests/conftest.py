@@ -27,6 +27,15 @@ def setup_test_db():
         pass
 
 
+@pytest.fixture(autouse=True)
+def test_environment_isolation(monkeypatch):
+    """Isolate test environment to prevent live paid API calls during automated tests."""
+    from app.config import settings
+    monkeypatch.setattr(settings, "TRYON_PROVIDER", "mock")
+    monkeypatch.setattr(settings, "VISION_PROVIDER", "mock")
+    monkeypatch.setattr(settings, "STORAGE_BACKEND", "local")
+
+
 @pytest.fixture
 def db_session():
     connection = test_engine.connect()
@@ -53,8 +62,8 @@ def client(db_session):
 
 @pytest.fixture
 def sample_image_bytes():
-    """Generates a valid small JPEG in memory for testing."""
-    img = Image.new("RGB", (120, 120), color=(50, 80, 120))
+    """Generates a valid small JPEG in memory for testing (>= 128x128)."""
+    img = Image.new("RGB", (200, 200), color=(50, 80, 120))
     buffer = io.BytesIO()
     img.save(buffer, format="JPEG")
     buffer.seek(0)

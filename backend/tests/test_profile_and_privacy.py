@@ -219,3 +219,85 @@ def test_profile_security_and_authorization_isolation(client):
 
     app.dependency_overrides.pop(get_current_user, None)
 
+
+def test_profile_update_nested_fit_preferences_regression(client):
+    """
+    Regression test for nested fit_preferences payload sent by Flutter client.
+    Verifies that nested sizing preferences persist across reloads,
+    omitted fields do not overwrite existing values, and explicit empty strings clear fields.
+    """
+    user = AuthenticatedUser(id="user-fit-regression", email="fit_tester@campus.edu", role="authenticated")
+    app.dependency_overrides[get_current_user] = lambda: user
+
+    # 1. Save profile with nested fit_preferences (as sent by mobile ApiClient)
+    nested_payload = {
+        "display_name": "Fit Tester",
+        "bio": "Testing fit preferences persistence",
+        "fit_preferences": {
+            "tops_size": "M",
+            "bottoms_size": "32",
+            "shoe_size": "10",
+            "preferred_fit": "relaxed",
+        },
+        "preferred_styles": ["Minimalist", "Casual"],
+    }
+    res = client.patch("/api/users/me/profile", json=nested_payload)
+    assert res.status_code == 200
+    data = res.json()
+
+    assert data["fit_preferences"] is not None
+    assert data["fit_preferences"]["tops_size"] == "M"
+    assert data["fit_preferences"]["bottoms_size"] == "32"
+    assert data["fit_preferences"]["shoe_size"] == "10"
+    assert data["fit_preferences"]["preferred_fit"] == "relaxed"
+
+    # 2. Reload profile via GET /api/users/me to verify persistence
+    get_res = client.get("/api/users/me")
+    assert get_res.status_code == 200
+    fetched = get_res.json()
+    assert fetched["fit_preferences"]["tops_size"] == "M"
+    assert fetched["fit_preferences"]["bottoms_size"] == "32"
+    assert fetched["fit_preferences"]["shoe_size"] == "10"
+    assert fetched["fit_preferences"]["preferred_fit"] == "relaxed"
+
+    # 3. Partial update: update ONLY bio, omitting fit_preferences
+    patch_bio = client.patch("/api/users/me/profile", json={"bio": "New bio only"})
+    assert patch_bio.status_code == 200
+    after_bio = client.get("/api/users/me").json()
+    assert after_bio["bio"] == "New bio only"
+    # Verify sizing preferences are preserved, NOT overwritten
+    assert after_bio["fit_preferences"]["tops_size"] == "M"
+    assert after_bio["fit_preferences"]["bottoms_size"] == "32"
+
+    # 4. Explicit clear: clearing tops_size with empty string
+    clear_patch = client.patch("/api/users/me/profile", json={
+        "fit_preferences": {
+            "tops_size": "",
+        }
+    })
+    assert clear_patch.status_code == 200
+    after_clear = client.get("/api/users/me").json()
+    assert after_clear["fit_preferences"]["tops_size"] is None
+    # bottoms_size remains intact
+    assert after_clear["fit_preferences"]["bottoms_size"] == "32"
+
+    app.dependency_overrides.pop(get_current_user, None)
+
+
+def test_profile_update_validation_errors(client):
+    """
+    Verifies that invalid input produces clear validation errors.
+    """
+    user = AuthenticatedUser(id="user-val-err", email="val_tester@campus.edu", role="authenticated")
+    app.dependency_overrides[get_current_user] = lambda: user
+
+    # Invalid age (under 13)
+    res_age = client.patch("/api/users/me/profile", json={"age": 5})
+    assert res_age.status_code == 422
+
+    # Invalid age (over 120)
+    res_age_old = client.patch("/api/users/me/profile", json={"age": 150})
+    assert res_age_old.status_code == 422
+
+    app.dependency_overrides.pop(get_current_user, None)
+

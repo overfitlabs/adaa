@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/models/garment_item.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_endpoints.dart';
 import '../../../core/theme/app_colors.dart';
@@ -23,6 +24,7 @@ import '../../communities/screens/shared_closet_screen.dart';
 import '../../outfits/screens/outfits_screen.dart';
 import '../../profile/screens/profile_screen.dart';
 import '../../styling/screens/recommendations_screen.dart';
+import '../../styling/screens/adaa_chat_screen.dart';
 import '../../tryon/screens/tryon_screen.dart';
 import '../../communities/screens/shared_item_detail_screen.dart';
 import '../../communities/widgets/public_profile_sheet.dart';
@@ -87,10 +89,85 @@ class _HomeScreenState extends State<HomeScreen> {
       if (picked == null) return;
       if (!mounted) return;
 
-      await _runAnalysis(picked, intent: intent);
+      if (intent == ItemReviewIntent.addToCloset) {
+        await _runWardrobeDetection(picked);
+      } else {
+        await _runAnalysis(picked, intent: intent);
+      }
     } catch (e) {
       if (mounted) {
         _showAnalysisErrorDialog('Failed to pick image: $e', intent: intent);
+      }
+    }
+  }
+
+  Future<void> _runWardrobeDetection(XFile file) async {
+    bool dialogPopped = false;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => const _AnalyzingDialog(
+        title: 'Detecting Garments...',
+        subtitle: 'Isolating pieces and extracting metadata for your closet...',
+      ),
+    );
+
+    try {
+      final data = await ApiClient.detectWardrobeItemFromPhoto(file);
+      if (mounted && !dialogPopped) {
+        dialogPopped = true;
+        Navigator.of(context, rootNavigator: true).pop();
+      }
+
+      final rawItems = data['detected_items'] as List<dynamic>? ?? [];
+      final items = rawItems
+          .map((e) => DetectedFashionItem.fromJson(e as Map<String, dynamic>))
+          .toList();
+      final sourceUrl =
+          data['detected_item']?['extracted_image_url'] as String? ??
+          (items.isNotEmpty ? items.first.extractedImageUrl : null);
+
+      if (items.isEmpty && mounted) {
+        _showAnalysisErrorDialog(
+          'No clear garments could be detected in the uploaded photo. Please try a clearer angle.',
+          intent: ItemReviewIntent.addToCloset,
+        );
+        return;
+      }
+
+      if (mounted) {
+        final res = await Navigator.of(context).push<bool>(
+          MaterialPageRoute(
+            builder: (_) => ItemReviewScreen(
+              customItems: items,
+              sourceImageUrl: sourceUrl,
+              initialIntent: ItemReviewIntent.addToCloset,
+            ),
+          ),
+        );
+
+        if (res == true && mounted) {
+          // Immediately refresh personal wardrobe and seamlessly navigate to My Closet tab
+          await context.read<WardrobeProvider>().loadWardrobe(silent: false);
+          setState(() => _currentTabIndex = 2);
+        }
+      }
+    } catch (e) {
+      if (mounted && !dialogPopped) {
+        dialogPopped = true;
+        Navigator.of(context, rootNavigator: true).pop();
+      }
+      if (mounted) {
+        _showAnalysisErrorDialog(
+          'Detection error: $e',
+          intent: ItemReviewIntent.addToCloset,
+        );
+      }
+    } finally {
+      if (mounted && !dialogPopped) {
+        dialogPopped = true;
+        Navigator.of(context, rootNavigator: true).pop();
       }
     }
   }
@@ -660,9 +737,9 @@ class _HomeScreenState extends State<HomeScreen> {
             _buildGreetingHeader(),
             const SizedBox(height: 16),
 
-            // Wardrobe Capsule Summary Card
-            _buildCapsuleCard(wardrobe),
-            const SizedBox(height: 18),
+            // Persistent Ask adaa Stylist Entry Point (Option 1)
+            _buildAskAdaaCard(),
+            const SizedBox(height: 16),
 
             // Quick Action Tiles (2x2 Grid)
             _buildQuickTilesGrid(outfits),
@@ -697,7 +774,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 12),
               SizedBox(
-                height: 170,
+                height: 205,
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
                   itemCount: analysisProv.history.length,
@@ -724,50 +801,53 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            ClipRRect(
-                              borderRadius: const BorderRadius.vertical(
-                                top: Radius.circular(14),
-                              ),
-                              child: PrivateImageView(
-                                imageUrl: item.imageUrl,
-                                height: 100,
-                                width: double.infinity,
-                                fit: BoxFit.cover,
-                                errorWidget: Container(
-                                  height: 100,
-                                  color: AppColors.accentSoft,
-                                  child: const Icon(
-                                    Icons.image_outlined,
-                                    color: AppColors.textMuted,
+                            AspectRatio(
+                              aspectRatio: 1.0,
+                              child: ClipRRect(
+                                borderRadius: const BorderRadius.vertical(
+                                  top: Radius.circular(14),
+                                ),
+                                child: PrivateImageView(
+                                  imageUrl: item.imageUrl,
+                                  fit: BoxFit.cover,
+                                  errorWidget: Container(
+                                    color: AppColors.accentSoft,
+                                    child: const Icon(
+                                      Icons.image_outlined,
+                                      color: AppColors.textMuted,
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
-                            Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    item.vibeOrStyle.isNotEmpty
-                                        ? item.vibeOrStyle
-                                        : 'Outfit Look',
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w700,
+                            Expanded(
+                              child: Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      item.vibeOrStyle.isNotEmpty
+                                          ? item.vibeOrStyle
+                                          : 'Outfit Look',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                      ),
                                     ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    '${item.detectedGarmentCount} pieces',
-                                    style: const TextStyle(
-                                      fontSize: 11,
-                                      color: AppColors.textSecondary,
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      '${item.detectedGarmentCount} pieces',
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        color: AppColors.textSecondary,
+                                      ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
                             ),
                           ],
@@ -838,84 +918,116 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildCapsuleCard(WardrobeProvider wardrobe) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
-        boxShadow: [AppColors.subtleShadow],
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: const BoxDecoration(
-              color: AppColors.sageContainer,
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.checkroom,
-              color: AppColors.forest,
-              size: 22,
-            ),
+  Widget _buildAskAdaaCard() {
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const AdaaChatScreen()),
+        );
+      },
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF1E3A2B), Color(0xFF14271D)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      'Wardrobe Capsule',
-                      style: AppTypography.titleMedium.copyWith(
-                        color: AppColors.forest,
-                        fontWeight: FontWeight.w700,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: const Color(0xFFD4AF37).withValues(alpha: 0.35),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF1E3A2B).withValues(alpha: 0.25),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: const Color(0xFFD4AF37).withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: const Color(0xFFD4AF37).withValues(alpha: 0.4),
+                ),
+              ),
+              child: const Icon(
+                Icons.auto_awesome,
+                color: Color(0xFFE5C07B),
+                size: 22,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        'Ask adaa',
+                        style: AppTypography.titleMedium.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 16,
+                        ),
                       ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFD4AF37)
+                              .withValues(alpha: 0.25),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Text(
+                          'AI STYLIST',
+                          style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFFE5C07B),
+                            letterSpacing: 0.8,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    'What should I wear? Outfit pairings & styling',
+                    style: AppTypography.bodySmall.copyWith(
+                      color: const Color(0xFFD0D7D2),
+                      fontSize: 12,
                     ),
-                  ],
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  wardrobe.items.isNotEmpty
-                      ? '${wardrobe.items.length} digitized pieces ready to mix'
-                      : 'Snap pieces to deconstruct & catalog your collection',
-                  style: AppTypography.bodySmall.copyWith(
-                    color: AppColors.textSecondary,
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          TextButton(
-            onPressed: () => setState(() => _currentTabIndex = 2),
-            style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              minimumSize: Size.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.arrow_forward,
+                size: 16,
+                color: Colors.white,
+              ),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Open',
-                  style: AppTypography.labelMedium.copyWith(
-                    color: AppColors.forest,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const Icon(
-                  Icons.chevron_right,
-                  size: 16,
-                  color: AppColors.forest,
-                ),
-              ],
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -1455,7 +1567,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           const SizedBox(height: 14),
           Text(
-            'Decode Any Outfit.\nMatch Your Closet.',
+            'Decode Any Outfit. Match Your Closet.',
             style: AppTypography.displayLarge.copyWith(
               color: Colors.white,
               fontSize: 24,
@@ -1535,24 +1647,24 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(height: 6),
 
           // General Upload Entry Point
-          Center(
-            child: TextButton.icon(
-              onPressed: () => _showImageSourceModal(intent: null),
-              icon: const Icon(
-                Icons.arrow_upward_rounded,
-                size: 14,
-                color: AppColors.sandSoft,
-              ),
-              label: const Text(
-                'Upload Outfit Photo',
-                style: TextStyle(
-                  color: AppColors.sandSoft,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ),
+          // Center(
+          //   child: TextButton.icon(
+          //     onPressed: () => _showImageSourceModal(intent: null),
+          //     icon: const Icon(
+          //       Icons.arrow_upward_rounded,
+          //       size: 14,
+          //       color: AppColors.sandSoft,
+          //     ),
+          //     label: const Text(
+          //       'Upload Outfit Photo',
+          //       style: TextStyle(
+          //         color: AppColors.sandSoft,
+          //         fontSize: 11,
+          //         fontWeight: FontWeight.w600,
+          //       ),
+          //     ),
+          //   ),
+          // ),
         ],
       ),
     );
@@ -1758,7 +1870,7 @@ class _HomeScreenState extends State<HomeScreen> {
         else
           // Rich horizontal feed of shared pieces
           SizedBox(
-            height: 235,
+            height: 255,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: sharedItems.length,
@@ -1800,119 +1912,129 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        ClipRRect(
-                          borderRadius: const BorderRadius.vertical(
-                            top: Radius.circular(14),
-                          ),
-                          child: Stack(
-                            children: [
-                              PrivateImageView(
-                                imageUrl: garment.imageUrl,
-                                height: 115,
-                                width: 155,
-                                fit: BoxFit.cover,
-                              ),
-                              Positioned(
-                                top: 6,
-                                left: 6,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 6,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.espresso.withValues(
-                                      alpha: 0.8,
-                                    ),
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: Text(
-                                    shared.communityName,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
+                        AspectRatio(
+                          aspectRatio: 1.0,
+                          child: ClipRRect(
+                            borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(14),
+                            ),
+                            child: Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                Container(color: AppColors.surfaceContainerLow),
+                                Center(
+                                  child: PrivateImageView(
+                                    imageUrl: garment.imageUrl,
+                                    fit: BoxFit.contain,
+                                    backgroundColor:
+                                        AppColors.surfaceContainerLow,
                                   ),
                                 ),
-                              ),
-                            ],
+                                Positioned(
+                                  top: 6,
+                                  left: 6,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.espresso.withValues(
+                                        alpha: 0.8,
+                                      ),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      shared.communityName,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                        Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                garment.name,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.textPrimary,
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                Text(
+                                  garment.name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.textPrimary,
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(height: 3),
-                              // Owner Attribution
-                              InkWell(
-                                onTap: () => PublicProfileSheet.show(
-                                  context,
-                                  userId: shared.ownerId,
-                                  fallbackName: shared.resolvedOwnerName,
-                                ),
-                                borderRadius: BorderRadius.circular(4),
-                                child: Row(
-                                  children: [
-                                    CircleAvatar(
-                                      radius: 8,
-                                      backgroundColor: AppColors.accentSoft,
-                                      child: Text(
-                                        shared.ownerInitials,
-                                        style: const TextStyle(
-                                          fontSize: 8,
-                                          fontWeight: FontWeight.w800,
-                                          color: AppColors.primary,
+                                const SizedBox(height: 3),
+                                // Owner Attribution
+                                InkWell(
+                                  onTap: () => PublicProfileSheet.show(
+                                    context,
+                                    userId: shared.ownerId,
+                                    fallbackName: shared.resolvedOwnerName,
+                                  ),
+                                  borderRadius: BorderRadius.circular(4),
+                                  child: Row(
+                                    children: [
+                                      CircleAvatar(
+                                        radius: 8,
+                                        backgroundColor: AppColors.accentSoft,
+                                        child: Text(
+                                          shared.ownerInitials,
+                                          style: const TextStyle(
+                                            fontSize: 8,
+                                            fontWeight: FontWeight.w800,
+                                            color: AppColors.primary,
+                                          ),
                                         ),
                                       ),
+                                      const SizedBox(width: 4),
+                                      Expanded(
+                                        child: Text(
+                                          shared.resolvedOwnerName,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            fontSize: 10,
+                                            color: AppColors.textSecondary,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Wrap(
+                                  spacing: 4,
+                                  children: [
+                                    AdaaBrandBadge(
+                                      text: garment.category.toUpperCase(),
                                     ),
-                                    const SizedBox(width: 4),
-                                    Expanded(
-                                      child: Text(
-                                        shared.resolvedOwnerName,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
+                                    if (garment.primaryColor.isNotEmpty)
+                                      Text(
+                                        garment.primaryColor,
                                         style: const TextStyle(
                                           fontSize: 10,
                                           color: AppColors.textSecondary,
-                                          fontWeight: FontWeight.w500,
                                         ),
                                       ),
-                                    ),
                                   ],
                                 ),
-                              ),
-                              const SizedBox(height: 4),
-                              Wrap(
-                                spacing: 4,
-                                children: [
-                                  AdaaBrandBadge(
-                                    text: garment.category.toUpperCase(),
-                                  ),
-                                  if (garment.primaryColor.isNotEmpty)
-                                    Text(
-                                      garment.primaryColor,
-                                      style: const TextStyle(
-                                        fontSize: 10,
-                                        color: AppColors.textSecondary,
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       ],
@@ -1928,31 +2050,40 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 class _AnalyzingDialog extends StatelessWidget {
-  const _AnalyzingDialog();
+  final String title;
+  final String subtitle;
+
+  const _AnalyzingDialog({
+    this.title = 'Analyzing Outfit...',
+    this.subtitle = 'Identifying garments, silhouettes, colors, and extracting candidate pieces...',
+  });
 
   @override
   Widget build(BuildContext context) {
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: const Padding(
-        padding: EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            CircularProgressIndicator(
+            const CircularProgressIndicator(
               color: AppColors.terracotta,
               strokeWidth: 3,
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             Text(
-              'Analyzing Outfit...',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+              title,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
             ),
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
             Text(
-              'Identifying garments, silhouettes, colors, and extracting candidate pieces...',
+              subtitle,
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+              style: const TextStyle(
+                fontSize: 12,
+                color: AppColors.textSecondary,
+              ),
             ),
           ],
         ),

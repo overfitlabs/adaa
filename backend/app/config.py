@@ -35,11 +35,18 @@ class Settings(BaseSettings):
     CLOUDINARY_CLOUD_NAME: str = ""
     CLOUDINARY_API_KEY: str = ""
     CLOUDINARY_API_SECRET: str = ""
+    # Optional: Token-based authentication key for paid Cloudinary plans (Advanced/Enterprise)
     CLOUDINARY_AUTH_TOKEN_KEY: str = ""
     CLOUDINARY_SECURE_DELIVERY: bool = True
     STORAGE_BACKEND: str = "cloudinary"  # "cloudinary" | "local"
-    IMAGE_DELIVERY_TTL_SECONDS: int = 1800  # 30 minutes
+    IMAGE_DELIVERY_TTL_SECONDS: int = 1800  # 30 minutes (enforced via token auth if key is configured)
     TRYON_RETENTION_DAYS: int = 7
+    OPERATOR_SECRET: str = ""  # Secret for operator CLI / cron endpoints
+
+    # Cloudinary MediaFlows Integration
+    USE_MEDIAFLOWS: bool = False
+    MEDIAFLOWS_WEBHOOK_SECRET: str = ""
+    MEDIAFLOWS_TIMEOUT_SECONDS: int = 25
 
     model_config = SettingsConfigDict(
         env_file=(
@@ -68,6 +75,16 @@ class Settings(BaseSettings):
     @property
     def is_cloudinary_configured(self) -> bool:
         return bool(self.CLOUDINARY_CLOUD_NAME and self.CLOUDINARY_API_KEY and self.CLOUDINARY_API_SECRET)
+
+    @property
+    def is_cloudinary_token_auth_configured(self) -> bool:
+        """True ONLY if Cloudinary is configured AND the Token-Based Authentication key is provided."""
+        return bool(self.is_cloudinary_configured and self.CLOUDINARY_AUTH_TOKEN_KEY and self.CLOUDINARY_AUTH_TOKEN_KEY.strip())
+
+    @property
+    def is_cloudinary_authenticated_delivery(self) -> bool:
+        """True if Cloudinary backend is configured for authenticated asset delivery."""
+        return bool(self.is_cloudinary_configured and self.STORAGE_BACKEND == "cloudinary")
 
 
 settings = Settings()

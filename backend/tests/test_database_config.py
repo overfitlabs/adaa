@@ -123,6 +123,7 @@ def test_init_db_schema_isolation_does_not_touch_profiles():
         "outfit_analyses",
         "saved_outfits",
         "tryon_tasks",
+        "user_tryon_models",
         "communities",
         "community_memberships",
         "community_listings",

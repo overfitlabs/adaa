@@ -175,7 +175,8 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
                                 height: 70,
                                 child: PrivateImageView(
                                   imageUrl: item.imageUrl,
-                                  fit: BoxFit.cover,
+                                  fit: BoxFit.contain,
+                                  backgroundColor: AppColors.surfaceContainerLow,
                                   errorWidget: Container(
                                     color: AppColors.accentSoft,
                                     child: const Icon(
@@ -357,10 +358,14 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 8,
+            runSpacing: 6,
             children: [
               Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Container(
                     padding: const EdgeInsets.all(8),
@@ -375,12 +380,16 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
                     ),
                   ),
                   const SizedBox(width: 10),
-                  const Text(
-                    'AI Outfit Generator',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary,
+                  const Flexible(
+                    child: Text(
+                      'AI Outfit Generator',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                      ),
                     ),
                   ),
                 ],
@@ -610,31 +619,36 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '${stylist.selectedOccasion.toUpperCase()} LOOKS',
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 1.0,
-                color: AppColors.primary,
-              ),
-            ),
-            if (resp != null && resp.appliedProfilePreferences.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: 2),
-                child: Text(
-                  resp.appliedProfilePreferences.join(' • '),
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: AppColors.textSecondary,
-                  ),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '${stylist.selectedOccasion.toUpperCase()} LOOKS',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.0,
+                  color: AppColors.primary,
                 ),
               ),
-          ],
+              if (resp != null && resp.appliedProfilePreferences.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Text(
+                    resp.appliedProfilePreferences.join(' • '),
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: AppColors.textSecondary,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+            ],
+          ),
         ),
+        const SizedBox(width: 8),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           decoration: BoxDecoration(
@@ -696,7 +710,9 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
                         ),
                       ),
                       const SizedBox(height: 4),
-                      Row(
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 4,
                         children: [
                           Container(
                             padding: const EdgeInsets.symmetric(
@@ -717,7 +733,6 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
                               ),
                             ),
                           ),
-                          const SizedBox(width: 6),
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 8,
@@ -776,7 +791,7 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
 
           // Horizontal Garment Thumbnails
           SizedBox(
-            height: 120,
+            height: 168,
             child: ListView.separated(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               scrollDirection: Axis.horizontal,
@@ -788,25 +803,29 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
                   onTap: () => _showInspectOutfitSheet(context, outfit),
                   borderRadius: BorderRadius.circular(14),
                   child: Container(
-                    width: 90,
+                    width: 104,
                     decoration: BoxDecoration(
                       color: AppColors.background,
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(color: AppColors.borderLight),
                     ),
+                    clipBehavior: Clip.antiAlias,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
+                        AspectRatio(
+                          aspectRatio: 1.0,
                           child: ClipRRect(
                             borderRadius: const BorderRadius.vertical(
                               top: Radius.circular(13),
                             ),
-                            child: SizedBox(
+                            child: Container(
+                              color: AppColors.surfaceContainerLow,
                               width: double.infinity,
                               child: PrivateImageView(
                                 imageUrl: item.imageUrl,
-                                fit: BoxFit.cover,
+                                fit: BoxFit.contain,
+                                backgroundColor: AppColors.surfaceContainerLow,
                                 errorWidget: Container(
                                   color: AppColors.accentSoft,
                                   child: const Icon(
@@ -819,29 +838,56 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
                             ),
                           ),
                         ),
-                        Padding(
-                          padding: const EdgeInsets.all(6),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                item.name,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              Text(
-                                item.category,
-                                maxLines: 1,
-                                style: const TextStyle(
-                                  fontSize: 9,
-                                  color: AppColors.textSecondary,
-                                ),
-                              ),
-                            ],
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            child: LayoutBuilder(
+                              builder: (context, constraints) {
+                                return FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.centerLeft,
+                                  child: ConstrainedBox(
+                                    constraints: BoxConstraints(
+                                      maxWidth: constraints.maxWidth,
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          item.name,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                            color: AppColors.textPrimary,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          item.category.toUpperCase(),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.w600,
+                                            color: AppColors.textSecondary,
+                                            letterSpacing: 0.3,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
                           ),
                         ),
                       ],
@@ -938,8 +984,11 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
           // Bottom Action Row (Save / Saved & Inspect)
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 8,
+              runSpacing: 8,
               children: [
                 TextButton.icon(
                   onPressed: () => _showInspectOutfitSheet(context, outfit),

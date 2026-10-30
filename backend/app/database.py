@@ -81,6 +81,8 @@ REQUIRED_COLUMNS = {
         ("cloudinary_public_id", "VARCHAR(255)"),
         ("image_format", "VARCHAR(20)"),
         ("image_version", "VARCHAR(30)"),
+        ("status", "VARCHAR(30) DEFAULT 'completed'"),
+        ("error_message", "TEXT"),
     ],
     "saved_outfits": [
         ("user_id", "VARCHAR(36)"),
@@ -94,6 +96,9 @@ REQUIRED_COLUMNS = {
         ("garment_image_public_id", "VARCHAR(255)"),
         ("result_image_public_id", "VARCHAR(255)"),
         ("expires_at", "DATETIME"),
+        ("is_friend_tryon", "BOOLEAN DEFAULT 0"),
+        ("used_saved_model", "BOOLEAN DEFAULT 0"),
+        ("inspiration_analysis_id", "VARCHAR(36)"),
     ],
     "communities": [
         ("status", "VARCHAR(30) DEFAULT 'active'"),

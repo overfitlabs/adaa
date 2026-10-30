@@ -115,4 +115,14 @@ class StylistProvider extends ChangeNotifier {
     _outfits = [];
     notifyListeners();
   }
+
+  @visibleForTesting
+  void setOutfitsForTesting(
+    List<RecommendedOutfit> outfits, {
+    OutfitGenerationResponse? response,
+  }) {
+    _outfits = outfits;
+    _generationResponse = response;
+    notifyListeners();
+  }
 }

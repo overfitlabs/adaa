@@ -19,6 +19,16 @@ from app.schemas import (
 )
 from app.services.image_storage import image_storage_service
 from app.services.vision_provider import get_vision_provider
+from app.services.metadata_normalizer import (
+    normalize_garment_metadata,
+    normalize_category,
+    normalize_color,
+    normalize_pattern,
+    normalize_material,
+    normalize_fit,
+    normalize_season,
+    normalize_formality,
+)
 from app.auth.supabase_auth import get_optional_current_user, get_current_user, AuthenticatedUser
 
 logger = logging.getLogger("wardrobelens.routes_wardrobe")
@@ -73,14 +83,19 @@ def _model_to_response(item: WardrobeItem) -> WardrobeItemResponse:
 @router.post("/detect-item")
 async def detect_wardrobe_item_from_photo(
     file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: Optional[AuthenticatedUser] = Depends(get_optional_current_user),
 ):
     """
-    Analyzes a photo of a single wardrobe garment to pre-fill metadata
-    (category, colors, material, pattern, fit) before saving.
+    Analyzes a photo of a wardrobe garment or full outfit to pre-fill metadata
+    (category, colors, material, pattern, fit) before saving to personal closet.
+    Extracts individual garments as standardized square crops (600x600).
+    CRITICAL: Does NOT create an OutfitAnalysisRecord in outfit_analyses, ensuring
+    wardrobe cataloging is strictly separated from outfit inspiration analysis.
     Cleans up any temporary staging files immediately to prevent orphaned disk assets.
     """
     raw_bytes = await file.read()
-    clean_bytes, ext, _, _ = image_storage_service.validate_and_sanitize_image(file, raw_bytes)
+    clean_bytes, ext, width, height = image_storage_service.validate_and_sanitize_image(file, raw_bytes)
 
     temp_filename = f"detect_staging_{uuid.uuid4().hex}.{ext}"
     temp_dir = settings.storage_path / "temp"
@@ -93,10 +108,29 @@ async def detect_wardrobe_item_from_photo(
 
         vision = get_vision_provider()
         summary, vibe, items = await vision.analyze_outfit_image(temp_path)
+
+        # Upload original photo under wardrobe subfolder
+        uploaded_meta = await image_storage_service.upload(
+            user_id=current_user.id if current_user else None,
+            subfolder="wardrobe",
+            pre_sanitized=(clean_bytes, ext, width, height),
+        )
+
+        from app.api.routes_analysis import _extract_garment_crops
+        await _extract_garment_crops(
+            clean_bytes=clean_bytes,
+            items=items,
+            user_id=current_user.id if current_user else None,
+            original_public_id=uploaded_meta.public_id,
+            original_storage_provider=uploaded_meta.storage_provider,
+        )
+
         primary_item = items[0] if items else None
         return {
-            "detected_item": primary_item,
+            "detected_item": primary_item.model_dump() if hasattr(primary_item, "model_dump") else primary_item,
+            "detected_items": [i.model_dump() if hasattr(i, "model_dump") else i for i in items],
             "detected_vibe": vibe,
+            "summary": summary,
         }
     except Exception as e:
         logger.error("Wardrobe item detection failed: %s", str(e), exc_info=True)
@@ -154,10 +188,25 @@ async def create_wardrobe_item(
     uploaded_meta = None
 
     if file:
+        raw_bytes = await file.read()
+        clean_bytes, ext, width, height = image_storage_service.validate_and_sanitize_image(file, raw_bytes)
+        from PIL import Image
+        from app.services.image_storage import standardize_to_square
+        try:
+            with Image.open(io.BytesIO(clean_bytes)) as pil_img:
+                sq_img = standardize_to_square(pil_img, target_size=600, padding_ratio=0.06)
+                out_buf = io.BytesIO()
+                sq_img.save(out_buf, format="JPEG", quality=90)
+                clean_bytes = out_buf.getvalue()
+                ext = "jpg"
+                width, height = 600, 600
+        except Exception as sq_err:
+            logger.warning("Could not pre-square upload: %s", str(sq_err))
+
         uploaded_meta = await image_storage_service.upload(
-            file,
             user_id=user_id,
             subfolder="wardrobe",
+            pre_sanitized=(clean_bytes, ext, width, height),
         )
         final_image_path = uploaded_meta.public_id
         final_storage_provider = uploaded_meta.storage_provider
@@ -165,25 +214,46 @@ async def create_wardrobe_item(
         final_format = uploaded_meta.format
         final_version = uploaded_meta.version
     else:
-        # Fallback for manual or test fixture image_path
-        final_image_path = image_path
-        final_storage_provider = "local"
-        final_cloudinary_id = None
-        final_format = image_path.split(".")[-1] if "." in image_path else "jpg"
+        # Fallback for manual or review flow image_path (e.g. extracted square crops)
+        clean_path = (image_path or "").strip().lstrip("/")
+        if clean_path.startswith("storage/"):
+            clean_path = clean_path[len("storage/"):]
+        final_image_path = clean_path
+        is_cloudinary = (
+            settings.is_cloudinary_configured
+            and settings.STORAGE_BACKEND == "cloudinary"
+            and ("wardrobelens/" in clean_path or clean_path.startswith("extracted/"))
+        )
+        final_storage_provider = "cloudinary" if is_cloudinary else "local"
+        final_cloudinary_id = final_image_path if is_cloudinary else None
+        final_format = final_image_path.split(".")[-1] if "." in final_image_path else "jpg"
         final_version = None
+
+    clean_meta = normalize_garment_metadata(
+        category=category,
+        primary_color=primary_color,
+        secondary_color=secondary_color,
+        pattern=pattern,
+        material=material,
+        fit=fit,
+        season=season,
+        formality=formality,
+        name=name,
+        sub_category=sub_category,
+    )
 
     item = WardrobeItem(
         user_id=user_id,
-        name=name.strip(),
-        category=category.strip().lower(),
-        sub_category=sub_category.strip() if sub_category else None,
-        primary_color=primary_color.strip(),
-        secondary_color=secondary_color.strip() if secondary_color else None,
-        pattern=pattern.strip() if pattern else None,
-        material=material.strip() if material else None,
-        fit=fit.strip() if fit else None,
-        season=season.strip() if season else None,
-        formality=formality.strip() if formality else None,
+        name=clean_meta["name"],
+        category=clean_meta["category"],
+        sub_category=clean_meta["sub_category"],
+        primary_color=clean_meta["primary_color"],
+        secondary_color=clean_meta["secondary_color"],
+        pattern=clean_meta["pattern"],
+        material=clean_meta["material"],
+        fit=clean_meta["fit"],
+        season=clean_meta["season"],
+        formality=clean_meta["formality"],
         brand=brand.strip() if brand else None,
         size=size.strip() if size else None,
         condition=condition.strip() if condition else None,
@@ -239,6 +309,19 @@ def bulk_create_wardrobe_items(
     for item_data in payload.items:
         client_id = item_data.client_id
         try:
+            clean_meta = normalize_garment_metadata(
+                category=item_data.category,
+                primary_color=item_data.primary_color,
+                secondary_color=item_data.secondary_color,
+                pattern=item_data.pattern,
+                material=item_data.material,
+                fit=item_data.fit,
+                season=item_data.season,
+                formality=item_data.formality,
+                name=item_data.name,
+                sub_category=item_data.sub_category,
+            )
+
             # Clean image path (strip any leading slashes or /storage/ prefix)
             raw_img = (item_data.image_path or "").strip().lstrip("/")
             if raw_img.startswith("storage/"):
@@ -248,8 +331,8 @@ def bulk_create_wardrobe_items(
             existing = None
             if raw_img and raw_img != "wardrobe/placeholder.jpg":
                 q = db.query(WardrobeItem).filter(
-                    WardrobeItem.name == item_data.name.strip(),
-                    WardrobeItem.category == item_data.category.strip().lower(),
+                    WardrobeItem.name == clean_meta["name"],
+                    WardrobeItem.category == clean_meta["category"],
                     (WardrobeItem.image_path == raw_img)
                     | (WardrobeItem.image_path == f"/{raw_img}")
                     | (WardrobeItem.image_path == f"storage/{raw_img}"),
@@ -284,16 +367,16 @@ def bulk_create_wardrobe_items(
 
             new_item = WardrobeItem(
                 user_id=user_id,
-                name=item_data.name.strip(),
-                category=item_data.category.strip().lower(),
-                sub_category=item_data.sub_category.strip() if item_data.sub_category else None,
-                primary_color=item_data.primary_color.strip(),
-                secondary_color=item_data.secondary_color.strip() if item_data.secondary_color else None,
-                pattern=item_data.pattern.strip() if item_data.pattern else None,
-                material=item_data.material.strip() if item_data.material else None,
-                fit=item_data.fit.strip() if item_data.fit else None,
-                season=item_data.season.strip() if item_data.season else None,
-                formality=item_data.formality.strip() if item_data.formality else None,
+                name=clean_meta["name"],
+                category=clean_meta["category"],
+                sub_category=clean_meta["sub_category"],
+                primary_color=clean_meta["primary_color"],
+                secondary_color=clean_meta["secondary_color"],
+                pattern=clean_meta["pattern"],
+                material=clean_meta["material"],
+                fit=clean_meta["fit"],
+                season=clean_meta["season"],
+                formality=clean_meta["formality"],
                 brand=item_data.brand.strip() if item_data.brand else None,
                 size=item_data.size.strip() if item_data.size else None,
                 condition=item_data.condition.strip() if item_data.condition else None,
@@ -424,6 +507,23 @@ def update_wardrobe_item(
     data = update_data.model_dump(exclude_unset=True)
     if "tags" in data and data["tags"] is not None:
         item.tags = json.dumps(data.pop("tags"))
+
+    if "category" in data and data["category"] is not None:
+        data["category"] = normalize_category(data["category"])
+    if "primary_color" in data and data["primary_color"] is not None:
+        data["primary_color"] = normalize_color(data["primary_color"], default_neutral=True)
+    if "secondary_color" in data:
+        data["secondary_color"] = normalize_color(data["secondary_color"], default_neutral=False)
+    if "pattern" in data:
+        data["pattern"] = normalize_pattern(data["pattern"])
+    if "material" in data:
+        data["material"] = normalize_material(data["material"])
+    if "fit" in data:
+        data["fit"] = normalize_fit(data["fit"])
+    if "season" in data:
+        data["season"] = normalize_season(data["season"])
+    if "formality" in data:
+        data["formality"] = normalize_formality(data["formality"])
 
     for key, value in data.items():
         if hasattr(item, key):

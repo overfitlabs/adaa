@@ -96,56 +96,93 @@ class SharedItemDetailScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Padding(
+              padding: EdgeInsetsGeometry.fromLTRB(20, 0, 20, 0),
+              child: const Text(
+                'Outfit Details',
+                style: TextStyle(
+                  fontFamily: 'Playfair Display',
+                  fontSize: 32,
+                  height: 1.2,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.forest,
+                ),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Padding(
+              padding: EdgeInsetsGeometry.fromLTRB(20, 0, 20, 0),
+              child: Text(
+                "The looks really good! Can't wait to see you in this",
+                style: TextStyle(
+                  fontSize: 14,
+                  height: 1.5,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
             // Garment Image
-            Stack(
-              children: [
-                PrivateImageView(
-                  imageUrl: garment.imageUrl,
-                  width: double.infinity,
-                  height: 360,
-                  fit: BoxFit.cover,
-                  placeholder: Container(
-                    height: 260,
-                    color: AppColors.accentSoft,
-                    child: const Center(
-                      child: Icon(
-                        Icons.checkroom,
-                        size: 50,
-                        color: AppColors.textMuted,
+            AspectRatio(
+              aspectRatio: 1.0,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Container(color: AppColors.surfaceContainerLow),
+                  Center(
+                    child: PrivateImageView(
+                      imageUrl: garment.imageUrl,
+                      width: double.infinity,
+                      height: double.infinity,
+                      fit: BoxFit.contain,
+                      backgroundColor: AppColors.surfaceContainerLow,
+                      placeholder: Container(
+                        color: AppColors.surfaceContainerLow,
+                        child: const Center(
+                          child: Icon(
+                            Icons.checkroom,
+                            size: 50,
+                            color: AppColors.textMuted,
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                ),
-                Positioned(
-                  top: 14,
-                  left: 14,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.9),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.groups, color: Colors.white, size: 14),
-                        const SizedBox(width: 5),
-                        Text(
-                          sharedItem.communityName,
-                          style: const TextStyle(
+                  Positioned(
+                    top: 14,
+                    left: 14,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.9),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.groups,
                             color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
+                            size: 14,
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 5),
+                          Text(
+                            sharedItem.communityName,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
             Padding(
               padding: const EdgeInsets.all(20),

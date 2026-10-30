@@ -8,8 +8,10 @@ import 'package:provider/provider.dart';
 import '../../../core/models/garment_item.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/widgets/private_image_view.dart';
 import '../../../state/wardrobe_provider.dart';
 import '../../../core/widgets/adaa_wordmark.dart';
+import '../../analysis/screens/item_review_screen.dart';
 
 class AddWardrobeItemScreen extends StatefulWidget {
   const AddWardrobeItemScreen({super.key});
@@ -41,6 +43,9 @@ class _AddWardrobeItemScreenState extends State<AddWardrobeItemScreen> {
 
   bool _isDetecting = false;
   bool _isSaving = false;
+  DetectedFashionItem? _detectedItem;
+  List<DetectedFashionItem> _detectedItems = [];
+  bool _showExtractedCrop = true;
 
   final List<String> _categoryOptions = [
     'tops',
@@ -115,9 +120,16 @@ class _AddWardrobeItemScreenState extends State<AddWardrobeItemScreen> {
     try {
       final data = await ApiClient.detectWardrobeItemFromPhoto(_selectedImage!);
       setState(() {
-        final detected = data['detected_item'] != null
+        final rawList = data['detected_items'] as List<dynamic>? ?? [];
+        _detectedItems = rawList
+            .map((e) => DetectedFashionItem.fromJson(e as Map<String, dynamic>))
+            .toList();
+
+        _detectedItem = data['detected_item'] != null
             ? DetectedFashionItem.fromJson(data['detected_item'])
-            : null;
+            : (_detectedItems.isNotEmpty ? _detectedItems.first : null);
+        _showExtractedCrop = true;
+        final detected = _detectedItem;
 
         if (detected != null) {
           _nameController.text = detected.name;
@@ -251,7 +263,12 @@ class _AddWardrobeItemScreenState extends State<AddWardrobeItemScreen> {
           ? null
           : _formalityController.text.trim(),
       tags: tags,
-      file: _selectedImage,
+      imagePath: (_showExtractedCrop && _detectedItem?.extractedImagePath != null)
+          ? _detectedItem!.extractedImagePath
+          : null,
+      file: (_showExtractedCrop && _detectedItem?.extractedImagePath != null)
+          ? null
+          : _selectedImage,
     );
 
     setState(() => _isSaving = false);
@@ -337,6 +354,11 @@ class _AddWardrobeItemScreenState extends State<AddWardrobeItemScreen> {
               const SizedBox(height: 22),
               // Image Picker Area
               _buildImagePickerBox(),
+
+              if (_detectedItems.length > 1) ...[
+                const SizedBox(height: 14),
+                _buildMultiItemBanner(),
+              ],
 
               if (_selectedImage != null) ...[
                 const SizedBox(height: 10),
@@ -631,93 +653,205 @@ class _AddWardrobeItemScreenState extends State<AddWardrobeItemScreen> {
     );
   }
 
+  Widget _buildMultiItemBanner() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColors.accentSoft,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.auto_awesome, color: AppColors.primary, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${_detectedItems.length} garments detected in this photo!',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primary,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                const Text(
+                  'Review and add all pieces to your closet at once.',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+            ),
+            onPressed: () async {
+              final res = await Navigator.push<bool>(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ItemReviewScreen(
+                    customItems: _detectedItems,
+                    sourceImageUrl: _selectedImage?.path,
+                    initialIntent: ItemReviewIntent.addToCloset,
+                  ),
+                ),
+              );
+              if (res == true && mounted) {
+                Navigator.pop(context, true);
+              }
+            },
+            child: const Text('Add All'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildImagePickerBox() {
     return GestureDetector(
       onTap: () => _showPickerModal(),
-      child: Container(
-        height: 220,
-        width: double.infinity,
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.outlineVariant, width: 1.5),
-        ),
-        child: _selectedImage != null
-            ? Stack(
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
-                    child: kIsWeb
-                        ? Image.network(
-                            _selectedImage!.path,
-                            width: double.infinity,
-                            height: double.infinity,
-                            fit: BoxFit.cover,
-                          )
-                        : Image.file(
-                            File(_selectedImage!.path),
-                            width: double.infinity,
-                            height: double.infinity,
-                            fit: BoxFit.cover,
-                          ),
-                  ),
-                  Positioned(
-                    bottom: 10,
-                    right: 10,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
+      child: AspectRatio(
+        aspectRatio: 1.0,
+        child: Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: AppColors.surfaceContainerLow,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.outlineVariant, width: 1.5),
+          ),
+          child: _selectedImage != null
+              ? Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: (_showExtractedCrop && _detectedItem?.extractedImageUrl != null)
+                          ? PrivateImageView(
+                              imageUrl: _detectedItem!.extractedImageUrl,
+                              fit: BoxFit.contain,
+                              backgroundColor: AppColors.surfaceContainerLow,
+                            )
+                          : (kIsWeb
+                              ? Image.network(
+                                  _selectedImage!.path,
+                                  fit: BoxFit.contain,
+                                )
+                              : Image.file(
+                                  File(_selectedImage!.path),
+                                  fit: BoxFit.contain,
+                                )),
+                    ),
+                    Positioned(
+                      bottom: 10,
+                      right: 10,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.forest.withValues(alpha: 0.8),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.edit, size: 14, color: Colors.white),
+                            SizedBox(width: 4),
+                            Text(
+                              'Change Photo',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                      decoration: BoxDecoration(
-                        color: AppColors.forest.withValues(alpha: 0.8),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Row(
-                        children: [
-                          Icon(Icons.edit, size: 14, color: Colors.white),
-                          SizedBox(width: 4),
-                          Text(
-                            'Change Photo',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
+                    ),
+                    if (_detectedItem?.extractedImageUrl != null)
+                      Positioned(
+                        top: 10,
+                        right: 10,
+                        child: GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _showExtractedCrop = !_showExtractedCrop;
+                            });
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.espresso.withValues(alpha: 0.85),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  _showExtractedCrop ? Icons.crop : Icons.photo,
+                                  size: 13,
+                                  color: Colors.white,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  _showExtractedCrop ? 'Extracted Crop' : 'Original Photo',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        ],
+                        ),
+                      ),
+                  ],
+                )
+              : const Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircleAvatar(
+                      radius: 28,
+                      backgroundColor: AppColors.surface,
+                      child: Icon(
+                        Icons.camera_alt_outlined,
+                        color: AppColors.forest,
+                        size: 26,
                       ),
                     ),
-                  ),
-                ],
-              )
-            : const Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircleAvatar(
-                    radius: 28,
-                    backgroundColor: AppColors.surfaceContainerLow,
-                    child: Icon(
-                      Icons.camera_alt_outlined,
-                      color: AppColors.forest,
-                      size: 26,
+                    SizedBox(height: 12),
+                    Text(
+                      'Upload Photo of Your Garment',
+                      style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
                     ),
-                  ),
-                  SizedBox(height: 12),
-                  Text(
-                    'Upload Photo of Your Garment',
-                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    'AI will auto-populate categories, colors, and attributes',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: AppColors.textSecondary,
+                    SizedBox(height: 4),
+                    Text(
+                      'AI will extract garment pieces and auto-populate details',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      ),
                     ),
-                  ),
-                ],
-              ),
+                  ],
+                ),
+        ),
       ),
     );
   }

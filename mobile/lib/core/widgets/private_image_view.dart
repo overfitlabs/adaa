@@ -7,22 +7,26 @@ class PrivateImageView extends StatefulWidget {
   final String? imageUrl;
   final double? width;
   final double? height;
+  final double? aspectRatio;
   final BoxFit fit;
   final BorderRadius? borderRadius;
   final Widget? placeholder;
   final Widget? errorWidget;
   final VoidCallback? onRefreshUrl;
+  final Color? backgroundColor;
 
   const PrivateImageView({
     super.key,
     required this.imageUrl,
     this.width,
     this.height,
+    this.aspectRatio,
     this.fit = BoxFit.cover,
     this.borderRadius,
     this.placeholder,
     this.errorWidget,
     this.onRefreshUrl,
+    this.backgroundColor,
   });
 
   @override
@@ -36,7 +40,7 @@ class _PrivateImageViewState extends State<PrivateImageView> {
   Widget build(BuildContext context) {
     final rawUrl = widget.imageUrl;
     if (rawUrl == null || rawUrl.trim().isEmpty) {
-      return _buildFallback(isError: false);
+      return _wrapContainer(_buildFallback(isError: false));
     }
 
     final resolvedUrl = ApiEndpoints.resolveImageUrl(rawUrl);
@@ -64,7 +68,7 @@ class _PrivateImageViewState extends State<PrivateImageView> {
             Container(
               width: widget.width,
               height: widget.height,
-              color: AppColors.accentSoft,
+              color: widget.backgroundColor ?? AppColors.accentSoft,
               child: const Center(
                 child: SizedBox(
                   width: 24,
@@ -79,14 +83,34 @@ class _PrivateImageViewState extends State<PrivateImageView> {
       },
     );
 
-    if (widget.borderRadius != null) {
-      imageWidget = ClipRRect(
-        borderRadius: widget.borderRadius!,
-        child: imageWidget,
+    return _wrapContainer(imageWidget);
+  }
+
+  Widget _wrapContainer(Widget child) {
+    Widget wrapped = child;
+
+    if (widget.backgroundColor != null) {
+      wrapped = ColoredBox(
+        color: widget.backgroundColor!,
+        child: wrapped,
       );
     }
 
-    return imageWidget;
+    if (widget.borderRadius != null) {
+      wrapped = ClipRRect(
+        borderRadius: widget.borderRadius!,
+        child: wrapped,
+      );
+    }
+
+    if (widget.aspectRatio != null) {
+      wrapped = AspectRatio(
+        aspectRatio: widget.aspectRatio!,
+        child: wrapped,
+      );
+    }
+
+    return wrapped;
   }
 
   Widget _buildFallback({required bool isError}) {
@@ -100,7 +124,7 @@ class _PrivateImageViewState extends State<PrivateImageView> {
     return Container(
       width: widget.width,
       height: widget.height,
-      color: AppColors.accentSoft,
+      color: widget.backgroundColor ?? AppColors.accentSoft,
       child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,

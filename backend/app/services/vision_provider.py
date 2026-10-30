@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import List, Tuple
 from app.config import settings
 from app.schemas import DetectedFashionItem, StyleAttributes
+from app.services.metadata_normalizer import normalize_garment_metadata
 
 logger = logging.getLogger("wardrobelens.vision")
 
@@ -52,22 +53,29 @@ class GeminiVisionProvider(VisionProvider):
 You are an expert fashion stylist and garment analyst.
 Examine this image carefully. Note that it may contain a person wearing an outfit, a mannequin, a flat-lay of clothes on a bed/surface, or individual garments and accessories.
 
-Identify every distinct visible clothing piece and accessory. Include:
-- tops, shirts, t-shirts, sweaters
-- trousers, jeans, pants, shorts, skirts
-- jackets, coats, blazers, cardigans
-- footwear (sneakers, boots, loafers, heels)
-- bags, backpacks, clutches
-- watches, jewelry, belts, sunglasses, hats, scarves
+CRITICAL GARMENT EXTRACTION RULES:
+1. Deconstruct the outfit into EVERY distinct, individual wearable garment and accessory piece.
+2. An outfit is NEVER a single garment. If a person is wearing multiple pieces (e.g. jacket over a t-shirt with trousers and shoes), you MUST detect and output EACH piece as its own independent item in the "items" array.
+3. NEVER group an entire outfit into a single item, and NEVER misclassify multiple visible garments solely as "tops".
+4. Separate layers clearly:
+   - Outerwear: blazers, jackets, coats, cardigans -> category: 'outerwear' or 'jackets'
+   - Base tops: t-shirts, shirts, blouses, knitwear, hoodies -> category: 'tops' or 'shirts'
+   - Bottoms: trousers, jeans, pants, shorts, skirts -> category: 'bottoms' or 'trousers' or 'jeans'
+   - Footwear: sneakers, boots, loafers, heels, sandals -> category: 'shoes' or 'footwear'
+   - Dresses: one-piece dresses, gowns, jumpsuits -> category: 'dresses'
+   - Bags: handbags, backpacks, totes, clutches -> category: 'bags'
+   - Accessories: watches, jewelry, belts, sunglasses, hats, scarves -> category: 'accessories'
+5. For each item, provide an accurate, tight bounding box "box_2d": [ymin, xmin, ymax, xmax] with coordinates normalized from 0 to 1000 that tightly encloses ONLY that specific garment, excluding neighboring garments and background as much as possible.
 
 For each item, provide:
-1. category (one of: tops, shirts, trousers, jeans, jackets, footwear, bags, watches, jewelry, hats, sunglasses, other)
+1. category (one of: tops, bottoms, outerwear, dresses, shoes, bags, accessories, jackets, trousers, jeans, footwear, other)
 2. sub_category (e.g. 'Oversized Double-Breasted Blazer', 'Straight Leg Denim Jeans')
 3. descriptive name
 4. primary_color (e.g. 'navy', 'cream', 'charcoal', 'olive', 'black')
 5. secondary_color (if any)
 6. style attributes: pattern, material, fit, formality (casual, smart-casual, formal, athleisure), season, neckline_or_collar
 7. position/layer description
+8. box_2d: [ymin, xmin, ymax, xmax] (0 to 1000)
 
 Provide your response in strictly valid JSON format matching this schema:
 {
@@ -75,7 +83,7 @@ Provide your response in strictly valid JSON format matching this schema:
   "vibe": "e.g. Scandinavian Minimalist, Smart Casual, Streetwear, Parisian Chic",
   "items": [
     {
-      "category": "jackets",
+      "category": "outerwear",
       "sub_category": "Blazer",
       "name": "Navy Wool Tailored Blazer",
       "primary_color": "Navy",
@@ -168,12 +176,24 @@ Note: box_2d is [ymin, xmin, ymax, xmax] with coordinates normalized from 0 to 1
 
         for item_data in parsed.get("items", []):
             attr_dict = item_data.get("attributes", {})
-            attributes = StyleAttributes(
+            clean = normalize_garment_metadata(
+                category=item_data.get("category"),
+                primary_color=item_data.get("primary_color"),
+                secondary_color=item_data.get("secondary_color"),
                 pattern=attr_dict.get("pattern"),
                 material=attr_dict.get("material"),
                 fit=attr_dict.get("fit"),
-                formality=attr_dict.get("formality"),
                 season=attr_dict.get("season"),
+                formality=attr_dict.get("formality"),
+                name=item_data.get("name"),
+                sub_category=item_data.get("sub_category"),
+            )
+            attributes = StyleAttributes(
+                pattern=clean["pattern"],
+                material=clean["material"],
+                fit=clean["fit"],
+                formality=clean["formality"],
+                season=clean["season"],
                 neckline_or_collar=attr_dict.get("neckline_or_collar"),
             )
             raw_box = item_data.get("box_2d")
@@ -186,11 +206,11 @@ Note: box_2d is [ymin, xmin, ymax, xmax] with coordinates normalized from 0 to 1
 
             item = DetectedFashionItem(
                 id=str(uuid.uuid4()),
-                category=item_data.get("category", "other").lower(),
-                sub_category=item_data.get("sub_category"),
-                name=item_data.get("name", "Fashion Item"),
-                primary_color=item_data.get("primary_color", "Neutral"),
-                secondary_color=item_data.get("secondary_color"),
+                category=clean["category"],
+                sub_category=clean["sub_category"],
+                name=clean["name"],
+                primary_color=clean["primary_color"],
+                secondary_color=clean["secondary_color"],
                 attributes=attributes,
                 confidence=float(item_data.get("confidence", 0.9)),
                 bounding_box_description=item_data.get("bounding_box_description"),

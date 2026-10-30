@@ -120,20 +120,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         titleSpacing: 0,
       ),
 
-      // AppBar(
-      //         title: const Text(
-      //           'activity',
-      //           style: TextStyle(
-      //             fontWeight: FontWeight.bold,
-      //             color: AppColors.espresso,
-      //             letterSpacing: -0.5,
-      //           ),
-      //   ),
-      //   actions: [
-
-      //     const SizedBox(width: 8),
-      //   ],
-      // ),
       body: RefreshIndicator(
         color: AppColors.terracotta,
         onRefresh: () => notifProv.loadNotifications(),

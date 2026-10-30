@@ -366,6 +366,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
       ),
       floatingActionButton: isApproved
           ? FloatingActionButton(
+              heroTag: 'community_detail_fab',
               backgroundColor: AppColors.forest,
               foregroundColor: Colors.white,
               child: const Icon(Icons.share_sharp),
@@ -740,16 +741,23 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Expanded(
+                            AspectRatio(
+                              aspectRatio: 1.0,
                               child: Stack(
+                                fit: StackFit.expand,
                                 children: [
-                                  PrivateImageView(
-                                    imageUrl: item.imageUrl,
-                                    width: double.infinity,
-                                    height: double.infinity,
-                                    fit: BoxFit.cover,
-                                    borderRadius: const BorderRadius.vertical(
-                                      top: Radius.circular(14),
+                                  Container(
+                                    color: AppColors.surfaceContainerLow,
+                                  ),
+                                  Center(
+                                    child: PrivateImageView(
+                                      imageUrl: item.imageUrl,
+                                      fit: BoxFit.contain,
+                                      backgroundColor:
+                                          AppColors.surfaceContainerLow,
+                                      borderRadius: const BorderRadius.vertical(
+                                        top: Radius.circular(14),
+                                      ),
                                     ),
                                   ),
                                   Positioned(

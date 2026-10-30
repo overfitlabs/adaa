@@ -185,3 +185,82 @@ def test_delete_asset(tmp_path):
             type="authenticated",
             invalidate=True,
         )
+
+
+def test_is_cloudinary_token_auth_configured_property():
+    with patch.object(settings, "CLOUDINARY_CLOUD_NAME", "mycloud"), \
+         patch.object(settings, "CLOUDINARY_API_KEY", "key123"), \
+         patch.object(settings, "CLOUDINARY_API_SECRET", "secret456"), \
+         patch.object(settings, "CLOUDINARY_AUTH_TOKEN_KEY", ""):
+        assert settings.is_cloudinary_configured is True
+        assert settings.is_cloudinary_token_auth_configured is False
+        service = ImageStorageService()
+        assert service.is_token_auth_active is False
+
+    with patch.object(settings, "CLOUDINARY_CLOUD_NAME", "mycloud"), \
+         patch.object(settings, "CLOUDINARY_API_KEY", "key123"), \
+         patch.object(settings, "CLOUDINARY_API_SECRET", "secret456"), \
+         patch.object(settings, "CLOUDINARY_AUTH_TOKEN_KEY", "0123456789abcdef0123456789abcdef"):
+        assert settings.is_cloudinary_token_auth_configured is True
+        service = ImageStorageService()
+        assert service.is_token_auth_active is True
+
+
+def test_generate_delivery_url_custom_ttl():
+    service = ImageStorageService()
+    hex_key = "0123456789abcdef0123456789abcdef"
+    with patch.object(settings, "CLOUDINARY_CLOUD_NAME", "mycloud"), \
+         patch.object(settings, "CLOUDINARY_API_KEY", "key123"), \
+         patch.object(settings, "CLOUDINARY_API_SECRET", "secret456"), \
+         patch.object(settings, "CLOUDINARY_AUTH_TOKEN_KEY", hex_key):
+
+        url_300 = service.generate_delivery_url(
+            "wardrobelens/users/u1/wardrobe/item1",
+            storage_provider="cloudinary",
+            ttl_seconds=300,
+        )
+        assert "__cld_token__=" in url_300
+        assert "exp=" in url_300
+        assert "hmac=" in url_300
+
+
+def test_free_tier_authenticated_delivery_url_signed_without_token():
+    """Verifies Cloudinary Free-tier delivery: HMAC path-signed URL (sign_url=True) without paid token."""
+    service = ImageStorageService()
+    with patch.object(settings, "CLOUDINARY_CLOUD_NAME", "freecloud"), \
+         patch.object(settings, "CLOUDINARY_API_KEY", "key_free"), \
+         patch.object(settings, "CLOUDINARY_API_SECRET", "secret_free"), \
+         patch.object(settings, "CLOUDINARY_AUTH_TOKEN_KEY", ""):
+
+        url = service.generate_delivery_url(
+            "wardrobelens/users/u1/wardrobe/shirt1",
+            storage_provider="cloudinary",
+            ttl_seconds=1800,
+        )
+        assert url.startswith("https://res.cloudinary.com/freecloud/image/authenticated/s--")
+        assert "shirt1" in url
+        assert "__cld_token__" not in url
+
+
+def test_generate_private_download_url_api_endpoint():
+    """Verifies Strategy A utility: time-limited private download URL via api.cloudinary.com REST API."""
+    service = ImageStorageService()
+    with patch.object(settings, "CLOUDINARY_CLOUD_NAME", "freecloud"), \
+         patch.object(settings, "CLOUDINARY_API_KEY", "key_free"), \
+         patch.object(settings, "CLOUDINARY_API_SECRET", "secret_free"):
+
+        dl_url = service.generate_private_download_url(
+            "wardrobelens/users/u1/wardrobe/shirt1",
+            format="png",
+            expires_at=1800000000,
+            attachment=False,
+        )
+        assert dl_url.startswith("https://api.cloudinary.com/v1_1/freecloud/image/download?")
+        assert "public_id=wardrobelens%2Fusers%2Fu1%2Fwardrobe%2Fshirt1" in dl_url
+        assert "format=png" in dl_url
+        assert "type=authenticated" in dl_url
+        assert "expires_at=1800000000" in dl_url
+        assert "signature=" in dl_url
+        assert "api_key=key_free" in dl_url
+
+

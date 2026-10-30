@@ -31,5 +31,8 @@ def health_check(db: Session = Depends(get_db)):
         "vision_provider": settings.VISION_PROVIDER,
         "tryon_provider": settings.TRYON_PROVIDER,
         "storage_backend": settings.STORAGE_BACKEND,
+        "cloudinary_authenticated_delivery": settings.is_cloudinary_authenticated_delivery if settings.STORAGE_BACKEND == "cloudinary" else None,
+        "cloudinary_token_auth_configured": settings.is_cloudinary_token_auth_configured if settings.STORAGE_BACKEND == "cloudinary" else None,
+        "cloudinary_token_auth_enabled": settings.is_cloudinary_token_auth_configured if settings.STORAGE_BACKEND == "cloudinary" else None,
     }
     return JSONResponse(status_code=status_code, content=content)

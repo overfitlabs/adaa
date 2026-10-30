@@ -425,7 +425,7 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
             ),
             const SizedBox(height: 8),
             SizedBox(
-              height: 70,
+              height: 64,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 itemCount: outfit.items.length,
@@ -433,23 +433,28 @@ class _OutfitsScreenState extends State<OutfitsScreen> {
                 itemBuilder: (ctx, i) {
                   final item = outfit.items[i];
                   return Container(
-                    width: 60,
+                    width: 64,
+                    height: 64,
                     decoration: BoxDecoration(
-                      color: AppColors.sandSoft,
+                      color: AppColors.surfaceContainerLow,
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: AppColors.border),
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(8),
-                      child: PrivateImageView(
-                        imageUrl: item.imageUrl,
-                        fit: BoxFit.cover,
-                        errorWidget: Container(
-                          color: AppColors.sandSoft,
-                          child: const Icon(
-                            Icons.checkroom,
-                            size: 18,
-                            color: AppColors.forest,
+                      child: AspectRatio(
+                        aspectRatio: 1.0,
+                        child: PrivateImageView(
+                          imageUrl: item.imageUrl,
+                          fit: BoxFit.contain,
+                          backgroundColor: AppColors.surfaceContainerLow,
+                          errorWidget: Container(
+                            color: AppColors.sandSoft,
+                            child: const Icon(
+                              Icons.checkroom,
+                              size: 18,
+                              color: AppColors.forest,
+                            ),
                           ),
                         ),
                       ),

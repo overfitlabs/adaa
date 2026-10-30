@@ -77,5 +77,9 @@
 			</array>
 		</dict>
 	</array>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>adaa uses speech recognition for hands-free voice styling interactions.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>adaa uses your microphone to transcribe voice styling requests.</string>
 </dict>
 </plist>

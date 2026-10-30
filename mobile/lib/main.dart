@@ -18,6 +18,7 @@ import 'state/community_provider.dart';
 import 'state/profile_provider.dart';
 import 'state/notification_provider.dart';
 import 'state/stylist_provider.dart';
+import 'state/chat_provider.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -64,6 +65,7 @@ class AdaaApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ProfileProvider()),
         ChangeNotifierProvider(create: (_) => NotificationProvider()),
         ChangeNotifierProvider(create: (_) => StylistProvider()),
+        ChangeNotifierProvider(create: (_) => ChatProvider()),
       ],
       child: MaterialApp(
         title: 'adaa',

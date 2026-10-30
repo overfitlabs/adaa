@@ -9,19 +9,21 @@ import '../../../core/widgets/private_image_view.dart';
 import '../../../state/analysis_provider.dart';
 import '../../../state/wardrobe_provider.dart';
 import '../../matching/screens/matching_result_screen.dart';
+import '../../../core/widgets/adaa_wordmark.dart';
 
-enum ItemReviewIntent {
-  addToCloset,
-  findPiece,
-}
+enum ItemReviewIntent { addToCloset, findPiece }
 
 class ItemReviewScreen extends StatefulWidget {
-  final OutfitAnalysisResponse analysis;
+  final OutfitAnalysisResponse? analysis;
+  final List<DetectedFashionItem>? customItems;
+  final String? sourceImageUrl;
   final ItemReviewIntent? initialIntent;
 
   const ItemReviewScreen({
     super.key,
-    required this.analysis,
+    this.analysis,
+    this.customItems,
+    this.sourceImageUrl,
     this.initialIntent,
   });
 
@@ -40,7 +42,7 @@ class _ItemReviewScreenState extends State<ItemReviewScreen> {
   void initState() {
     super.initState();
     _intent = widget.initialIntent ?? ItemReviewIntent.addToCloset;
-    _items = List.from(widget.analysis.items);
+    _items = List.from(widget.customItems ?? widget.analysis?.items ?? []);
 
     if (_intent == ItemReviewIntent.addToCloset) {
       _selectedIds.addAll(_items.map((i) => i.id));
@@ -78,14 +80,26 @@ class _ItemReviewScreenState extends State<ItemReviewScreen> {
     final nameCtrl = TextEditingController(text: item.name);
     final catCtrl = TextEditingController(text: item.category);
     final colorCtrl = TextEditingController(text: item.primaryColor);
-    final materialCtrl = TextEditingController(text: item.attributes.material ?? '');
+    final secColorCtrl = TextEditingController(text: item.secondaryColor ?? '');
+    final materialCtrl = TextEditingController(
+      text: item.attributes.material ?? '',
+    );
+    final patternCtrl = TextEditingController(
+      text: item.attributes.pattern ?? '',
+    );
     final fitCtrl = TextEditingController(text: item.attributes.fit ?? '');
+    final seasonCtrl = TextEditingController(
+      text: item.attributes.season ?? '',
+    );
 
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Edit Garment Attributes', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+        title: const Text(
+          'Edit Garment Attributes',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+        ),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -97,7 +111,9 @@ class _ItemReviewScreenState extends State<ItemReviewScreen> {
               const SizedBox(height: 12),
               TextField(
                 controller: catCtrl,
-                decoration: const InputDecoration(labelText: 'Category (tops, jackets, jeans, trousers, footwear, bags)'),
+                decoration: const InputDecoration(
+                  labelText: 'Category (tops, bottoms, outerwear, dresses, shoes, bags, accessories)',
+                ),
               ),
               const SizedBox(height: 12),
               TextField(
@@ -106,13 +122,39 @@ class _ItemReviewScreenState extends State<ItemReviewScreen> {
               ),
               const SizedBox(height: 12),
               TextField(
+                controller: secColorCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Secondary Color (optional)',
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: patternCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Pattern (e.g. solid, striped, floral, plaid)',
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
                 controller: materialCtrl,
-                decoration: const InputDecoration(labelText: 'Material (optional)'),
+                decoration: const InputDecoration(
+                  labelText: 'Material (e.g. cotton, denim, wool, linen)',
+                ),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: fitCtrl,
-                decoration: const InputDecoration(labelText: 'Fit / Silhouette (optional)'),
+                decoration: const InputDecoration(
+                  labelText: 'Fit / Silhouette (e.g. slim, regular, relaxed, oversized)',
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: seasonCtrl,
+                decoration: const InputDecoration(
+                  labelText:
+                      'Season (spring, summer, fall, winter, all-season)',
+                ),
               ),
             ],
           ),
@@ -120,7 +162,10 @@ class _ItemReviewScreenState extends State<ItemReviewScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
           ),
           ElevatedButton(
             onPressed: () {
@@ -131,13 +176,23 @@ class _ItemReviewScreenState extends State<ItemReviewScreen> {
                   subCategory: item.subCategory,
                   name: nameCtrl.text.trim(),
                   primaryColor: colorCtrl.text.trim(),
-                  secondaryColor: item.secondaryColor,
+                  secondaryColor: secColorCtrl.text.trim().isEmpty
+                      ? null
+                      : secColorCtrl.text.trim(),
                   attributes: StyleAttributes(
-                    material: materialCtrl.text.trim().isEmpty ? null : materialCtrl.text.trim(),
-                    fit: fitCtrl.text.trim().isEmpty ? null : fitCtrl.text.trim(),
-                    pattern: item.attributes.pattern,
+                    material: materialCtrl.text.trim().isEmpty
+                        ? null
+                        : materialCtrl.text.trim(),
+                    fit: fitCtrl.text.trim().isEmpty
+                        ? null
+                        : fitCtrl.text.trim(),
+                    pattern: patternCtrl.text.trim().isEmpty
+                        ? null
+                        : patternCtrl.text.trim(),
                     formality: item.attributes.formality,
-                    season: item.attributes.season,
+                    season: seasonCtrl.text.trim().isEmpty
+                        ? null
+                        : seasonCtrl.text.trim(),
                     necklineOrCollar: item.attributes.necklineOrCollar,
                   ),
                   confidence: item.confidence,
@@ -171,7 +226,12 @@ class _ItemReviewScreenState extends State<ItemReviewScreen> {
     if (_intent == ItemReviewIntent.addToCloset) {
       setState(() => _isSaving = true);
       final wardrobeProv = context.read<WardrobeProvider>();
-      final itemsToSave = _items.where((i) => _selectedIds.contains(i.id)).map((i) {
+      final fallbackOriginal =
+          widget.sourceImageUrl ?? widget.analysis?.imageUrl ?? '';
+
+      final itemsToSave = _items.where((i) => _selectedIds.contains(i.id)).map((
+        i,
+      ) {
         if (_useOriginalCrop[i.id] == true) {
           return DetectedFashionItem(
             id: i.id,
@@ -184,8 +244,8 @@ class _ItemReviewScreenState extends State<ItemReviewScreen> {
             confidence: i.confidence,
             boundingBoxDescription: i.boundingBoxDescription,
             box2d: i.box2d,
-            extractedImagePath: widget.analysis.imageUrl,
-            extractedImageUrl: widget.analysis.imageUrl,
+            extractedImagePath: fallbackOriginal,
+            extractedImageUrl: fallbackOriginal,
           );
         }
         return i;
@@ -193,7 +253,7 @@ class _ItemReviewScreenState extends State<ItemReviewScreen> {
 
       final res = await wardrobeProv.bulkAddItems(
         itemsToSave,
-        sourceAnalysisId: widget.analysis.analysisId,
+        sourceAnalysisId: widget.analysis?.analysisId,
       );
 
       if (mounted) {
@@ -203,7 +263,9 @@ class _ItemReviewScreenState extends State<ItemReviewScreen> {
         if (savedCount > 0) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Saved $savedCount ${savedCount == 1 ? 'item' : 'items'} to your closet!'),
+              content: Text(
+                'Saved $savedCount ${savedCount == 1 ? 'item' : 'items'} to your closet!',
+              ),
               backgroundColor: AppColors.exactMatch,
             ),
           );
@@ -211,30 +273,36 @@ class _ItemReviewScreenState extends State<ItemReviewScreen> {
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(wardrobeProv.error ?? 'Failed to save items to closet.'),
+              content: Text(
+                wardrobeProv.error ?? 'Failed to save items to closet.',
+              ),
               backgroundColor: AppColors.missing,
             ),
           );
         }
       }
     } else {
-      final selectedItem = _items.firstWhere((i) => _selectedIds.contains(i.id));
+      final selectedItem = _items.firstWhere(
+        (i) => _selectedIds.contains(i.id),
+      );
       final analysisProv = context.read<AnalysisProvider>();
       setState(() => _isSaving = true);
 
-      final success = await analysisProv.matchAgainstWardrobe(customItems: [selectedItem]);
+      final success = await analysisProv.matchAgainstWardrobe(
+        customItems: [selectedItem],
+      );
       if (mounted) {
         setState(() => _isSaving = false);
         if (success) {
           Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => const MatchingResultScreen(),
-            ),
+            MaterialPageRoute(builder: (_) => const MatchingResultScreen()),
           );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(analysisProv.error ?? 'Failed to find matching pieces.'),
+              content: Text(
+                analysisProv.error ?? 'Failed to find matching pieces.',
+              ),
               backgroundColor: AppColors.missing,
             ),
           );
@@ -249,21 +317,69 @@ class _ItemReviewScreenState extends State<ItemReviewScreen> {
     final totalCount = _items.length;
 
     return Scaffold(
+      backgroundColor: AppColors.canvas,
       appBar: AppBar(
-        title: const Text('review detected pieces'),
+        backgroundColor: AppColors.surface,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        toolbarHeight: 68,
+        automaticallyImplyLeading: false,
+        leadingWidth: 56,
+        leading: Padding(
+          padding: const EdgeInsets.all(10),
+          child: IconButton(
+            tooltip: 'Go back',
+            icon: const Icon(
+              Icons.arrow_back_ios_new,
+              size: 20,
+              color: AppColors.forest,
+            ),
+            onPressed: () => Navigator.of(context).maybePop(),
+          ),
+        ),
+        title: const AdaaWordmark(
+          size: AdaaWordmarkSize.medium,
+          color: AppColors.espresso,
+          withDotAccent: true,
+          showSubtitle: true,
+          subtitle: 'style intelligence & closet',
+        ),
+        centerTitle: true,
+        titleSpacing: 0,
         actions: [
           if (_intent == ItemReviewIntent.addToCloset)
             TextButton(
               onPressed: _onSelectAll,
               child: Text(
-                _selectedIds.length == _items.length ? 'Deselect All' : 'Select All',
-                style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.primary),
+                _selectedIds.length == _items.length
+                    ? 'Deselect All'
+                    : 'Select All',
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.primary,
+                ),
               ),
             ),
         ],
       ),
       body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Padding(
+            padding: EdgeInsetsGeometry.fromLTRB(20, 0, 20, 0),
+            child: const Text(
+              'Review Detected Items',
+              style: TextStyle(
+                fontFamily: 'Playfair Display',
+                fontSize: 32,
+                height: 1.2,
+                fontWeight: FontWeight.w600,
+                color: AppColors.forest,
+              ),
+            ),
+          ),
+          SizedBox(height: 8),
           if (widget.initialIntent == null)
             Container(
               margin: const EdgeInsets.fromLTRB(16, 12, 16, 8),
@@ -288,7 +404,9 @@ class _ItemReviewScreenState extends State<ItemReviewScreen> {
                       child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 10),
                         decoration: BoxDecoration(
-                          color: _intent == ItemReviewIntent.addToCloset ? AppColors.surface : Colors.transparent,
+                          color: _intent == ItemReviewIntent.addToCloset
+                              ? AppColors.surface
+                              : Colors.transparent,
                           borderRadius: BorderRadius.circular(8),
                           boxShadow: _intent == ItemReviewIntent.addToCloset
                               ? [AppColors.cardShadow]
@@ -300,7 +418,9 @@ class _ItemReviewScreenState extends State<ItemReviewScreen> {
                             Icon(
                               Icons.checkroom_outlined,
                               size: 16,
-                              color: _intent == ItemReviewIntent.addToCloset ? AppColors.primary : AppColors.textSecondary,
+                              color: _intent == ItemReviewIntent.addToCloset
+                                  ? AppColors.primary
+                                  : AppColors.textSecondary,
                             ),
                             const SizedBox(width: 6),
                             Text(
@@ -309,7 +429,9 @@ class _ItemReviewScreenState extends State<ItemReviewScreen> {
                               style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w700,
-                                color: _intent == ItemReviewIntent.addToCloset ? AppColors.primary : AppColors.textSecondary,
+                                color: _intent == ItemReviewIntent.addToCloset
+                                    ? AppColors.primary
+                                    : AppColors.textSecondary,
                               ),
                             ),
                           ],
@@ -323,14 +445,21 @@ class _ItemReviewScreenState extends State<ItemReviewScreen> {
                         setState(() {
                           _intent = ItemReviewIntent.findPiece;
                           _selectedIds.clear();
-                          if (_items.isNotEmpty) _selectedIds.add(_items.first.id);
+                          if (_items.isNotEmpty) {
+                            _selectedIds.add(_items.first.id);
+                          }
                         });
                       },
                       borderRadius: BorderRadius.circular(8),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 10,
+                          horizontal: 4,
+                        ),
                         decoration: BoxDecoration(
-                          color: _intent == ItemReviewIntent.findPiece ? AppColors.surface : Colors.transparent,
+                          color: _intent == ItemReviewIntent.findPiece
+                              ? AppColors.surface
+                              : Colors.transparent,
                           borderRadius: BorderRadius.circular(8),
                           boxShadow: _intent == ItemReviewIntent.findPiece
                               ? [AppColors.cardShadow]
@@ -342,7 +471,9 @@ class _ItemReviewScreenState extends State<ItemReviewScreen> {
                             Icon(
                               Icons.search,
                               size: 16,
-                              color: _intent == ItemReviewIntent.findPiece ? AppColors.primary : AppColors.textSecondary,
+                              color: _intent == ItemReviewIntent.findPiece
+                                  ? AppColors.primary
+                                  : AppColors.textSecondary,
                             ),
                             const SizedBox(width: 4),
                             Text(
@@ -351,7 +482,9 @@ class _ItemReviewScreenState extends State<ItemReviewScreen> {
                               style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w700,
-                                color: _intent == ItemReviewIntent.findPiece ? AppColors.primary : AppColors.textSecondary,
+                                color: _intent == ItemReviewIntent.findPiece
+                                    ? AppColors.primary
+                                    : AppColors.textSecondary,
                               ),
                             ),
                           ],
@@ -374,7 +507,9 @@ class _ItemReviewScreenState extends State<ItemReviewScreen> {
               child: Row(
                 children: [
                   Icon(
-                    _intent == ItemReviewIntent.addToCloset ? Icons.checkroom_outlined : Icons.search,
+                    _intent == ItemReviewIntent.addToCloset
+                        ? Icons.checkroom_outlined
+                        : Icons.search,
                     size: 18,
                     color: AppColors.primary,
                   ),
@@ -383,7 +518,11 @@ class _ItemReviewScreenState extends State<ItemReviewScreen> {
                     _intent == ItemReviewIntent.addToCloset
                         ? 'Select garments to add to your personal wardrobe'
                         : 'Choose one garment to discover matching looks',
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primary,
+                    ),
                   ),
                 ],
               ),
@@ -398,9 +537,11 @@ class _ItemReviewScreenState extends State<ItemReviewScreen> {
                 final item = _items[idx];
                 final isSelected = _selectedIds.contains(item.id);
                 final useOriginal = _useOriginalCrop[item.id] == true;
+                final fallbackOriginal =
+                    widget.sourceImageUrl ?? widget.analysis?.imageUrl ?? '';
                 final displayImageUrl = useOriginal
-                    ? widget.analysis.imageUrl
-                    : (item.extractedImageUrl ?? widget.analysis.imageUrl);
+                    ? fallbackOriginal
+                    : (item.extractedImageUrl ?? fallbackOriginal);
 
                 return InkWell(
                   onTap: () => _onToggleSelection(item.id),
@@ -411,7 +552,9 @@ class _ItemReviewScreenState extends State<ItemReviewScreen> {
                       color: AppColors.surface,
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
-                        color: isSelected ? AppColors.primary : AppColors.border,
+                        color: isSelected
+                            ? AppColors.primary
+                            : AppColors.border,
                         width: isSelected ? 2 : 1,
                       ),
                       boxShadow: [AppColors.cardShadow],
@@ -424,20 +567,28 @@ class _ItemReviewScreenState extends State<ItemReviewScreen> {
                           padding: const EdgeInsets.only(top: 24, right: 10),
                           child: Icon(
                             _intent == ItemReviewIntent.findPiece
-                                ? (isSelected ? Icons.radio_button_checked : Icons.radio_button_off)
-                                : (isSelected ? Icons.check_box : Icons.check_box_outline_blank),
-                            color: isSelected ? AppColors.primary : AppColors.textSecondary,
+                                ? (isSelected
+                                      ? Icons.radio_button_checked
+                                      : Icons.radio_button_off)
+                                : (isSelected
+                                      ? Icons.check_box
+                                      : Icons.check_box_outline_blank),
+                            color: isSelected
+                                ? AppColors.primary
+                                : AppColors.textSecondary,
                             size: 22,
                           ),
                         ),
                         ClipRRect(
                           borderRadius: BorderRadius.circular(10),
-                          child: SizedBox(
+                          child: Container(
                             width: 84,
                             height: 84,
+                            color: AppColors.surfaceContainerLow,
                             child: PrivateImageView(
                               imageUrl: displayImageUrl,
-                              fit: BoxFit.cover,
+                              fit: BoxFit.contain,
+                              backgroundColor: AppColors.surfaceContainerLow,
                             ),
                           ),
                         ),
@@ -451,13 +602,20 @@ class _ItemReviewScreenState extends State<ItemReviewScreen> {
                                   Expanded(
                                     child: Text(
                                       item.name,
-                                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 14,
+                                      ),
                                       maxLines: 2,
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
                                   IconButton(
-                                    icon: const Icon(Icons.edit_outlined, size: 18, color: AppColors.textSecondary),
+                                    icon: const Icon(
+                                      Icons.edit_outlined,
+                                      size: 18,
+                                      color: AppColors.textSecondary,
+                                    ),
                                     tooltip: 'Edit Details',
                                     onPressed: () => _openEditDialog(idx, item),
                                     padding: EdgeInsets.zero,
@@ -470,29 +628,126 @@ class _ItemReviewScreenState extends State<ItemReviewScreen> {
                                 spacing: 6,
                                 runSpacing: 4,
                                 children: [
-                                  AdaaBrandBadge(text: item.category.toUpperCase()),
+                                  AdaaBrandBadge(
+                                    text: item.category.toUpperCase(),
+                                  ),
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 7,
+                                      vertical: 2,
+                                    ),
                                     decoration: BoxDecoration(
                                       color: AppColors.surfaceElevated,
                                       borderRadius: BorderRadius.circular(6),
-                                      border: Border.all(color: AppColors.border),
+                                      border: Border.all(
+                                        color: AppColors.border,
+                                      ),
                                     ),
                                     child: Text(
                                       item.primaryColor,
-                                      style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+                                      style: const TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.textSecondary,
+                                      ),
                                     ),
                                   ),
-                                  if (item.attributes.material != null)
+                                  if (item.secondaryColor != null &&
+                                      item.secondaryColor!.isNotEmpty)
                                     Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 7,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.surfaceElevated,
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(
+                                          color: AppColors.borderLight,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        item.secondaryColor!,
+                                        style: const TextStyle(
+                                          fontSize: 10,
+                                          color: AppColors.textSecondary,
+                                        ),
+                                      ),
+                                    ),
+                                  if (item.attributes.pattern != null &&
+                                      item.attributes.pattern!.isNotEmpty)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 7,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.surfaceElevated,
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        item.attributes.pattern!,
+                                        style: const TextStyle(
+                                          fontSize: 10,
+                                          color: AppColors.textSecondary,
+                                        ),
+                                      ),
+                                    ),
+                                  if (item.attributes.material != null &&
+                                      item.attributes.material!.isNotEmpty)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 7,
+                                        vertical: 2,
+                                      ),
                                       decoration: BoxDecoration(
                                         color: AppColors.surfaceElevated,
                                         borderRadius: BorderRadius.circular(6),
                                       ),
                                       child: Text(
                                         item.attributes.material!,
-                                        style: const TextStyle(fontSize: 10, color: AppColors.textSecondary),
+                                        style: const TextStyle(
+                                          fontSize: 10,
+                                          color: AppColors.textSecondary,
+                                        ),
+                                      ),
+                                    ),
+                                  if (item.attributes.fit != null &&
+                                      item.attributes.fit!.isNotEmpty)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 7,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.surfaceElevated,
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        item.attributes.fit!,
+                                        style: const TextStyle(
+                                          fontSize: 10,
+                                          color: AppColors.textSecondary,
+                                        ),
+                                      ),
+                                    ),
+                                  if (item.attributes.season != null &&
+                                      item.attributes.season!.isNotEmpty)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 7,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.surfaceElevated,
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        item.attributes.season!,
+                                        style: const TextStyle(
+                                          fontSize: 10,
+                                          color: AppColors.textSecondary,
+                                        ),
                                       ),
                                     ),
                                 ],
@@ -502,19 +757,29 @@ class _ItemReviewScreenState extends State<ItemReviewScreen> {
                                 children: [
                                   Text(
                                     '${(item.confidence * 100).toInt()}% confidence',
-                                    style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      color: AppColors.textSecondary,
+                                    ),
                                   ),
                                   const Spacer(),
                                   if (item.extractedImageUrl != null)
                                     InkWell(
                                       onTap: () {
                                         setState(() {
-                                          _useOriginalCrop[item.id] = !useOriginal;
+                                          _useOriginalCrop[item.id] =
+                                              !useOriginal;
                                         });
                                       },
                                       child: Text(
-                                        useOriginal ? 'Show crop' : 'Keep original',
-                                        style: const TextStyle(fontSize: 11, color: AppColors.accent, fontWeight: FontWeight.w600),
+                                        useOriginal
+                                            ? 'Show crop'
+                                            : 'Keep original',
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          color: AppColors.accent,
+                                          fontWeight: FontWeight.w600,
+                                        ),
                                       ),
                                     ),
                                 ],
@@ -552,7 +817,10 @@ class _ItemReviewScreenState extends State<ItemReviewScreen> {
                       ? const SizedBox(
                           width: 18,
                           height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
                         )
                       : Icon(
                           _intent == ItemReviewIntent.addToCloset
@@ -564,7 +832,10 @@ class _ItemReviewScreenState extends State<ItemReviewScreen> {
                     _intent == ItemReviewIntent.addToCloset
                         ? 'Save $selectedCount of $totalCount to My Closet'
                         : 'Find Matches for Selected Piece',
-                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ),

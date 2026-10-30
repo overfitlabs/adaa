@@ -3,7 +3,6 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
-import 'package:wardrobelens/features/auth/screens/logout_success_screen.dart';
 
 import '../../../core/auth/session_manager.dart';
 import '../../../core/network/api_client.dart';
@@ -106,10 +105,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => LogoutSuccessScreen()),
-            ),
+            onPressed: () => Navigator.pop(ctx),
             child: const Text(
               'Cancel',
               style: TextStyle(color: AppColors.textSecondary),
@@ -337,12 +333,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                           ),
                           TextButton(
-                            onPressed: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const EditProfileScreen(),
-                              ),
-                            ),
+                            onPressed: () async {
+                              final saved = await Navigator.push<bool>(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const EditProfileScreen(),
+                                ),
+                              );
+                              if (saved == true && mounted) {
+                                _loadProfile();
+                              }
+                            },
                             style: TextButton.styleFrom(
                               foregroundColor: AppColors.sage,
                               padding: const EdgeInsets.symmetric(
@@ -368,6 +369,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           color: AppColors.textSecondary,
                         ),
                       ),
+                      if ((userProfile?.bio ?? '').isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          userProfile?.bio ?? '',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppColors.forest,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -447,11 +461,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _settingsRow(
               icon: Icons.badge_outlined,
               title: 'Edit Profile',
-              subtitle: 'Personal info, sizes & aesthetics',
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const EditProfileScreen()),
-              ),
+              subtitle:
+                  (userProfile?.fitPreferences != null &&
+                      userProfile!.fitPreferences.hasAnyPreferences)
+                  ? 'Tops: ${userProfile.fitPreferences.topsSize ?? "-"} • Bottoms: ${userProfile.fitPreferences.bottomsSize ?? "-"} • Fit: ${userProfile.fitPreferences.preferredFit ?? "-"}'
+                  : 'Personal info, sizes & aesthetics',
+              onTap: () async {
+                final saved = await Navigator.push<bool>(
+                  context,
+                  MaterialPageRoute(builder: (_) => const EditProfileScreen()),
+                );
+                if (saved == true && mounted) {
+                  _loadProfile();
+                }
+              },
             ),
             _settingsDivider(),
             _settingsRow(
@@ -469,7 +492,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _settingsRow(
               icon: Icons.description_outlined,
               title: 'Terms of Service',
-              onTap: () {},
+              onTap: () {
+                ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'We are just building, maybe next time you will see a long page of terms and conditions. ',
+                    ),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              },
             ),
           ]),
           const SizedBox(height: 22),

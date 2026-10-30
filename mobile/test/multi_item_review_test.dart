@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:wardrobelens/core/models/garment_item.dart';
 import 'package:wardrobelens/core/models/outfit_analysis.dart';
 import 'package:wardrobelens/core/models/wardrobe_item.dart';
+import 'package:wardrobelens/core/widgets/private_image_view.dart';
 import 'package:wardrobelens/features/analysis/screens/item_review_screen.dart';
 import 'package:wardrobelens/state/analysis_provider.dart';
 import 'package:wardrobelens/state/wardrobe_provider.dart';
@@ -237,6 +238,67 @@ void main() {
       await tester.pump();
 
       expect(find.text('Show crop'), findsOneWidget);
+    });
+
+    testWidgets('Garment items render in standardized 1:1 square containers with BoxFit.contain', (tester) async {
+      final fakeWardrobe = FakeWardrobeForReview();
+      await tester.pumpWidget(createReviewApp(wardrobeProv: fakeWardrobe, initialIntent: ItemReviewIntent.addToCloset));
+      await tester.pump();
+
+      final imageViews = tester.widgetList<PrivateImageView>(find.byType(PrivateImageView));
+      expect(imageViews, isNotEmpty);
+      for (final view in imageViews) {
+        expect(view.fit, equals(BoxFit.contain));
+      }
+    });
+
+    testWidgets('Wardrobe detection flow renders customItems without requiring an analysis record', (tester) async {
+      final fakeWardrobe = FakeWardrobeForReview();
+      final customItem1 = DetectedFashionItem(
+        id: 'c-1',
+        category: 'tops',
+        name: 'Cotton Oxford Shirt',
+        primaryColor: 'White',
+        confidence: 0.95,
+        attributes: StyleAttributes(material: 'cotton', pattern: 'solid'),
+        extractedImageUrl: 'https://example.com/c1.jpg',
+      );
+      final customItem2 = DetectedFashionItem(
+        id: 'c-2',
+        category: 'bottoms',
+        name: 'Denim Jeans',
+        primaryColor: 'Blue',
+        confidence: 0.92,
+        attributes: StyleAttributes(material: 'denim', pattern: 'solid'),
+        extractedImageUrl: 'https://example.com/c2.jpg',
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MultiProvider(
+            providers: [
+              ChangeNotifierProvider<WardrobeProvider>.value(value: fakeWardrobe),
+              ChangeNotifierProvider<AnalysisProvider>(create: (_) => AnalysisProvider()),
+            ],
+            child: ItemReviewScreen(
+              customItems: [customItem1, customItem2],
+              sourceImageUrl: 'https://example.com/full.jpg',
+              initialIntent: ItemReviewIntent.addToCloset,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.text('Cotton Oxford Shirt'), findsOneWidget);
+      expect(find.text('Denim Jeans'), findsOneWidget);
+      expect(find.text('Save 2 of 2 to My Closet'), findsOneWidget);
+
+      await tester.tap(find.text('Save 2 of 2 to My Closet'));
+      await tester.pump();
+
+      expect(fakeWardrobe.bulkAddCalled, isTrue);
+      expect(fakeWardrobe.lastSavedDetectedItems.length, equals(2));
     });
   });
 }

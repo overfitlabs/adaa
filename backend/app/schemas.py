@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Any
 from pydantic import BaseModel, Field, ConfigDict, model_validator
 
 
@@ -44,10 +44,39 @@ class OutfitAnalysisResponse(BaseModel):
     image_url: str
     summary: str
     vibe_or_style: Optional[str] = None
-    items: List[DetectedFashionItem]
-    detected_garment_count: int
+    items: List[DetectedFashionItem] = Field(default_factory=list)
+    detected_garment_count: int = 0
     created_at: datetime
     user_id: Optional[str] = None
+    status: str = "completed"
+    error: Optional[str] = None
+
+
+class ScanStatusResponse(BaseModel):
+    scan_id: str
+    status: str  # "pending", "processing", "completed", "failed"
+    result: Optional[OutfitAnalysisResponse] = None
+    error: Optional[str] = None
+    created_at: Optional[datetime] = None
+
+
+class MediaFlowsWebhookPayload(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    scan_id: Optional[str] = None
+    public_id: Optional[str] = None
+    gemini_output: Optional[Any] = None
+    status: Optional[str] = None
+    error: Optional[str] = None
+
+
+class MediaFlowsUrlResponse(BaseModel):
+    url: str
+    image_url: str
+    signed_url: str
+    public_id: str
+    scan_id: str
+    expires_in: int = 300
 
 
 # Wardrobe Models
@@ -207,6 +236,27 @@ class TryOnTaskResponse(BaseModel):
     error_message: Optional[str] = None
     created_at: datetime
     updated_at: datetime
+    expires_at: Optional[datetime] = None
+    can_retry: bool = False
+    is_friend_tryon: bool = False
+    used_saved_model: bool = False
+    inspiration_analysis_id: Optional[str] = None
+
+
+class TryOnHistoryResponse(BaseModel):
+    items: List[TryOnTaskResponse]
+    next_cursor: Optional[str] = None
+    has_more: bool = False
+    total_count: int = 0
+
+
+class UserTryOnModelResponse(BaseModel):
+    has_model: bool
+    model_id: Optional[str] = None
+    image_url: Optional[str] = None
+    storage_provider: Optional[str] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
 
 
 # Recommendation Models
@@ -250,6 +300,36 @@ class OutfitGenerationResponse(BaseModel):
     applied_profile_preferences: Optional[List[str]] = Field(default_factory=list)
     missing_categories: Optional[List[str]] = Field(default_factory=list)
     outfits: List[RecommendedOutfit] = Field(default_factory=list)
+
+
+# Stylist Chat Models
+class ChatMessage(BaseModel):
+    role: str = Field(..., description="'user', 'assistant', or 'system'")
+    content: str = Field(..., min_length=1, max_length=2000)
+
+
+class StylistAction(BaseModel):
+    action_type: str = Field(
+        ...,
+        description="'view_garment', 'open_outfit', 'start_tryon', 'open_scanner', or 'open_wardrobe'",
+    )
+    title: str = Field(..., description="Human-readable label for the action button")
+    payload: Optional[dict] = Field(default_factory=dict, description="Action payload such as item_id, category, outfit_id")
+
+
+class StylistChatRequest(BaseModel):
+    message: str = Field(..., min_length=1, max_length=2000, description="User message or transcribed voice input")
+    history: List[ChatMessage] = Field(default_factory=list, description="Prior conversation turns for context")
+
+
+class StylistChatResponse(BaseModel):
+    reply: str
+    domain_status: str = Field("allowed", description="'allowed', 'redirected', or 'clarification'")
+    suggested_items: List[WardrobeItemResponse] = Field(default_factory=list)
+    suggested_outfits: List[RecommendedOutfit] = Field(default_factory=list)
+    suggested_acquisitions: List[str] = Field(default_factory=list)
+    actions: List[StylistAction] = Field(default_factory=list)
+
 
 
 
@@ -435,6 +515,7 @@ class UserProfileUpdate(BaseModel):
     bottoms_size: Optional[str] = Field(None, max_length=30)
     shoe_size: Optional[str] = Field(None, max_length=30)
     preferred_fit: Optional[str] = Field(None, max_length=30)
+    fit_preferences: Optional[FitPreferences] = None
     preferred_styles: Optional[List[str]] = None
     privacy_settings: Optional[ProfilePrivacyUpdate] = None
 

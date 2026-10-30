@@ -51,7 +51,9 @@ class OutfitAnalysisRecord(Base):
     image_version = Column(String(30), nullable=True)
     summary = Column(Text, nullable=True)
     vibe = Column(String(80), nullable=True)
-    items_json = Column(Text, nullable=False)  # JSON encoded detected items
+    items_json = Column(Text, nullable=False, default="[]", server_default="[]")  # JSON encoded detected items
+    status = Column(String(30), nullable=False, default="completed", server_default="completed", index=True)
+    error_message = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
@@ -91,6 +93,22 @@ class TryOnTaskRecord(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     expires_at = Column(DateTime, nullable=True, index=True)
+    is_friend_tryon = Column(Boolean, nullable=False, default=False, server_default="0")
+    used_saved_model = Column(Boolean, nullable=False, default=False, server_default="0")
+    inspiration_analysis_id = Column(String(36), nullable=True, index=True)
+
+
+class UserTryOnModel(Base):
+    __tablename__ = "user_tryon_models"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    user_id = Column(String(36), nullable=False, unique=True, index=True)
+    image_path = Column(String(255), nullable=False)
+    storage_provider = Column(String(30), nullable=False, default="local", server_default="local")
+    cloudinary_public_id = Column(String(255), nullable=True)
+    image_format = Column(String(20), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
 class Community(Base):
