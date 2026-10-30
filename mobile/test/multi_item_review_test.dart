@@ -170,7 +170,7 @@ void main() {
       await tester.pumpWidget(createReviewApp(wardrobeProv: fakeWardrobe, initialIntent: ItemReviewIntent.addToCloset));
       await tester.pump();
 
-      expect(find.text('review detected pieces'), findsOneWidget);
+      expect(find.text('Review Detected Items'), findsOneWidget);
       expect(find.text('Oversized Wool Blazer'), findsOneWidget);
       expect(find.text('Wide Pleated Trousers'), findsOneWidget);
       expect(find.text('Chunky Leather Loafers'), findsOneWidget);

@@ -1,3 +1,4 @@
+import io
 import json
 import logging
 import uuid
@@ -439,7 +440,8 @@ def list_wardrobe_items(
         query = query.filter(WardrobeItem.user_id.is_(None))
 
     if category and category.lower() != "all":
-        query = query.filter(WardrobeItem.category == category.lower().strip())
+        norm_cat = normalize_category(category) or category.lower().strip()
+        query = query.filter((WardrobeItem.category == category.lower().strip()) | (WardrobeItem.category == norm_cat))
 
     if color:
         query = query.filter(

@@ -27,8 +27,8 @@ def test_create_and_get_wardrobe_item(client, sample_image_bytes):
     assert response.status_code == 201
     item = response.json()
     assert item["name"] == "Navy Wool Blazer"
-    assert item["category"] == "jackets"
-    assert item["primary_color"] == "Navy"
+    assert item["category"] == "outerwear"
+    assert item["primary_color"] == "navy"
     assert item["brand"] == "Brooks Brothers"
     assert item["size"] == "40R"
     assert item["condition"] == "Excellent"
@@ -69,12 +69,12 @@ def test_create_and_get_wardrobe_item(client, sample_image_bytes):
     )
     assert update_res.status_code == 200
     assert update_res.json()["name"] == "Updated Navy Wool Blazer"
-    assert update_res.json()["fit"] == "Oversized"
+    assert update_res.json()["fit"] == "oversized"
     assert update_res.json()["brand"] == "Brooks Brothers Vintage"
     assert update_res.json()["notes"] == "Hand wash cold now."
     # Check that untouched fields are preserved
     assert update_res.json()["size"] == "40R"
-    assert update_res.json()["primary_color"] == "Navy"
+    assert update_res.json()["primary_color"] == "navy"
 
     # Delete item
     del_res = client.delete(f"/api/wardrobe/items/{item_id}")
